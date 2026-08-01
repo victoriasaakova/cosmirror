@@ -1,11 +1,17 @@
-# Cosmirror Web
+# Cosmirror
 
-Next.js (React) frontend for Cosmirror. Talks to `cosmirror-api` (Django + SQLite).
+Monorepo: Next.js frontend + Django API.
 
-## Setup
+```
+.
+├── src/          # Next.js app (landing)
+├── api/          # Django + DRF backend
+└── public/
+```
+
+## Frontend
 
 ```bash
-cd cosmirror-web
 npm install
 cp .env.example .env.local
 npm run dev
@@ -13,10 +19,25 @@ npm run dev
 
 Open http://localhost:3000
 
-## Env
-
 ```
 NEXT_PUBLIC_API_URL=http://127.0.0.1:8000
 ```
 
-Backend must be running on port 8000 (see `../cosmirror-api/README.md`).
+## Backend
+
+```bash
+cd api
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+python manage.py migrate
+python manage.py seed_onboarding
+python manage.py createsuperuser
+python manage.py runserver 8000
+```
+
+- Admin: http://127.0.0.1:8000/admin/
+- Health: http://127.0.0.1:8000/api/health/
+
+See `api/README.md` for domain model and full API list.
