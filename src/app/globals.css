@@ -163,6 +163,63 @@ body {
   animation: fade-up 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+/* ── Falling pills zone ── */
+
+.pill-zone {
+  --zone-h: 9rem;
+  height: var(--zone-h);
+}
+
+@media (min-width: 768px) {
+  .pill-zone {
+    --zone-h: 10rem;
+  }
+}
+
+.road-panorama {
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 28%, #000 82%, transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0%, #000 28%, #000 82%, transparent 100%);
+}
+
+.message-swap {
+  opacity: 0;
+  filter: blur(2px);
+  transition:
+    opacity 700ms cubic-bezier(0.23, 1, 0.32, 1),
+    filter 700ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.message-swap[data-active="true"] {
+  opacity: 1;
+  filter: blur(0);
+  transition-delay: 650ms;
+}
+
+.star-fall {
+  position: absolute;
+  top: 0;
+  opacity: 0;
+  animation: star-fall var(--dur) linear infinite;
+  animation-delay: var(--delay);
+}
+
+@keyframes star-fall {
+  0% {
+    transform: translateY(-2.5rem);
+    opacity: 0;
+  }
+  12% {
+    opacity: var(--o);
+  }
+  85% {
+    opacity: var(--o);
+  }
+  100% {
+    transform: translateY(calc(var(--zone-h) + 1rem));
+    opacity: 0;
+  }
+}
+
 .reveal-delay-1 {
   animation-delay: 0.12s;
 }
@@ -188,5 +245,15 @@ body {
   .reveal-delay-2,
   .reveal-delay-3 {
     animation: none !important;
+  }
+
+  /* Keep the message readable and stars still when motion is reduced. */
+  .star-fall {
+    animation: none !important;
+    opacity: 0;
+  }
+
+  .message-swap {
+    transition: none !important;
   }
 }
