@@ -24,9 +24,18 @@ urlpatterns = [
         views.OnboardingStepSubmitView.as_view(),
         name="onboarding-step-submit",
     ),
+    path(
+        "onboarding/sessions/<uuid:token>/insight/",
+        views.OnboardingInsightView.as_view(),
+        name="onboarding-insight",
+    ),
+    # Гео для онбординга
+    path("geo/lookup/", views.GeoLookupView.as_view(), name="geo-lookup"),
+    path("geo/suggest/", views.GeoSuggestView.as_view(), name="geo-suggest"),
     # Вводы в продукте
     path("inputs/", views.UserInputListCreateView.as_view(), name="user-inputs"),
-    # Астро (закладки)
+    # Астро
     path("astro/charts/", views.NatalChartListView.as_view(), name="natal-charts"),
     path("astro/cycles/", views.GlobalCycleListView.as_view(), name="global-cycles"),
+    path("astro/sky-now/", views.SkyNowView.as_view(), name="sky-now"),
 ]

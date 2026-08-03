@@ -182,7 +182,7 @@ class OnboardingStepAnswer(models.Model):
 class WaitlistLead(models.Model):
     """Заявки до полноценной регистрации: email + телефон + telegram."""
 
-    email = models.EmailField("Email", unique=True)
+    email = models.EmailField("Email", blank=True, null=True, unique=True)
     phone = models.CharField("Телефон", max_length=32, blank=True)
     telegram = models.CharField("Telegram", max_length=64, blank=True)
     name = models.CharField("Имя", max_length=120, blank=True)

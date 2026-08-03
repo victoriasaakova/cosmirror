@@ -4,13 +4,30 @@ async function parseJson(res: Response): Promise<unknown> {
   return res.json().catch(() => ({}));
 }
 
+function networkErrorMessage(err: unknown, fallback: string): string {
+  if (err instanceof TypeError) {
+    return "Не удалось связаться с API. Запусти cosmirror-api на http://127.0.0.1:8000";
+  }
+  if (err instanceof Error && err.message) return err.message;
+  return fallback;
+}
+
 function errorMessage(data: unknown, fallback: string): string {
   if (typeof data !== "object" || !data) return fallback;
   const record = data as Record<string, unknown>;
-  for (const key of ["email", "detail", "non_field_errors"]) {
+  for (const key of ["email", "detail", "non_field_errors", "astro", "telegram", "phone"]) {
     const value = record[key];
     if (typeof value === "string" && value) return value;
     if (Array.isArray(value) && value[0]) return String(value[0]);
+  }
+  const payload = record.payload;
+  if (typeof payload === "object" && payload) {
+    const p = payload as Record<string, unknown>;
+    for (const key of ["birth_date", "birth_place", "astro", "email", "telegram", "phone"]) {
+      const value = p[key];
+      if (typeof value === "string" && value) return value;
+      if (Array.isArray(value) && value[0]) return String(value[0]);
+    }
   }
   return fallback;
 }
@@ -120,11 +137,16 @@ export async function fetchOnboardingSteps(): Promise<OnboardingStep[]> {
 }
 
 export async function createOnboardingSession(): Promise<OnboardingSession> {
-  const res = await fetch(`${API_URL}/api/onboarding/sessions/`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: "{}",
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}/api/onboarding/sessions/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+    });
+  } catch (err) {
+    throw new Error(networkErrorMessage(err, "Не удалось создать сессию"));
+  }
   const data = await parseJson(res);
   if (!res.ok) throw new Error(errorMessage(data, "Не удалось создать сессию"));
   return data as OnboardingSession;
@@ -143,11 +165,16 @@ export async function submitOnboardingStep(
   payload: Record<string, unknown>,
   completed = true,
 ): Promise<OnboardingSession> {
-  const res = await fetch(`${API_URL}/api/onboarding/sessions/${token}/steps/${slug}/`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ payload, completed }),
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}/api/onboarding/sessions/${token}/steps/${slug}/`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ payload, completed }),
+    });
+  } catch (err) {
+    throw new Error(networkErrorMessage(err, "Не удалось сохранить шаг"));
+  }
   const data = await parseJson(res);
   if (!res.ok) throw new Error(errorMessage(data, "Не удалось сохранить шаг"));
   return data as OnboardingSession;
@@ -158,6 +185,70 @@ export async function fetchGlobalCycles(): Promise<GlobalPlanetaryCycle[]> {
   const data = await parseJson(res);
   if (!res.ok) throw new Error(errorMessage(data, "Не удалось загрузить циклы"));
   return data as GlobalPlanetaryCycle[];
+}
+
+export type PlaceSuggestion = {
+  place: string;
+  latitude: number;
+  longitude: number;
+  timezone: string;
+  country: string;
+};
+
+export async function lookupPlace(query: string): Promise<PlaceSuggestion> {
+  const res = await fetch(`${API_URL}/api/geo/lookup/?q=${encodeURIComponent(query)}`, {
+    cache: "no-store",
+  });
+  const data = await parseJson(res);
+  if (!res.ok) throw new Error(errorMessage(data, "Не удалось найти город"));
+  return data as PlaceSuggestion;
+}
+
+export async function suggestPlaces(query: string): Promise<PlaceSuggestion[]> {
+  const res = await fetch(`${API_URL}/api/geo/suggest/?q=${encodeURIComponent(query)}`, {
+    cache: "no-store",
+  });
+  const data = await parseJson(res);
+  if (!res.ok) throw new Error(errorMessage(data, "Не удалось найти города"));
+  const record = data as { results?: PlaceSuggestion[] };
+  return Array.isArray(record.results) ? record.results : [];
+}
+
+export type OnboardingInsight = {
+  status: string;
+  has_birth_time: boolean;
+  natal: {
+    planets: Record<string, { sign: string; sign_ru: string; degree: number; longitude?: number }>;
+    ascendant: { sign: string; sign_ru: string; degree: number } | null;
+    midheaven: { sign: string; sign_ru: string; degree: number } | null;
+    houses: unknown;
+    notes: string[];
+    location: { place: string; lat: number; lng: number };
+    timezone: string;
+    engine: string;
+  };
+  insight: {
+    tone: string;
+    disclaimer: string;
+    base: { key: string; title: string; text: string }[];
+    cycles: { key: string; title: string; text: string }[];
+    influences: { key: string; title: string; text: string }[];
+    sky_now: Record<string, unknown>;
+  };
+};
+
+export async function fetchOnboardingInsight(token: string): Promise<OnboardingInsight> {
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}/api/onboarding/sessions/${token}/insight/`, {
+      cache: "no-store",
+    });
+  } catch (err) {
+    throw new Error(networkErrorMessage(err, "Не удалось получить инсайт"));
+  }
+  const data = await parseJson(res);
+  if (!res.ok) throw new Error(errorMessage(data, "Не удалось получить инсайт"));
+  return data as OnboardingInsight;
 }
 
 export { API_URL };

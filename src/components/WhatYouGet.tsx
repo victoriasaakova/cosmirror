@@ -46,6 +46,26 @@ function roundCoordinate(value: number) {
   return Number(value.toFixed(3));
 }
 
+const ZODIAC_SEGMENTS = ZODIAC_PATHS.map((path, index) => {
+  const dividerAngle = index * 30 - 90;
+  const iconAngle = dividerAngle + 15;
+  const dividerRadians = (dividerAngle * Math.PI) / 180;
+  const iconRadians = (iconAngle * Math.PI) / 180;
+  const x = roundCoordinate(100 + Math.cos(iconRadians) * 81);
+  const y = roundCoordinate(100 + Math.sin(iconRadians) * 81);
+
+  return {
+    path,
+    x,
+    y,
+    innerX: roundCoordinate(100 + Math.cos(dividerRadians) * 72),
+    innerY: roundCoordinate(100 + Math.sin(dividerRadians) * 72),
+    outerX: roundCoordinate(100 + Math.cos(dividerRadians) * 91),
+    outerY: roundCoordinate(100 + Math.sin(dividerRadians) * 91),
+    transform: `translate(${roundCoordinate(x - 6)} ${roundCoordinate(y - 6)}) scale(0.5)`,
+  };
+});
+
 function BirthChart() {
   return (
     <svg
@@ -58,41 +78,27 @@ function BirthChart() {
       <circle cx="100" cy="100" r="72" fill="none" stroke="currentColor" strokeOpacity="0.35" />
       <circle cx="100" cy="100" r="52" fill="none" stroke="currentColor" strokeOpacity="0.16" />
 
-      {ZODIAC_PATHS.map((path, index) => {
-        const dividerAngle = index * 30 - 90;
-        const iconAngle = dividerAngle + 15;
-        const dividerRadians = (dividerAngle * Math.PI) / 180;
-        const iconRadians = (iconAngle * Math.PI) / 180;
-        const x = roundCoordinate(100 + Math.cos(iconRadians) * 81);
-        const y = roundCoordinate(100 + Math.sin(iconRadians) * 81);
-        const innerX = roundCoordinate(100 + Math.cos(dividerRadians) * 72);
-        const innerY = roundCoordinate(100 + Math.sin(dividerRadians) * 72);
-        const outerX = roundCoordinate(100 + Math.cos(dividerRadians) * 91);
-        const outerY = roundCoordinate(100 + Math.sin(dividerRadians) * 91);
-
-        return (
-          <g key={path}>
-            <line
-              x1={innerX}
-              y1={innerY}
-              x2={outerX}
-              y2={outerY}
-              stroke="currentColor"
-              strokeOpacity="0.3"
-            />
-            <path
-              d={path}
-              transform={`translate(${x - 6} ${y - 6}) scale(0.5)`}
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.7"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-            </path>
-          </g>
-        );
-      })}
+      {ZODIAC_SEGMENTS.map((segment) => (
+        <g key={segment.path}>
+          <line
+            x1={segment.innerX}
+            y1={segment.innerY}
+            x2={segment.outerX}
+            y2={segment.outerY}
+            stroke="currentColor"
+            strokeOpacity="0.3"
+          />
+          <path
+            d={segment.path}
+            transform={segment.transform}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.7"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </g>
+      ))}
 
       <g fill="none" strokeLinecap="round">
         <path d="M100 48 L72 126 L137 126 L58 76 L109 142 Z" stroke="#ff7b36" strokeOpacity="0.48" />
@@ -311,7 +317,7 @@ export function WhatYouGet() {
           })}
         </div>
 
-        <div className="relative aspect-[4/3] min-h-[20rem] overflow-hidden rounded-[2rem] border border-white/10 bg-[#0b0a0e] shadow-[0_28px_80px_rgba(0,0,0,0.38)]">
+        <div className="relative min-h-[20rem] overflow-hidden rounded-[2rem] border border-white/10 bg-[#0b0a0e] shadow-[0_28px_80px_rgba(0,0,0,0.38)] sm:aspect-[4/3]">
           <div
             key={activeIndex}
             className="h-full animate-[fade-up_0.55s_cubic-bezier(0.22,1,0.36,1)_both]"

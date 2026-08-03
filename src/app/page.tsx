@@ -3,12 +3,6 @@ import { Header } from "@/components/Header";
 import { FallingPills } from "@/components/FallingPills";
 import { WhatYouGet } from "@/components/WhatYouGet";
 
-const NAV = [
-  { href: "#how", label: "Как это работает" },
-  { href: "#get", label: "Что получишь" },
-  { href: "#for", label: "Если знакомо" },
-];
-
 const FAMILIAR_CARDS = [
   {
     icon: (
@@ -151,111 +145,12 @@ const CONNECTS = [
   "текущие астрологические циклы",
 ];
 
-const BENEFITS = [
-  "Быстрее понимать, что с тобой происходит.",
-  "Замечать повторяющиеся жизненные сценарии.",
-  "Видеть, что действительно даёт тебе энергию, а что постепенно её забирает.",
-  "Принимать решения, опираясь не только на эмоции момента, но и на понимание собственных закономерностей.",
+const NOT_PROMISES = [
+  "Мы не предсказываем будущее.",
+  "Мы не говорим, какие решения тебе принимать.",
+  "Мы не утверждаем, что звезды определяют твою жизнь.",
+  "Мы не заменяем психолога или терапию.",
 ];
-
-const ASTROLOGY_PRINCIPLES = [
-  {
-    from: "Мы помогаем понять настоящий момент.",
-    to: "Но не предсказываем будущее.",
-  },
-  {
-    from: "Помогаем увидеть ситуацию с новой перспективы.",
-    to: "Но не принимаем решения за тебя.",
-  },
-  {
-    from: "Помогаем соединить астрологию с твоим реальным опытом.",
-    to: "Но не объясняем твою жизнь положением планет.",
-  },
-  {
-    from: "Помогаем лучше понимать себя.",
-    to: "Но не говорим, кто ты.",
-  },
-];
-
-function IconOrbit() {
-  return (
-    <svg viewBox="0 0 48 48" className="h-10 w-10 text-[var(--peach)]" fill="none" aria-hidden>
-      <circle cx="24" cy="24" r="5" fill="currentColor" opacity="0.9" />
-      <ellipse cx="24" cy="24" rx="18" ry="8" stroke="currentColor" strokeWidth="1.4" opacity="0.7" />
-      <ellipse
-        cx="24"
-        cy="24"
-        rx="18"
-        ry="8"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        opacity="0.45"
-        transform="rotate(60 24 24)"
-      />
-    </svg>
-  );
-}
-
-function IconStar() {
-  return (
-    <svg viewBox="0 0 48 48" className="h-9 w-9 text-[var(--peach)]" fill="currentColor" aria-hidden>
-      <path d="M24 6l2.4 14.2L40 24l-13.6 3.8L24 42l-2.4-14.2L8 24l13.6-3.8L24 6z" opacity="0.9" />
-    </svg>
-  );
-}
-
-function IconMap() {
-  return (
-    <svg viewBox="0 0 48 48" className="h-9 w-9 text-[var(--peach)]" fill="none" aria-hidden>
-      <path
-        d="M12 10l12-4 12 4v28l-12-4-12 4V10z"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinejoin="round"
-      />
-      <path d="M24 6v28" stroke="currentColor" strokeWidth="1.4" opacity="0.6" />
-    </svg>
-  );
-}
-
-function PrincipleIcon({ index }: { index: number }) {
-  const common = {
-    fill: "none",
-    stroke: "currentColor",
-    strokeWidth: 1.35,
-    strokeLinecap: "round" as const,
-    strokeLinejoin: "round" as const,
-  };
-
-  const icons = [
-    <g key="present" {...common}>
-      <circle cx="24" cy="24" r="16" opacity="0.35" />
-      <circle cx="24" cy="24" r="5" />
-      <path d="M24 8v5M24 35v5M8 24h5M35 24h5" />
-      <path d="M24 19v5l4 3" opacity="0.75" />
-    </g>,
-    <g key="compass" {...common}>
-      <circle cx="24" cy="24" r="17" opacity="0.35" />
-      <path d="M29 19l-3 7-7 3 3-7 7-3Z" />
-      <circle cx="24" cy="24" r="2" fill="currentColor" stroke="none" />
-    </g>,
-    <g key="star" {...common}>
-      <path d="M24 6l3.2 13.8L42 24l-14.8 4.2L24 42l-3.2-13.8L6 24l14.8-4.2L24 6Z" />
-      <circle cx="24" cy="24" r="3" opacity="0.55" />
-    </g>,
-    <g key="mirror" {...common}>
-      <ellipse cx="24" cy="21" rx="12" ry="15" />
-      <path d="M24 36v6M18 42h12" />
-      <path d="M19 14c2-2 5-3 8-2" opacity="0.55" />
-    </g>,
-  ];
-
-  return (
-    <svg viewBox="0 0 48 48" className="h-10 w-10 text-[#ff7b36]" aria-hidden>
-      {icons[index]}
-    </svg>
-  );
-}
 
 function ConnectIcon({ index }: { index: number }) {
   const common = {
@@ -331,7 +226,7 @@ export default function Home() {
         {/* Centered Hero Content */}
         <div className="relative z-10 mx-auto flex w-full max-w-4xl flex-col items-center px-5 text-center md:px-8">
           {/* Centered Headline */}
-          <h1 className="reveal font-display text-5xl leading-[1.06] tracking-tight text-white sm:text-6xl md:text-7xl lg:text-[4.8rem] max-w-3xl drop-shadow-[0_4px_24px_rgba(0,0,0,0.8)]">
+          <h1 className="reveal font-display text-4xl leading-[1.06] tracking-tight text-white min-[420px]:text-5xl sm:text-6xl md:text-7xl lg:text-[4.8rem] max-w-3xl drop-shadow-[0_4px_24px_rgba(0,0,0,0.8)]">
             Начни замечать{" "}
             <span className="font-display italic text-[#ff7b36]">закономерности</span>{" "}
             своей жизни
@@ -346,7 +241,7 @@ export default function Home() {
           {/* Single White CTA Button with Black Text and Headline Font */}
           <div className="reveal reveal-delay-2 mt-9 flex justify-center">
             <a
-              href="#access"
+              href="/onboarding"
               className="inline-flex items-center justify-center rounded-full bg-white hover:bg-zinc-100 text-black font-display font-semibold text-lg md:text-xl px-10 py-3.5 shadow-[0_12px_36px_rgba(255,255,255,0.25)] transition-all transform hover:scale-[1.03] active:scale-[0.98] cursor-pointer"
             >
               Начать путешествие
@@ -363,11 +258,15 @@ export default function Home() {
         {/* Section embedded background panorama */}
         <div className="road-panorama pointer-events-none absolute inset-x-0 bottom-0 z-0 h-64 sm:h-72 md:h-80">
           <Image
-            src="/images/natal-road-panorama.png"
+            src="/images/natal-road-panorama-magenta.png"
             alt=""
             fill
             sizes="100vw"
             className="object-cover object-[center_78%]"
+          />
+          <div
+            aria-hidden
+            className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-[#07070c] via-[#07070c]/70 to-transparent sm:h-32 md:h-36"
           />
         </div>
 
@@ -458,7 +357,7 @@ export default function Home() {
 
           <div className="mt-14 flex justify-center">
             <a
-              href="#access"
+              href="/onboarding"
               className="inline-flex items-center justify-center rounded-full bg-white px-10 py-3.5 font-display text-lg font-semibold text-black shadow-[0_12px_36px_rgba(255,255,255,0.25)] transition-all hover:scale-[1.03] hover:bg-zinc-100 active:scale-[0.98] md:text-xl"
             >
               Построить карту
@@ -478,18 +377,9 @@ export default function Home() {
             </h2>
           </div>
 
-          <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {ASTROLOGY_PRINCIPLES.map((item, index) => (
-              <article
-                key={item.from}
-                className="flex flex-col rounded-[1.5rem] border border-white/10 bg-white/[0.025] p-5"
-              >
-                <PrincipleIcon index={index} />
-                <p className="mt-5 font-display text-lg leading-snug text-white">{item.from}</p>
-                <p className="mt-3 text-sm font-light leading-relaxed text-white/60">
-                  {item.to}
-                </p>
-              </article>
+          <div className="mx-auto mt-8 max-w-2xl space-y-2 text-center text-sm leading-relaxed text-white/60 md:text-[15px]">
+            {NOT_PROMISES.map((item) => (
+              <p key={item}>{item}</p>
             ))}
           </div>
         </div>
@@ -549,7 +439,7 @@ export default function Home() {
 
           <div className="mx-auto mt-12 max-w-2xl text-center">
             <a
-              href="#access"
+              href="/onboarding"
               className="inline-flex items-center justify-center rounded-full bg-white px-10 py-3.5 font-display text-lg font-semibold text-black shadow-[0_12px_36px_rgba(255,255,255,0.25)] transition-all hover:scale-[1.03] hover:bg-zinc-100 active:scale-[0.98] md:text-xl"
             >
               Попробовать бесплатно
@@ -562,7 +452,6 @@ export default function Home() {
       <footer className="relative border-t border-white/8 bg-[#050508] py-10">
         <div className="mx-auto flex w-full max-w-6xl flex-col items-start justify-between gap-6 px-5 md:flex-row md:items-center md:px-8">
           <p className="font-display text-xl text-white">Cosmirror</p>
-          <p className="text-sm text-white/45">Самопонимание — на языке твоей жизни.</p>
           <div className="flex items-center gap-5 text-sm text-white/50">
             <a href="mailto:hello@cosmirror.app" className="transition hover:text-white">
               Contact

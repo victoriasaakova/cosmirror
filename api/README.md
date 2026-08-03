@@ -11,7 +11,7 @@ Python backend for Cosmirror: Django + Django REST Framework + SQLite + Admin.
 ## Setup
 
 ```bash
-cd api
+cd cosmirror-api
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
@@ -22,8 +22,38 @@ python manage.py createsuperuser
 python manage.py runserver 8000
 ```
 
+При первом астро-расчёте Skyfield скачает `de421.bsp` (~17 МБ) в `core/services/ephemeris/`.
+
 - Admin: http://127.0.0.1:8000/admin/
 - Health: http://127.0.0.1:8000/api/health/
+
+## Онбординг + астро (MVP)
+
+Стек: **Skyfield (MIT) + NASA JPL**, `timezonefinder`, Nominatim. Без Swiss Ephemeris — движок сменный позже.
+
+| Method | Path | Описание |
+|--------|------|----------|
+| GET | `/api/geo/lookup/?q=Москва` | город → lat/lng/timezone |
+| PUT | `/api/onboarding/sessions/<token>/steps/birth/` | дата + город (+ время?) → считает карту |
+| GET | `/api/onboarding/sessions/<token>/insight/` | база + текущие циклы + что может влиять |
+| GET | `/api/astro/sky-now/` | текущие планеты / циклы |
+
+Payload шага `birth`:
+
+```json
+{
+  "payload": {
+    "birth_date": "1995-03-12",
+    "birth_place": "Москва",
+    "birth_time": "14:30"
+  },
+  "completed": true
+}
+```
+
+- `birth_place` обязателен (или lat/lng).
+- Без `birth_time` — Солнце/Луна/планеты считаются, Asc/дома не отдаём.
+- Инсайт: готовые тексты в духе The Pattern, не LLM.
 
 ## Domain
 

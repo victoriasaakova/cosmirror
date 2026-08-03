@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const NAV = [
   { href: "#for", label: "Для кого" },
@@ -10,6 +10,17 @@ const NAV = [
 
 export function Header() {
   const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsOpen(false);
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [isOpen]);
 
   return (
     <header className="fixed inset-x-0 top-4 z-50 mx-auto px-4 flex justify-center">
@@ -32,7 +43,7 @@ export function Header() {
 
         {/* Desktop CTA Button */}
         <a
-          href="#access"
+          href="/onboarding"
           className="hidden md:inline-flex rounded-full bg-white hover:bg-zinc-100 text-black font-display text-sm font-semibold px-5 py-2 shadow-md transition hover:scale-[1.02] active:scale-[0.98]"
         >
           Начать путешествие
@@ -59,7 +70,14 @@ export function Header() {
 
         {/* Mobile Menu Dropdown */}
         {isOpen && (
-          <div className="absolute left-0 right-0 top-full mt-3 flex flex-col items-center gap-4 rounded-3xl border border-white/20 bg-black/85 p-6 shadow-2xl backdrop-blur-2xl md:hidden">
+          <>
+            {/* Tap outside to close */}
+            <div
+              aria-hidden
+              onClick={() => setIsOpen(false)}
+              className="fixed inset-0 cursor-default bg-transparent md:hidden"
+            />
+            <div className="absolute left-0 right-0 top-full mt-3 flex flex-col items-center gap-4 rounded-3xl border border-white/20 bg-black/85 p-6 shadow-2xl backdrop-blur-2xl md:hidden">
             <nav className="flex flex-col items-center gap-4 text-base font-medium text-white/90">
               {NAV.map((item) => (
                 <a
@@ -73,13 +91,14 @@ export function Header() {
               ))}
             </nav>
             <a
-              href="#access"
+              href="/onboarding"
               onClick={() => setIsOpen(false)}
               className="mt-2 w-full rounded-full bg-white text-center text-black font-display text-base font-semibold py-3 shadow-md transition hover:bg-zinc-100"
             >
               Начать путешествие
             </a>
-          </div>
+            </div>
+          </>
         )}
       </div>
     </header>

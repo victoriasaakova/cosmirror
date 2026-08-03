@@ -49,6 +49,8 @@ class JournalEntrySerializer(serializers.ModelSerializer):
 
 
 class WaitlistLeadSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(required=False, allow_blank=True, allow_null=True)
+
     class Meta:
         model = WaitlistLead
         fields = (
@@ -157,10 +159,33 @@ class OnboardingStepSubmitSerializer(serializers.Serializer):
                 raise serializers.ValidationError(
                     {"payload": {"birth_date": ["Обязательное поле для карты."]}}
                 )
-        elif step.step_type == OnboardingStep.StepType.WAITLIST:
-            if not (payload.get("email") or "").strip():
+            has_place = bool(str(payload.get("birth_place") or "").strip())
+            has_coords = payload.get("birth_lat") not in (None, "") and payload.get(
+                "birth_lng"
+            ) not in (None, "")
+            if not has_place and not has_coords:
                 raise serializers.ValidationError(
-                    {"payload": {"email": ["Обязательное поле."]}}
+                    {
+                        "payload": {
+                            "birth_place": [
+                                "Нужен город рождения — по нему берём таймзону для точной Луны и Солнца."
+                            ]
+                        }
+                    }
+                )
+        elif step.step_type == OnboardingStep.StepType.WAITLIST:
+            email = (payload.get("email") or "").strip()
+            phone = (payload.get("phone") or "").strip()
+            telegram = (payload.get("telegram") or "").strip()
+            if not (email or phone or telegram):
+                raise serializers.ValidationError(
+                    {
+                        "payload": {
+                            "telegram": [
+                                "Оставь Telegram или телефон — так мы сможем открыть тебе разбор."
+                            ]
+                        }
+                    }
                 )
 
         answer, _ = OnboardingStepAnswer.objects.update_or_create(
@@ -202,7 +227,6 @@ class OnboardingStepSubmitSerializer(serializers.Serializer):
                 setattr(session, dest, payload[src])
                 self._session_extra_fields.append(dest)
 
-        # Закладка под астро-сервис: создаём/обновляем pending карту
         if session.birth_date:
             chart, _ = NatalChart.objects.update_or_create(
                 session=session,
@@ -213,30 +237,63 @@ class OnboardingStepSubmitSerializer(serializers.Serializer):
                     "birth_place": session.birth_place,
                     "birth_lat": session.birth_lat,
                     "birth_lng": session.birth_lng,
-                    "timezone": session.timezone or "UTC",
+                    "timezone": session.timezone or "",
                     "status": NatalChart.Status.PENDING,
+                    "error_message": "",
                 },
             )
             if session.user_id and chart.user_id != session.user_id:
                 chart.user = session.user
                 chart.save(update_fields=["user"])
 
+            from core.services.geo import GeoLookupError
+            from core.services.natal import NatalCalcError
+            from core.services.onboarding_astro import calculate_and_store_chart
+
+            try:
+                chart = calculate_and_store_chart(chart)
+            except (GeoLookupError, NatalCalcError) as exc:
+                raise serializers.ValidationError({"payload": {"astro": [str(exc)]}}) from exc
+
+            # Синхронизируем гео, которое добрал сервис (таймзона/координаты)
+            session.birth_place = chart.birth_place
+            session.birth_lat = chart.birth_lat
+            session.birth_lng = chart.birth_lng
+            session.timezone = chart.timezone
+            for field in ("birth_place", "birth_lat", "birth_lng", "timezone"):
+                if field not in self._session_extra_fields:
+                    self._session_extra_fields.append(field)
+
     def _apply_waitlist(self, session: OnboardingSession, payload: dict) -> None:
-        email = (payload.get("email") or "").strip().lower()
+        email = (payload.get("email") or "").strip().lower() or None
+        phone = (payload.get("phone") or "").strip()
+        telegram = (payload.get("telegram") or "").strip()
 
         defaults = {
-            "phone": (payload.get("phone") or "").strip(),
-            "telegram": (payload.get("telegram") or "").strip(),
+            "phone": phone,
+            "telegram": telegram,
             "name": (payload.get("name") or "").strip(),
             "source": (payload.get("source") or "onboarding").strip() or "onboarding",
             "message": (payload.get("message") or "").strip(),
         }
-        lead, created = WaitlistLead.objects.get_or_create(email=email, defaults=defaults)
-        if not created:
+
+        lead = None
+        if email:
+            lead = WaitlistLead.objects.filter(email=email).first()
+        if lead is None and telegram:
+            lead = WaitlistLead.objects.filter(telegram__iexact=telegram).first()
+        if lead is None and phone:
+            lead = WaitlistLead.objects.filter(phone=phone).first()
+
+        if lead:
+            if email and not lead.email:
+                lead.email = email
             for key, value in defaults.items():
                 if value:
                     setattr(lead, key, value)
             lead.save()
+        else:
+            lead = WaitlistLead.objects.create(email=email, **defaults)
 
         session.waitlist_lead = lead
         self._session_extra_fields.append("waitlist_lead")

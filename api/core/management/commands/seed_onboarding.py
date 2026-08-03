@@ -23,7 +23,9 @@ DEFAULT_STEPS = [
         "fields_schema": {
             "birth_date": {"type": "date", "required": True},
             "birth_time": {"type": "time", "required": False},
-            "birth_place": {"type": "string", "required": False},
+            "birth_place": {"type": "string", "required": True},
+            "birth_lat": {"type": "number", "required": False},
+            "birth_lng": {"type": "number", "required": False},
             "timezone": {"type": "string", "required": False},
         },
     },
@@ -35,9 +37,9 @@ DEFAULT_STEPS = [
         "order": 30,
         "is_required": True,
         "fields_schema": {
-            "email": {"type": "email", "required": True},
-            "phone": {"type": "string", "required": False},
             "telegram": {"type": "string", "required": False},
+            "phone": {"type": "string", "required": False},
+            "email": {"type": "email", "required": False},
             "name": {"type": "string", "required": False},
         },
     },

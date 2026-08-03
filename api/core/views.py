@@ -23,6 +23,11 @@ from .serializers import (
     UserSerializer,
     WaitlistLeadSerializer,
 )
+from .services.geo import GeoLookupError, lookup_place, suggest_places
+from .services.insight import build_insight
+from .services.natal import calculate_sky_now
+from .services.onboarding_astro import build_chart_and_insight
+
 
 
 class HealthView(APIView):
@@ -167,3 +172,142 @@ class GlobalCycleListView(generics.ListAPIView):
     serializer_class = GlobalPlanetaryCycleSerializer
     permission_classes = [permissions.AllowAny]
     queryset = GlobalPlanetaryCycle.objects.filter(is_active=True)
+
+
+class GeoLookupView(APIView):
+    """Город → lat/lng/timezone для онбординга."""
+
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        q = (request.query_params.get("q") or request.query_params.get("place") or "").strip()
+        if not q:
+            return Response({"detail": "Параметр q обязателен."}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            geo = lookup_place(q)
+        except GeoLookupError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {
+                "place": geo.place,
+                "latitude": geo.latitude,
+                "longitude": geo.longitude,
+                "timezone": geo.timezone,
+                "country": geo.country,
+            }
+        )
+
+
+class GeoSuggestView(APIView):
+    """Автокомплит городов (Nominatim / OpenStreetMap)."""
+
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        q = (request.query_params.get("q") or "").strip()
+        if len(q) < 2:
+            return Response({"results": []})
+        try:
+            items = suggest_places(q, limit=5)
+        except GeoLookupError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {
+                "results": [
+                    {
+                        "place": item.place,
+                        "latitude": item.latitude,
+                        "longitude": item.longitude,
+                        "timezone": item.timezone,
+                        "country": item.country,
+                    }
+                    for item in items
+                ]
+            }
+        )
+
+
+class OnboardingInsightView(APIView):
+    """
+    Инсайт онбординга: натал + текущие циклы + что может влиять.
+    Если карта уже посчитана — отдаём из NatalChart.chart_data.
+    """
+
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, token):
+        session = get_object_or_404(OnboardingSession, token=token)
+        chart = NatalChart.objects.filter(session=session).first()
+
+        if chart and chart.status == NatalChart.Status.READY and chart.chart_data:
+            data = chart.chart_data
+            insight = data.get("insight")
+            if not insight:
+                insight = build_insight(data, calculate_sky_now())
+            return Response(
+                {
+                    "status": chart.status,
+                    "has_birth_time": bool(data.get("has_birth_time")),
+                    "natal": {
+                        "planets": data.get("planets"),
+                        "ascendant": data.get("ascendant"),
+                        "midheaven": data.get("midheaven"),
+                        "houses": data.get("houses"),
+                        "notes": data.get("notes") or [],
+                        "location": data.get("location"),
+                        "timezone": data.get("timezone"),
+                        "engine": data.get("engine"),
+                    },
+                    "insight": insight,
+                }
+            )
+
+        if not session.birth_date:
+            return Response(
+                {"detail": "Сначала сохраните шаг birth с датой и городом."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            bundle = build_chart_and_insight(
+                birth_date=session.birth_date,
+                birth_time=session.birth_time,
+                birth_place=session.birth_place,
+                birth_lat=session.birth_lat,
+                birth_lng=session.birth_lng,
+                timezone_name=session.timezone or "",
+            )
+        except GeoLookupError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(
+            {
+                "status": "ready",
+                "has_birth_time": bool(bundle["natal"].get("has_birth_time")),
+                "natal": {
+                    "planets": bundle["natal"].get("planets"),
+                    "ascendant": bundle["natal"].get("ascendant"),
+                    "midheaven": bundle["natal"].get("midheaven"),
+                    "houses": bundle["natal"].get("houses"),
+                    "notes": bundle["natal"].get("notes") or [],
+                    "location": bundle["natal"].get("location"),
+                    "timezone": bundle["natal"].get("timezone"),
+                    "engine": bundle["natal"].get("engine"),
+                },
+                "insight": bundle["insight"],
+            }
+        )
+
+
+class SkyNowView(APIView):
+    """Текущие положения планет (для отладки / циклов)."""
+
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        sky = calculate_sky_now()
+        insight = build_insight({"planets": {}, "has_birth_time": False}, sky)
+        return Response({"sky_now": sky, "cycles": insight.get("cycles")})
+
