@@ -1279,10 +1279,6 @@ function InsightView({
         </div>
       ) : null}
 
-      <p className="mt-10 text-sm font-light leading-relaxed text-white/40">
-        {insight.insight.disclaimer}
-      </p>
-
       <Link
         href="/"
         className="mt-8 inline-flex w-full shrink-0 items-center justify-center rounded-full bg-white px-10 py-3.5 font-display text-lg font-semibold text-black shadow-[0_12px_36px_rgba(255,255,255,0.2)] transition-all hover:scale-[1.02] hover:bg-zinc-100 active:scale-[0.98] md:text-xl"
