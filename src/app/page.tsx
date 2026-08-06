@@ -17,14 +17,26 @@ const FAMILIAR_CARDS = [
         aria-hidden
       >
         <path
-          d="M24 14 C21 8 13 8 9 14 C5 20 9 28 24 38 C39 28 43 20 39 14 C35 8 27 8 24 14 Z"
-          strokeOpacity="0.9"
+          d="M24 24
+             C24 21 26.5 19 29.5 19
+             C34 19 37.5 22.5 37.5 27
+             C37.5 33.5 32 39 24.5 39
+             C15.5 39 9 32.5 9 24
+             C9 13.5 17.5 6 28 6
+             C36.5 6 43 12 43 20"
+          strokeOpacity="0.95"
         />
-        <path d="M24 14 L22 21 L26 26 L23 32 L24 38" strokeOpacity="0.9" />
+        <circle cx="29.5" cy="19" r="1.15" fill="currentColor" stroke="none" />
+        <circle cx="37.5" cy="27" r="1.15" fill="currentColor" stroke="none" />
+        <circle cx="24.5" cy="39" r="1.15" fill="currentColor" stroke="none" />
+        <circle cx="9" cy="24" r="1.15" fill="currentColor" stroke="none" />
+        <circle cx="28" cy="6" r="1.15" fill="currentColor" stroke="none" />
+        <circle cx="43" cy="20" r="1.15" fill="currentColor" stroke="none" />
+        <circle cx="24" cy="24" r="1.35" fill="currentColor" stroke="none" />
       </svg>
     ),
-    title: "Все повторяется",
-    text: "Кажется, что одни и те же ситуации происходят снова и снова, даже когда кажется, что ты уже изменилась.",
+    title: "Замкнутый круг",
+    text: "Попадаешь в похожие сюжеты в разных сферах жизни и не видишь закономерность, которая за ними стоит.",
   },
   {
     icon: (
@@ -33,57 +45,78 @@ const FAMILIAR_CARDS = [
         className="h-12 w-12 text-[#ff7b36]"
         fill="none"
         stroke="currentColor"
-        strokeWidth="1.3"
+        strokeWidth="1.25"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden
+      >
+        <rect x="8" y="14" width="28" height="20" rx="3.5" strokeOpacity="0.95" />
+        <path
+          d="M36 20 H39.5 C40.9 20 42 21.1 42 22.5 V25.5 C42 26.9 40.9 28 39.5 28 H36"
+          strokeOpacity="0.95"
+        />
+      </svg>
+    ),
+    title: "Ощущение тупика",
+    text: "Продуктивность есть, но в важных делах появляется сопротивление и чувство, что силы уходят не туда, куда хотелось.",
+  },
+  {
+    icon: (
+      <svg
+        viewBox="0 0 48 48"
+        className="h-12 w-12 text-[#ff7b36]"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.25"
         strokeLinecap="round"
         strokeLinejoin="round"
         aria-hidden
       >
         <path
-          d="M 24 24 A 3 3 0 0 1 24 18 A 6 6 0 0 1 24 30 A 9 9 0 0 1 24 12 A 12 12 0 0 1 24 36 A 15 15 0 0 1 24 9 A 17 17 0 0 1 24 41"
-          strokeOpacity="0.9"
+          d="M9 18
+             H15.5
+             C15.5 15.2 17.7 13.5 20 13.5
+             C22.3 13.5 24.5 15.2 24.5 18
+             V21.5
+             H28
+             C30.5 21.5 32 23.2 32 25.5
+             C32 27.8 30.5 29.5 28 29.5
+             H24.5
+             V33
+             C24.5 35.8 22.3 37.5 20 37.5
+             C17.7 37.5 15.5 35.8 15.5 33
+             V29.5
+             H9
+             C6.5 29.5 5 27.8 5 25.5
+             C5 23.2 6.5 21.5 9 21.5
+             Z"
+          strokeOpacity="0.95"
+        />
+        <path
+          d="M26 11
+             H31.5
+             C31.5 8.5 33.5 7 35.5 7
+             C37.5 7 39.5 8.5 39.5 11
+             V14.5
+             H43
+             C45.2 14.5 46.5 16 46.5 18
+             C46.5 20 45.2 21.5 43 21.5
+             H39.5
+             V25
+             C39.5 27.5 37.5 29 35.5 29
+             C33.5 29 31.5 27.5 31.5 25
+             V21.5
+             H26
+             C23.8 21.5 22.5 20 22.5 18
+             C22.5 16 23.8 14.5 26 14.5
+             Z"
+          strokeOpacity="0.95"
+          transform="rotate(16 34.5 18)"
         />
       </svg>
     ),
-    title: "Не понимаю, что со мной происходит",
-    text: "Иногда много сил и вдохновения. Иногда всё словно останавливается. И непонятно почему.",
-  },
-  {
-    icon: (
-      <svg
-        viewBox="0 0 48 48"
-        className="h-12 w-12 text-[#ff7b36]"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.25"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden
-      >
-        <path d="M27 8 L14 26 H25 L21 40 L34 22 H23 Z" strokeOpacity="0.9" />
-      </svg>
-    ),
-    title: "Не знаю, куда уходит энергия",
-    text: "День заканчивается, а ощущение такое, будто силы ушли не туда, куда действительно хотелось.",
-  },
-  {
-    icon: (
-      <svg
-        viewBox="0 0 48 48"
-        className="h-12 w-12 text-[#ff7b36]"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.25"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden
-      >
-        <ellipse cx="24" cy="36" rx="14" ry="5" strokeOpacity="0.9" />
-        <ellipse cx="24" cy="25" rx="10" ry="4" strokeOpacity="0.9" />
-        <ellipse cx="24" cy="15" rx="6" ry="3" strokeOpacity="0.9" />
-      </svg>
-    ),
-    title: "Не чувствую внутренней опоры",
-    text: "Хочется понимать себя лучше и принимать решения не только под влиянием эмоций момента.",
+    title: "Фоновый шум",
+    text: "Постоянный поиск ответов снаружи вместо того, чтобы научиться слышать собственные сигналы и доверять себе.",
   },
 ];
 
@@ -213,14 +246,20 @@ export default function Home() {
           alt="Cosmirror Futuristic Biomorphic Night World"
           fill
           priority
-          className="object-cover object-center"
+          className="z-0 object-cover object-center"
           sizes="100vw"
+        />
+
+        {/* Soft vignette for text readability — keep the photo visible */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 z-[1] bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(0,0,0,0.22)_70%,rgba(0,0,0,0.45)_100%)]"
         />
 
         {/* Seamless Bottom Gradient Fade into next section */}
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-x-0 bottom-0 h-48 bg-gradient-to-b from-transparent via-[#07070c]/50 to-[#07070c]"
+          className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-48 bg-gradient-to-b from-transparent via-[#07070c]/50 to-[#07070c]"
         />
 
         {/* Centered Hero Content */}
@@ -234,8 +273,8 @@ export default function Home() {
 
           {/* Centered Subtitle */}
           <p className="reveal reveal-delay-1 mt-6 max-w-xl text-base font-light leading-relaxed text-white/90 sm:text-lg md:text-xl drop-shadow-[0_2px_12px_rgba(0,0,0,0.9)]">
-            Cosmirror помогает лучше понимать себя через астрологию
-            <br className="hidden sm:inline" /> и увидеть историю, которая развивается вместе с тобой.
+            Соединяем астрологию с твоим опытом в историю,
+            <br className="hidden sm:inline" /> которая развивается вместе с тобой.
           </p>
 
           {/* Single White CTA Button with Black Text and Headline Font */}
@@ -244,7 +283,7 @@ export default function Home() {
               href="/onboarding"
               className="inline-flex items-center justify-center rounded-full bg-white hover:bg-zinc-100 text-black font-display font-semibold text-lg md:text-xl px-10 py-3.5 shadow-[0_12px_36px_rgba(255,255,255,0.25)] transition-all transform hover:scale-[1.03] active:scale-[0.98] cursor-pointer"
             >
-              Начать путешествие
+              Начать бесплатно
             </a>
           </div>
         </div>
@@ -278,22 +317,37 @@ export default function Home() {
             </h2>
           </div>
 
-          {/* 4 Vertical Cards Grid */}
-          <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {FAMILIAR_CARDS.map((card) => (
+          {/* Familiar moments: open columns with solid accent hairlines */}
+          <div className="mt-10 flex flex-col items-center lg:mt-16 lg:flex-row lg:items-stretch lg:justify-center">
+            {FAMILIAR_CARDS.map((card, index) => (
               <div
                 key={card.title}
-                className="group relative flex flex-col items-center text-center rounded-2xl border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/20 p-6 md:p-7 shadow-[0_10px_30px_rgba(0,0,0,0.35)] backdrop-blur-md transition-all duration-300 hover:-translate-y-1"
+                className="flex w-full max-w-[17rem] flex-col items-center lg:max-w-none lg:flex-1 lg:flex-row lg:items-stretch"
               >
-                <div className="mb-5 flex h-16 w-16 items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:drop-shadow-[0_0_12px_rgba(255,123,54,0.45)]">
-                  {card.icon}
-                </div>
-                <h3 className="mb-3 font-display text-xl font-normal leading-snug text-white">
-                  {card.title}
-                </h3>
-                <p className="text-sm leading-relaxed text-white/70 font-light">
-                  {card.text}
-                </p>
+                {index > 0 ? (
+                  <>
+                    <div
+                      aria-hidden
+                      className="my-5 h-px w-full bg-[#ff7b36]/60 lg:hidden"
+                    />
+                    <div
+                      aria-hidden
+                      className="mx-0 hidden w-px shrink-0 self-stretch bg-[#ff7b36]/60 lg:block"
+                    />
+                  </>
+                ) : null}
+
+                <article className="flex w-full flex-col items-center py-1 text-center lg:px-8 lg:py-2">
+                  <div className="mb-4 flex h-12 w-12 items-center justify-center lg:mb-6 lg:h-14 lg:w-14">
+                    {card.icon}
+                  </div>
+                  <h3 className="mb-2 max-w-[17rem] font-display text-lg font-normal leading-snug text-white lg:mb-3 lg:text-xl">
+                    {card.title}
+                  </h3>
+                  <p className="max-w-[17rem] text-sm font-light leading-relaxed text-white/65 lg:text-[0.95rem]">
+                    {card.text}
+                  </p>
+                </article>
               </div>
             ))}
           </div>

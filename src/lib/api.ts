@@ -234,6 +234,8 @@ export type OnboardingInsight = {
     cycles: { key: string; title: string; text: string }[];
     influences: { key: string; title: string; text: string }[];
     sky_now: Record<string, unknown>;
+    offer?: { title: string; text: string; cta: string };
+    source?: "groq" | "templates" | string;
   };
 };
 

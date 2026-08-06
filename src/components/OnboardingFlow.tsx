@@ -2,74 +2,38 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import {
-  FormEvent,
-  type ReactNode,
-  useCallback,
-  useEffect,
-  useState,
-} from "react";
-import {
-  createOnboardingSession,
   fetchOnboardingInsight,
   fetchOnboardingSession,
+  fetchOnboardingSteps,
   submitOnboardingStep,
   suggestPlaces,
   type OnboardingInsight,
+  type OnboardingStep,
   type PlaceSuggestion,
 } from "@/lib/api";
-
-const SESSION_KEY = "cosmirror.onboarding.token";
-
-type Gender = "female" | "male" | "";
-type AgeRange = "18-24" | "25-34" | "35-44" | "45+" | "";
-type LifeStage =
-  | "stable"
-  | "one-sphere"
-  | "many-spheres"
-  | "ready-to-change"
-  | "unclear"
-  | "";
-type FocusArea =
-  | "love"
-  | "money"
-  | "energy"
-  | "confidence"
-  | "path"
-  | "other";
-type Intent =
-  | "future"
-  | "potential"
-  | "uncertainty"
-  | "relationships"
-  | "patterns"
-  | "life-stage"
-  | "other"
-  | "";
-type ChartKnowledge =
-  | "sun-only"
-  | "big-three"
-  | "natal-chart"
-  | "transits"
-  | "";
-type AstrologyTrigger =
-  | "understand-self"
-  | "person"
-  | "decision"
-  | "check-feelings"
-  | "curious"
-  | "";
-
-type Answers = {
-  name: string;
-  gender: Gender;
-  age: AgeRange;
-  lifeStage: LifeStage;
-  focus: FocusArea[];
-  intent: Intent;
-  chartKnowledge: ChartKnowledge;
-  astrologyTrigger: AstrologyTrigger;
-};
+import {
+  adjacentStep,
+  buildProgressModel,
+  firstIncompleteScreenIndex,
+  INSIGHT_SLUG,
+  isReservedSlug,
+  nextStepHref,
+  prevStepHref,
+  progressIndexFor,
+  screenIsComplete,
+  screensForStep,
+  stepHref,
+  type ContentScreen,
+  type TitlePart,
+} from "@/lib/onboarding/screens";
+import {
+  ensureSessionToken,
+  patchDraft,
+  readDraft,
+} from "@/lib/onboarding/session";
 
 type BirthAnswers = {
   birth_date: string;
@@ -87,74 +51,6 @@ type ContactsAnswers = {
   telegram: string;
 };
 
-type Phase = "questions" | "birth" | "contacts" | "insight";
-
-const STEPS = [
-  "name",
-  "gender",
-  "age",
-  "lifeStage",
-  "focus",
-  "intent",
-  "chartKnowledge",
-  "astrologyTrigger",
-] as const;
-type Step = (typeof STEPS)[number];
-
-const GENDERS: { value: Exclude<Gender, "">; label: string }[] = [
-  { value: "female", label: "Женский" },
-  { value: "male", label: "Мужской" },
-];
-
-const AGES: { value: Exclude<AgeRange, "">; label: string }[] = [
-  { value: "18-24", label: "18–24" },
-  { value: "25-34", label: "25–34" },
-  { value: "35-44", label: "35–44" },
-  { value: "45+", label: "45+" },
-];
-
-const LIFE_STAGES: { value: Exclude<LifeStage, "">; label: string }[] = [
-  { value: "stable", label: "все довольно стабильно" },
-  { value: "one-sphere", label: "меняется одна важная сфера" },
-  { value: "many-spheres", label: "перестройки в нескольких сферах жизни" },
-  { value: "ready-to-change", label: "чувствую, что пора что-то менять" },
-  { value: "unclear", label: "пока не понимаю, что происходит" },
-];
-
-const FOCUS_AREAS: { value: FocusArea; label: string }[] = [
-  { value: "love", label: "отношения и любовь" },
-  { value: "money", label: "деньги и работа" },
-  { value: "energy", label: "энергия, ресурсы и восстановление" },
-  { value: "confidence", label: "самооценка и уверенность" },
-  { value: "path", label: "самореализация и поиск своего пути" },
-  { value: "other", label: "другое" },
-];
-
-const INTENTS: { value: Exclude<Intent, "">; label: string }[] = [
-  { value: "future", label: "узнать, что меня ждёт в ближайшем будущем" },
-  { value: "potential", label: "понять себя и свой потенциал" },
-  { value: "uncertainty", label: "найти выход из неопределённости" },
-  { value: "relationships", label: "наладить отношения" },
-  { value: "patterns", label: "понять закономерности своей жизни" },
-  { value: "life-stage", label: "разобраться в текущем жизненном этапе" },
-  { value: "other", label: "другое" },
-];
-
-const CHART_KNOWLEDGE: { value: Exclude<ChartKnowledge, "">; label: string }[] = [
-  { value: "sun-only", label: "Только знак зодиака" },
-  { value: "big-three", label: "Знак, луна или асцендент" },
-  { value: "natal-chart", label: "Читаю свою натальную карту" },
-  { value: "transits", label: "Разбираюсь в транзитах" },
-];
-
-const ASTROLOGY_TRIGGERS: { value: Exclude<AstrologyTrigger, "">; label: string }[] = [
-  { value: "understand-self", label: "Хочу понять, что со мной происходит" },
-  { value: "person", label: "Не складывается с конкретным человеком" },
-  { value: "decision", label: "Нужно принять решение" },
-  { value: "check-feelings", label: "Хочу проверить свои ощущения" },
-  { value: "curious", label: "Просто интересно" },
-];
-
 const PLANET_LABELS: Record<string, string> = {
   sun: "Солнце",
   moon: "Луна",
@@ -165,18 +61,22 @@ const PLANET_LABELS: Record<string, string> = {
   saturn: "Сатурн",
 };
 
-function canContinue(step: Step, answers: Answers) {
-  if (step === "name") return answers.name.trim().length > 0;
-  if (step === "gender") return answers.gender !== "";
-  if (step === "age") return answers.age !== "";
-  if (step === "lifeStage") return answers.lifeStage !== "";
-  if (step === "focus") return answers.focus.length > 0;
-  if (step === "intent") return answers.intent !== "";
-  if (step === "chartKnowledge") return answers.chartKnowledge !== "";
-  return answers.astrologyTrigger !== "";
-}
+const EMPTY_BIRTH: BirthAnswers = {
+  birth_date: "",
+  birth_place: "",
+  birth_time: "",
+  unknown_time: false,
+  birth_lat: null,
+  birth_lng: null,
+  timezone: "",
+};
 
-/** Маска ввода дд.мм.гггг — точки ставятся сами. */
+const EMPTY_CONTACTS: ContactsAnswers = {
+  email: "",
+  phone: "+",
+  telegram: "",
+};
+
 function formatBirthDateInput(raw: string): string {
   const digits = raw.replace(/\D/g, "").slice(0, 8);
   const day = digits.slice(0, 2);
@@ -186,6 +86,7 @@ function formatBirthDateInput(raw: string): string {
   if (digits.length <= 4) return `${day}.${month}`;
   return `${day}.${month}.${year}`;
 }
+
 function toIsoDate(value: string): string | null {
   const v = value.trim();
   if (/^\d{4}-\d{2}-\d{2}$/.test(v)) {
@@ -216,7 +117,6 @@ function isValidPhone(value: string) {
   return digits.length >= 8 && digits.length <= 15;
 }
 
-/** Всегда держит префикс `+`, дальше только цифры. */
 function formatPhoneInput(raw: string): string {
   const digits = raw.replace(/\D/g, "").slice(0, 15);
   return `+${digits}`;
@@ -224,18 +124,6 @@ function formatPhoneInput(raw: string): string {
 
 function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
-}
-
-function canSubmitContacts(contacts: ContactsAnswers) {
-  return Boolean(
-    contacts.telegram.trim() &&
-      isValidPhone(contacts.phone) &&
-      isValidEmail(contacts.email),
-  );
-}
-
-function labelFor(options: { value: string; label: string }[], value: string) {
-  return options.find((item) => item.value === value)?.label ?? "";
 }
 
 function choiceClass(active: boolean) {
@@ -250,250 +138,446 @@ function fieldClass() {
   return "mt-3 w-full border-b border-white/20 bg-transparent pb-3 font-display text-xl text-white outline-none placeholder:text-white/30 focus:border-[#ff7b36] sm:text-2xl [color-scheme:dark]";
 }
 
-async function ensureSessionToken(): Promise<string> {
-  if (typeof window !== "undefined") {
-    const existing = localStorage.getItem(SESSION_KEY);
-    if (existing) {
-      try {
-        await fetchOnboardingSession(existing);
-        return existing;
-      } catch {
-        localStorage.removeItem(SESSION_KEY);
-      }
-    }
-  }
-  const session = await createOnboardingSession();
-  localStorage.setItem(SESSION_KEY, session.token);
-  return session.token;
+function labelFor(options: { value: string; label: string }[], value: string) {
+  return options.find((item) => item.value === value)?.label ?? "";
 }
 
-export function OnboardingFlow() {
-  const [phase, setPhase] = useState<Phase>("questions");
-  const [stepIndex, setStepIndex] = useState(0);
-  const [answers, setAnswers] = useState<Answers>({
-    name: "",
-    gender: "",
-    age: "",
-    lifeStage: "",
-    focus: [],
-    intent: "",
-    chartKnowledge: "",
-    astrologyTrigger: "",
-  });
-  const [birth, setBirth] = useState<BirthAnswers>({
-    birth_date: "",
-    birth_place: "",
-    birth_time: "",
-    unknown_time: false,
-    birth_lat: null,
-    birth_lng: null,
-    timezone: "",
-  });
-  const [contacts, setContacts] = useState<ContactsAnswers>({
-    email: "",
-    phone: "+",
-    telegram: "",
-  });
+function renderTitle(parts: TitlePart[]) {
+  return parts.map((part, index) =>
+    part.accent ? (
+      <span key={index} className="font-display italic text-[#ff7b36]">
+        {part.t}
+      </span>
+    ) : (
+      <span key={index}>{part.t}</span>
+    ),
+  );
+}
+
+function birthFromPayload(payload: Record<string, unknown> | undefined): BirthAnswers {
+  if (!payload) return { ...EMPTY_BIRTH };
+  return {
+    birth_date:
+      typeof payload.birth_date_display === "string"
+        ? payload.birth_date_display
+        : typeof payload.birth_date === "string"
+          ? payload.birth_date.includes("-")
+            ? (() => {
+                const [y, m, d] = payload.birth_date.split("-");
+                return y && m && d ? `${d}.${m}.${y}` : "";
+              })()
+            : payload.birth_date
+          : "",
+    birth_place: typeof payload.birth_place === "string" ? payload.birth_place : "",
+    birth_time: typeof payload.birth_time === "string" ? payload.birth_time : "",
+    unknown_time: Boolean(payload.unknown_time),
+    birth_lat: typeof payload.birth_lat === "number" ? payload.birth_lat : null,
+    birth_lng: typeof payload.birth_lng === "number" ? payload.birth_lng : null,
+    timezone: typeof payload.timezone === "string" ? payload.timezone : "",
+  };
+}
+
+function contactsFromPayload(payload: Record<string, unknown> | undefined): ContactsAnswers {
+  if (!payload) return { ...EMPTY_CONTACTS };
+  return {
+    email: typeof payload.email === "string" ? payload.email : "",
+    phone: typeof payload.phone === "string" && payload.phone ? payload.phone : "+",
+    telegram: typeof payload.telegram === "string" ? payload.telegram : "",
+  };
+}
+
+function ctaLabel(step: OnboardingStep | null, submitting: boolean): string {
+  if (!step) return "Продолжить";
+  if (step.step_type === "birth_data") {
+    return submitting ? "Считаем карту…" : "Посмотреть карту";
+  }
+  if (step.step_type === "waitlist") {
+    return submitting ? "Открываем…" : "Показать результат";
+  }
+  return "Продолжить";
+}
+
+export function OnboardingFlow({ slug }: { slug: string }) {
+  const router = useRouter();
+  const [steps, setSteps] = useState<OnboardingStep[] | null>(null);
+  const [loadError, setLoadError] = useState("");
   const [sessionToken, setSessionToken] = useState<string | null>(null);
+  const [payloadByStep, setPayloadByStep] = useState<Record<string, Record<string, unknown>>>({});
+  const [screenIndex, setScreenIndex] = useState(0);
   const [insight, setInsight] = useState<OnboardingInsight | null>(null);
+  const [insightStatus, setInsightStatus] = useState<"idle" | "loading" | "ready" | "missing">(
+    "idle",
+  );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  const step = STEPS[stepIndex];
-  const isFirst = stepIndex === 0;
-  const isLast = stepIndex === STEPS.length - 1;
-  // На birth/contacts кнопку не глушим из‑за пустых полей — показываем ошибку при клике.
-  const ready =
-    phase === "questions"
-      ? canContinue(step, answers)
-      : phase === "birth" || phase === "contacts"
-        ? !submitting
-        : true;
+  const currentStep = useMemo(
+    () => (steps && !isReservedSlug(slug) ? steps.find((step) => step.slug === slug) : null),
+    [steps, slug],
+  );
 
-  const warmSession = useCallback(async () => {
+  const contentScreens = useMemo(
+    () => (currentStep ? screensForStep(currentStep) : []),
+    [currentStep],
+  );
+
+  const progress = useMemo(() => {
+    if (!steps) return { total: 0, index: 0 };
+    const model = buildProgressModel(steps);
+    return {
+      total: model.total,
+      index: progressIndexFor(steps, slug, screenIndex),
+    };
+  }, [steps, slug, screenIndex]);
+
+  const warm = useCallback(async () => {
     try {
-      const token = await ensureSessionToken();
+      const [apiSteps, token] = await Promise.all([
+        fetchOnboardingSteps(),
+        ensureSessionToken(),
+      ]);
       setSessionToken(token);
-    } catch {
-      // Сессию создадим при сабмите birth — не блокируем квиз.
+      setSteps(apiSteps);
+
+      const [draft, session] = await Promise.all([
+        Promise.resolve(readDraft()),
+        fetchOnboardingSession(token),
+      ]);
+
+      const byStep: Record<string, Record<string, unknown>> = { ...draft.byStep };
+      for (const answer of session.answers) {
+        const payload =
+          answer.payload && typeof answer.payload === "object"
+            ? (answer.payload as Record<string, unknown>)
+            : {};
+        byStep[answer.step_slug] = { ...(byStep[answer.step_slug] ?? {}), ...payload };
+      }
+      setPayloadByStep(byStep);
+      patchDraft({ byStep });
+
+      const stepMeta = apiSteps.find((step) => step.slug === slug);
+      const screens = stepMeta ? screensForStep(stepMeta) : [];
+      const payload = byStep[slug] ?? {};
+      const resumeScreen =
+        screens.length > 0
+          ? firstIncompleteScreenIndex(screens, payload)
+          : typeof draft.screenIndexByStep[slug] === "number"
+            ? draft.screenIndexByStep[slug]
+            : 0;
+      setScreenIndex(resumeScreen);
+      patchDraft({ stepSlug: slug, screenIndex: resumeScreen });
+
+      if (isReservedSlug(slug)) {
+        setInsightStatus("loading");
+        try {
+          const data = await fetchOnboardingInsight(token);
+          setInsight(data);
+          setInsightStatus("ready");
+        } catch {
+          setInsightStatus("missing");
+        }
+        return;
+      }
+
+      setInsightStatus("idle");
+      const known = apiSteps.some((step) => step.slug === slug);
+      if (!known) {
+        const first = apiSteps[0];
+        router.replace(first ? stepHref(first.slug) : "/");
+      }
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : "Не удалось загрузить онбординг");
     }
-  }, []);
+  }, [router, slug]);
 
   useEffect(() => {
-    void warmSession();
-  }, [warmSession]);
+    void warm();
+  }, [warm]);
+
+  useEffect(() => {
+    const draft = readDraft();
+    const saved = draft.screenIndexByStep[slug];
+    setScreenIndex(typeof saved === "number" ? saved : 0);
+    setError("");
+  }, [slug]);
+
+  useEffect(() => {
+    if (!isReservedSlug(slug) || !steps || insightStatus !== "missing") return;
+    const waitlist = [...steps].reverse().find((step) => step.step_type === "waitlist");
+    router.replace(waitlist ? stepHref(waitlist.slug) : stepHref(steps[0]?.slug ?? "welcome"));
+  }, [slug, steps, insightStatus, router]);
+
+  function updateStepPayload(stepSlug: string, patch: Record<string, unknown>) {
+    setPayloadByStep((prev) => {
+      const next = {
+        ...prev,
+        [stepSlug]: { ...(prev[stepSlug] ?? {}), ...patch },
+      };
+      patchDraft({ byStep: next });
+      return next;
+    });
+  }
+
+  function setScreen(nextIndex: number) {
+    setScreenIndex(nextIndex);
+    patchDraft({ stepSlug: slug, screenIndex: nextIndex });
+  }
+
+  async function goTo(href: string) {
+    router.push(href);
+  }
 
   function goBack() {
     setError("");
-    if (phase === "insight") {
-      setPhase("contacts");
+    if (isReservedSlug(slug)) {
+      if (steps?.length) {
+        void goTo(stepHref(steps[steps.length - 1].slug));
+      }
       return;
     }
-    if (phase === "contacts") {
-      setPhase("birth");
+    if (
+      currentStep &&
+      (currentStep.step_type === "content" ||
+        currentStep.step_type === "input" ||
+        currentStep.step_type === "custom") &&
+      contentScreens.length > 0 &&
+      screenIndex > 0
+    ) {
+      setScreen(screenIndex - 1);
       return;
     }
-    if (phase === "birth") {
-      setPhase("questions");
+    if (!steps) return;
+    const prev = prevStepHref(steps, slug);
+    if (prev) {
+      // Land on last screen of previous multi-screen step
+      const prevStep = adjacentStep(steps, slug, -1);
+      if (prevStep) {
+        const screens = screensForStep(prevStep);
+        if (screens.length > 1) {
+          patchDraft({ stepSlug: prevStep.slug, screenIndex: screens.length - 1 });
+        }
+      }
+      void goTo(prev);
       return;
     }
-    if (isFirst) return;
-    setStepIndex((current) => current - 1);
+    router.push("/");
   }
 
-  async function submitBirth() {
-    if (submitting) return;
-    const isoDate = toIsoDate(birth.birth_date);
-    if (!isoDate) {
-      setError("Укажи дату рождения в формате дд.мм.гггг");
-      return;
-    }
-    if (birth.birth_place.trim().length < 2) {
-      setError("Укажи город рождения");
-      return;
-    }
+  async function persistStep(stepSlug: string, payload: Record<string, unknown>, completed: boolean) {
+    const token = sessionToken ?? (await ensureSessionToken());
+    setSessionToken(token);
+    await submitOnboardingStep(token, stepSlug, payload, completed);
+    updateStepPayload(stepSlug, payload);
+    return token;
+  }
 
+  async function completeCurrentStep(payload: Record<string, unknown>) {
+    if (!currentStep || !steps) return;
     setSubmitting(true);
     setError("");
     try {
-      const token = sessionToken ?? (await ensureSessionToken());
-      setSessionToken(token);
+      const token = await persistStep(currentStep.slug, payload, true);
 
-      // Сохраняем ответы квиза на шаг welcome — бэк их кладёт в UserInput.
-      await submitOnboardingStep(
-        token,
-        "welcome",
-        {
-          name: answers.name,
-          gender: answers.gender,
-          age: answers.age,
-          life_stage: answers.lifeStage,
-          focus: answers.focus,
-          intent: answers.intent,
-          chart_knowledge: answers.chartKnowledge,
-          astrology_trigger: answers.astrologyTrigger,
-        },
-        true,
-      );
+      if (currentStep.step_type === "birth_data") {
+        try {
+          const data = await fetchOnboardingInsight(token);
+          setInsight(data);
+          patchDraft({ insightReady: true });
+        } catch {
+          // Contacts still unlock; insight fetched again there / on insight page.
+        }
+      }
 
+      if (currentStep.step_type === "waitlist") {
+        if (!insight) {
+          const data = await fetchOnboardingInsight(token);
+          setInsight(data);
+        }
+        patchDraft({ insightReady: true });
+        await goTo(stepHref(INSIGHT_SLUG));
+        return;
+      }
+
+      await goTo(nextStepHref(steps, currentStep.slug));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Не удалось сохранить шаг");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleSubmit(event?: FormEvent) {
+    event?.preventDefault();
+    if (!currentStep || submitting) return;
+
+    if (
+      currentStep.step_type === "content" ||
+      currentStep.step_type === "input" ||
+      currentStep.step_type === "custom"
+    ) {
+      const payload = {
+        ...(payloadByStep[currentStep.slug] ?? {}),
+        _screen:
+          contentScreens.length > 0
+            ? contentScreens[screenIndex]?.id ?? screenIndex
+            : "acknowledge",
+      };
+      if (contentScreens.length > 0) {
+        const screen = contentScreens[screenIndex];
+        if (!screenIsComplete(screen, payload)) return;
+        if (screenIndex < contentScreens.length - 1) {
+          setSubmitting(true);
+          setError("");
+          try {
+            await persistStep(currentStep.slug, payload, false);
+            setScreen(screenIndex + 1);
+          } catch (err) {
+            setError(err instanceof Error ? err.message : "Не удалось сохранить ответ");
+          } finally {
+            setSubmitting(false);
+          }
+          return;
+        }
+        await completeCurrentStep(payload);
+        return;
+      }
+      await completeCurrentStep({
+        ...payload,
+        acknowledged: true,
+        title: currentStep.title,
+      });
+      return;
+    }
+
+    if (currentStep.step_type === "birth_data") {
+      const birth = birthFromPayload(payloadByStep[currentStep.slug]);
+      const isoDate = toIsoDate(birth.birth_date);
+      if (!isoDate) {
+        setError("Укажи дату рождения в формате дд.мм.гггг");
+        return;
+      }
+      if (birth.birth_place.trim().length < 2) {
+        setError("Укажи город рождения");
+        return;
+      }
       const payload: Record<string, unknown> = {
         birth_date: isoDate,
+        birth_date_display: birth.birth_date,
         birth_place: birth.birth_place.trim(),
+        unknown_time: birth.unknown_time,
       };
-      if (!birth.unknown_time && birth.birth_time) {
-        payload.birth_time = birth.birth_time;
-      }
+      if (!birth.unknown_time && birth.birth_time) payload.birth_time = birth.birth_time;
       if (birth.birth_lat != null && birth.birth_lng != null) {
         payload.birth_lat = birth.birth_lat;
         payload.birth_lng = birth.birth_lng;
       }
-      if (birth.timezone) {
-        payload.timezone = birth.timezone;
+      if (birth.timezone) payload.timezone = birth.timezone;
+      await completeCurrentStep(payload);
+      return;
+    }
+
+    if (currentStep.step_type === "waitlist") {
+      const contacts = contactsFromPayload(payloadByStep[currentStep.slug]);
+      if (!contacts.telegram.trim()) {
+        setError("Укажи Telegram");
+        return;
+      }
+      if (!isValidPhone(contacts.phone)) {
+        setError("Укажи телефон с кодом страны, например +1 415… или +44…");
+        return;
+      }
+      if (!isValidEmail(contacts.email)) {
+        setError("Укажи корректный email");
+        return;
       }
 
-      await submitOnboardingStep(token, "birth", payload, true);
-      const data = await fetchOnboardingInsight(token);
-      setInsight(data);
-      // Сразу сбор контактов — инсайт только после них.
-      setPhase("contacts");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Не удалось построить карту");
-    } finally {
-      setSubmitting(false);
+      // Prefer name / quiz summary from any earlier content step.
+      const contentPayload =
+        steps
+          ?.filter((step) => step.step_type === "content")
+          .map((step) => payloadByStep[step.slug])
+          .find((item) => item && Object.keys(item).length > 0) ?? {};
+
+      const focus = Array.isArray(contentPayload.focus)
+        ? (contentPayload.focus as string[])
+        : [];
+      const focusScreens = steps
+        ?.flatMap((step) => screensForStep(step))
+        .find((screen) => screen.field === "focus");
+      const intentScreen = steps
+        ?.flatMap((step) => screensForStep(step))
+        .find((screen) => screen.field === "intent");
+      const lifeScreen = steps
+        ?.flatMap((step) => screensForStep(step))
+        .find((screen) => screen.field === "life_stage");
+
+      await completeCurrentStep({
+        email: contacts.email.trim(),
+        phone: contacts.phone.trim(),
+        telegram: contacts.telegram.trim(),
+        name: typeof contentPayload.name === "string" ? contentPayload.name.trim() : "",
+        source: "onboarding",
+        message: [
+          focus.length && focusScreens && focusScreens.kind === "multi"
+            ? `Фокус: ${focus.map((f) => labelFor(focusScreens.options, f)).join(", ")}`
+            : "",
+          typeof contentPayload.intent === "string" && intentScreen && intentScreen.kind !== "text"
+            ? `Цель: ${labelFor(intentScreen.options, contentPayload.intent)}`
+            : "",
+          typeof contentPayload.life_stage === "string" &&
+          lifeScreen &&
+          lifeScreen.kind !== "text"
+            ? `Период: ${labelFor(lifeScreen.options, contentPayload.life_stage)}`
+            : "",
+        ]
+          .filter(Boolean)
+          .join(" · "),
+      });
     }
   }
 
-  async function submitContacts() {
-    if (submitting) return;
-    if (!contacts.telegram.trim()) {
-      setError("Укажи Telegram");
-      return;
+  const payload = currentStep ? (payloadByStep[currentStep.slug] ?? {}) : {};
+  const ready = (() => {
+    if (!currentStep || submitting) return !submitting && Boolean(currentStep);
+    if (currentStep.step_type === "birth_data" || currentStep.step_type === "waitlist") {
+      return !submitting;
     }
-    if (!isValidPhone(contacts.phone)) {
-      setError("Укажи телефон с кодом страны, например +1 415… или +44…");
-      return;
+    if (contentScreens.length > 0) {
+      return screenIsComplete(contentScreens[screenIndex], payload);
     }
-    if (!isValidEmail(contacts.email)) {
-      setError("Укажи корректный email");
-      return;
-    }
-    setSubmitting(true);
-    setError("");
-    try {
-      const token = sessionToken ?? (await ensureSessionToken());
-      setSessionToken(token);
-      await submitOnboardingStep(
-        token,
-        "contacts",
-        {
-          email: contacts.email.trim(),
-          phone: contacts.phone.trim(),
-          telegram: contacts.telegram.trim(),
-          name: answers.name.trim(),
-          source: "onboarding",
-          message: [
-            answers.focus.length
-              ? `Фокус: ${answers.focus.map((f) => labelFor(FOCUS_AREAS, f)).join(", ")}`
-              : "",
-            answers.intent ? `Цель: ${labelFor(INTENTS, answers.intent)}` : "",
-            answers.lifeStage ? `Период: ${labelFor(LIFE_STAGES, answers.lifeStage)}` : "",
-          ]
-            .filter(Boolean)
-            .join(" · "),
-        },
-        true,
-      );
+    return true;
+  })();
 
-      // Если инсайт ещё не подтянули — добираем перед показом.
-      if (!insight) {
-        const data = await fetchOnboardingInsight(token);
-        setInsight(data);
-      }
-      setPhase("insight");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Не удалось сохранить контакты");
-    } finally {
-      setSubmitting(false);
-    }
+  const showProgress = Boolean(currentStep) && !isReservedSlug(slug);
+  const isFirstScreen =
+    Boolean(currentStep) &&
+    !prevStepHref(steps ?? [], slug) &&
+    screenIndex === 0;
+
+  if (loadError) {
+    return (
+      <main className="relative flex h-[100dvh] flex-1 items-center justify-center bg-[#07070c] px-5 text-center text-white">
+        <div>
+          <p className="text-white/70">{loadError}</p>
+          <button
+            type="button"
+            className="mt-6 rounded-full bg-white px-8 py-3 font-display text-black"
+            onClick={() => void warm()}
+          >
+            Повторить
+          </button>
+        </div>
+      </main>
+    );
   }
 
-  function goNext(event?: FormEvent) {
-    event?.preventDefault();
-    if (phase === "insight") return;
-    if (phase === "birth") {
-      void submitBirth();
-      return;
-    }
-    if (phase === "contacts") {
-      void submitContacts();
-      return;
-    }
-    if (!ready) return;
-    if (isLast) {
-      setPhase("birth");
-      return;
-    }
-    setStepIndex((current) => current + 1);
+  if (!steps) {
+    return (
+      <main className="relative flex h-[100dvh] flex-1 items-center justify-center bg-[#07070c] text-white/50">
+        Загружаем…
+      </main>
+    );
   }
-
-  function toggleFocus(value: FocusArea) {
-    setAnswers((prev) => {
-      const exists = prev.focus.includes(value);
-      return {
-        ...prev,
-        focus: exists ? prev.focus.filter((item) => item !== value) : [...prev.focus, value],
-      };
-    });
-  }
-
-  // Квиз + birth + contacts (insight — результат, без точки прогресса)
-  const progressCount = STEPS.length + 2;
-  const progressIndex =
-    phase === "questions"
-      ? stepIndex
-      : phase === "birth"
-        ? STEPS.length
-        : STEPS.length + 1;
 
   return (
     <main className="relative flex h-[100dvh] flex-1 flex-col overflow-hidden">
@@ -516,7 +600,7 @@ export function OnboardingFlow() {
 
       <div className="relative z-10 flex h-full min-h-0 flex-col px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-6 md:px-8 md:pt-8">
         <div className="mx-auto flex w-full max-w-lg shrink-0 items-center justify-between">
-          {phase === "questions" && isFirst ? (
+          {isFirstScreen && !isReservedSlug(slug) ? (
             <Link
               href="/"
               className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-white/[0.04] text-white/80 transition hover:border-white/30 hover:text-white"
@@ -545,11 +629,11 @@ export function OnboardingFlow() {
           <span className="w-11" aria-hidden />
         </div>
 
-        {phase === "questions" || phase === "birth" || phase === "contacts" ? (
+        {showProgress ? (
           <div className="mx-auto mt-8 flex w-full max-w-lg shrink-0 items-center justify-center gap-1.5">
-            {Array.from({ length: progressCount }).map((_, index) => {
-              const active = index === progressIndex;
-              const done = index < progressIndex;
+            {Array.from({ length: progress.total }).map((_, index) => {
+              const active = index === progress.index;
+              const done = index < progress.index;
               return (
                 <span
                   key={index}
@@ -567,146 +651,30 @@ export function OnboardingFlow() {
           </div>
         ) : null}
 
-        {phase === "insight" && insight ? (
-          <InsightView insight={insight} answers={answers} />
-        ) : (
+        {isReservedSlug(slug) && insight ? (
+          <InsightView insight={insight} payloadByStep={payloadByStep} steps={steps} />
+        ) : currentStep ? (
           <form
             noValidate
-            onSubmit={goNext}
+            onSubmit={handleSubmit}
             className="mx-auto flex w-full max-w-lg min-h-0 flex-1 flex-col pt-8 md:pt-10"
           >
             <div className="reveal min-h-0 flex-1 overflow-y-auto overscroll-contain pb-4 [-webkit-overflow-scrolling:touch]">
-              {phase === "questions" && step === "name" ? (
-                <NameStep
-                  value={answers.name}
-                  onChange={(name) => setAnswers((prev) => ({ ...prev, name }))}
-                />
-              ) : null}
-
-              {phase === "questions" && step === "gender" ? (
-                <GenderStep
-                  value={answers.gender}
-                  onChange={(gender) => setAnswers((prev) => ({ ...prev, gender }))}
-                />
-              ) : null}
-
-              {phase === "questions" && step === "age" ? (
-                <AgeStep
-                  value={answers.age}
-                  onChange={(age) => setAnswers((prev) => ({ ...prev, age }))}
-                />
-              ) : null}
-
-              {phase === "questions" && step === "lifeStage" ? (
-                <ChoiceStep
-                  title={
-                    <>
-                      Какой период у тебя{" "}
-                      <span className="font-display italic text-[#ff7b36]">сейчас?</span>
-                    </>
-                  }
-                  options={LIFE_STAGES}
-                  value={answers.lifeStage}
-                  onChange={(lifeStage) =>
-                    setAnswers((prev) => ({ ...prev, lifeStage: lifeStage as LifeStage }))
-                  }
-                />
-              ) : null}
-
-              {phase === "questions" && step === "focus" ? (
-                <MultiChoiceStep
-                  title={
-                    <>
-                      Какая сфера жизни сейчас волнует{" "}
-                      <span className="font-display italic text-[#ff7b36]">больше всего?</span>
-                    </>
-                  }
-                  hint="Можно выбрать несколько"
-                  options={FOCUS_AREAS}
-                  values={answers.focus}
-                  onToggle={toggleFocus}
-                />
-              ) : null}
-
-              {phase === "questions" && step === "intent" ? (
-                <ChoiceStep
-                  title={
-                    <>
-                      Какая у тебя главная цель{" "}
-                      <span className="font-display italic text-[#ff7b36]">на данный момент?</span>
-                    </>
-                  }
-                  options={INTENTS}
-                  value={answers.intent}
-                  onChange={(intent) =>
-                    setAnswers((prev) => ({ ...prev, intent: intent as Intent }))
-                  }
-                />
-              ) : null}
-
-              {phase === "questions" && step === "chartKnowledge" ? (
-                <ChoiceStep
-                  title={
-                    <>
-                      Что ты уже знаешь про{" "}
-                      <span className="font-display italic text-[#ff7b36]">свою карту?</span>
-                    </>
-                  }
-                  options={CHART_KNOWLEDGE}
-                  value={answers.chartKnowledge}
-                  onChange={(chartKnowledge) =>
-                    setAnswers((prev) => ({
-                      ...prev,
-                      chartKnowledge: chartKnowledge as ChartKnowledge,
-                    }))
-                  }
-                />
-              ) : null}
-
-              {phase === "questions" && step === "astrologyTrigger" ? (
-                <ChoiceStep
-                  title={
-                    <>
-                      Что обычно приводит тебя{" "}
-                      <span className="font-display italic text-[#ff7b36]">к астрологии?</span>
-                    </>
-                  }
-                  options={ASTROLOGY_TRIGGERS}
-                  value={answers.astrologyTrigger}
-                  onChange={(astrologyTrigger) =>
-                    setAnswers((prev) => ({
-                      ...prev,
-                      astrologyTrigger: astrologyTrigger as AstrologyTrigger,
-                    }))
-                  }
-                />
-              ) : null}
-
-              {phase === "birth" ? (
-                <BirthStep
-                  value={birth}
-                  onChange={(next) => {
-                    setError("");
-                    setBirth(next);
-                  }}
-                  error={error}
-                  submitting={submitting}
-                />
-              ) : null}
-
-              {phase === "contacts" ? (
-                <ContactsStep
-                  value={contacts}
-                  onChange={(next) => {
-                    setError("");
-                    setContacts(next);
-                  }}
-                  submitting={submitting}
-                />
-              ) : null}
+              <StepBody
+                step={currentStep}
+                screens={contentScreens}
+                screenIndex={screenIndex}
+                payload={payload}
+                error={error}
+                submitting={submitting}
+                onPayload={(patch) => {
+                  setError("");
+                  updateStepPayload(currentStep.slug, patch);
+                }}
+              />
             </div>
 
-            {error && (phase === "birth" || phase === "contacts") ? (
+            {error ? (
               <p className="mb-2 shrink-0 text-sm text-red-300" role="alert">
                 {error}
               </p>
@@ -718,171 +686,169 @@ export function OnboardingFlow() {
                 disabled={!ready}
                 className="inline-flex w-full items-center justify-center rounded-full bg-white px-10 py-3.5 font-display text-lg font-semibold text-black shadow-[0_12px_36px_rgba(255,255,255,0.2)] transition-all hover:scale-[1.02] hover:bg-zinc-100 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:scale-100 md:text-xl"
               >
-                {phase === "birth"
-                  ? submitting
-                    ? "Считаем карту…"
-                    : "Посмотреть карту"
-                  : phase === "contacts"
-                    ? submitting
-                      ? "Открываем…"
-                      : "Показать результат"
-                    : "Продолжить"}
+                {ctaLabel(currentStep, submitting)}
               </button>
             </div>
           </form>
+        ) : (
+          <div className="mx-auto flex w-full max-w-lg flex-1 items-center justify-center text-white/50">
+            Загружаем…
+          </div>
         )}
       </div>
     </main>
   );
 }
 
-function NameStep({
-  value,
-  onChange,
+function StepBody({
+  step,
+  screens,
+  screenIndex,
+  payload,
+  error,
+  submitting,
+  onPayload,
 }: {
-  value: string;
-  onChange: (value: string) => void;
+  step: OnboardingStep;
+  screens: ContentScreen[];
+  screenIndex: number;
+  payload: Record<string, unknown>;
+  error: string;
+  submitting: boolean;
+  onPayload: (patch: Record<string, unknown>) => void;
 }) {
-  return (
-    <div className="flex flex-col">
-      <h1 className="font-display text-3xl leading-tight tracking-tight text-white sm:text-4xl md:text-5xl">
-        Давай познакомимся,{" "}
-        <span className="font-display italic text-[#ff7b36]">как тебя зовут?</span>
-      </h1>
-      <label htmlFor="onboarding-name" className="sr-only">
-        Имя
-      </label>
-      <input
-        id="onboarding-name"
-        type="text"
-        name="name"
-        autoComplete="given-name"
-        autoFocus
-        placeholder="Твоё имя"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="mt-10 w-full border-b border-white/20 bg-transparent pb-3 font-display text-2xl text-white outline-none placeholder:text-white/30 focus:border-[#ff7b36] sm:text-3xl"
+  if (step.step_type === "birth_data") {
+    return (
+      <BirthStep
+        value={birthFromPayload(payload)}
+        onChange={(next) =>
+          onPayload({
+            ...next,
+            birth_date_display: next.birth_date,
+          })
+        }
+        error={error}
+        submitting={submitting}
       />
-    </div>
-  );
-}
+    );
+  }
 
-function GenderStep({
-  value,
-  onChange,
-}: {
-  value: Gender;
-  onChange: (value: Gender) => void;
-}) {
-  return (
-    <div className="flex flex-col">
-      <h1 className="font-display text-3xl leading-tight tracking-tight text-white sm:text-4xl md:text-5xl">
-        Укажи свой <span className="font-display italic text-[#ff7b36]">пол</span>
-      </h1>
-      <div className="mt-10 grid gap-3 sm:grid-cols-2">
-        {GENDERS.map((option) => (
-          <button
-            key={option.value}
-            type="button"
-            onClick={() => onChange(option.value)}
-            className={choiceClass(value === option.value)}
-          >
-            {option.label}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
+  if (step.step_type === "waitlist") {
+    return (
+      <ContactsStep
+        value={contactsFromPayload(payload)}
+        onChange={(next) => onPayload({ ...next })}
+        submitting={submitting}
+      />
+    );
+  }
 
-function AgeStep({
-  value,
-  onChange,
-}: {
-  value: AgeRange;
-  onChange: (value: AgeRange) => void;
-}) {
-  return (
-    <div className="flex flex-col">
-      <h1 className="font-display text-3xl leading-tight tracking-tight text-white sm:text-4xl md:text-5xl">
-        Сколько тебе <span className="font-display italic text-[#ff7b36]">лет?</span>
-      </h1>
-      <div className="mt-10 grid grid-cols-2 gap-3">
-        {AGES.map((option) => (
-          <button
-            key={option.value}
-            type="button"
-            onClick={() => onChange(option.value)}
-            className={`${choiceClass(value === option.value)} text-center`}
-          >
-            {option.label}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
+  if (screens.length > 0) {
+    return (
+      <ContentScreenView
+        screen={screens[Math.min(screenIndex, screens.length - 1)]}
+        payload={payload}
+        onPayload={onPayload}
+      />
+    );
+  }
 
-function ChoiceStep({
-  title,
-  options,
-  value,
-  onChange,
-}: {
-  title: ReactNode;
-  options: { value: string; label: string }[];
-  value: string;
-  onChange: (value: string) => void;
-}) {
   return (
     <div className="flex flex-col">
       <h1 className="font-display text-3xl leading-tight tracking-tight text-white sm:text-4xl md:text-[2.6rem]">
-        {title}
+        {step.title}
       </h1>
-      <div className="mt-8 flex flex-col gap-3">
-        {options.map((option) => (
-          <button
-            key={option.value}
-            type="button"
-            onClick={() => onChange(option.value)}
-            className={choiceClass(value === option.value)}
-          >
-            {option.label}
-          </button>
-        ))}
-      </div>
+      {step.subtitle ? (
+        <p className="mt-3 text-sm font-light leading-relaxed text-white/50">{step.subtitle}</p>
+      ) : null}
     </div>
   );
 }
 
-function MultiChoiceStep({
-  title,
-  hint,
-  options,
-  values,
-  onToggle,
+function ContentScreenView({
+  screen,
+  payload,
+  onPayload,
 }: {
-  title: ReactNode;
-  hint: string;
-  options: { value: FocusArea; label: string }[];
-  values: FocusArea[];
-  onToggle: (value: FocusArea) => void;
+  screen: ContentScreen;
+  payload: Record<string, unknown>;
+  onPayload: (patch: Record<string, unknown>) => void;
 }) {
+  if (screen.kind === "text") {
+    const value = typeof payload[screen.field] === "string" ? (payload[screen.field] as string) : "";
+    return (
+      <div className="flex flex-col">
+        <h1 className="font-display text-3xl leading-tight tracking-tight text-white sm:text-4xl md:text-5xl">
+          {renderTitle(screen.title)}
+        </h1>
+        <label htmlFor={`onboarding-${screen.field}`} className="sr-only">
+          {screen.field}
+        </label>
+        <input
+          id={`onboarding-${screen.field}`}
+          type={screen.inputType ?? "text"}
+          name={screen.field}
+          autoComplete={screen.autocomplete}
+          autoFocus
+          placeholder={screen.placeholder}
+          value={value}
+          onChange={(event) => onPayload({ [screen.field]: event.target.value })}
+          className="mt-10 w-full border-b border-white/20 bg-transparent pb-3 font-display text-2xl text-white outline-none placeholder:text-white/30 focus:border-[#ff7b36] sm:text-3xl"
+        />
+      </div>
+    );
+  }
+
+  if (screen.kind === "single") {
+    const value = typeof payload[screen.field] === "string" ? (payload[screen.field] as string) : "";
+    return (
+      <div className="flex flex-col">
+        <h1 className="font-display text-3xl leading-tight tracking-tight text-white sm:text-4xl md:text-[2.6rem]">
+          {renderTitle(screen.title)}
+        </h1>
+        <div
+          className={`mt-10 grid gap-3 ${screen.columns === 2 ? "grid-cols-2 sm:grid-cols-2" : ""}`}
+        >
+          {screen.options.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => onPayload({ [screen.field]: option.value })}
+              className={`${choiceClass(value === option.value)} ${screen.columns === 2 ? "text-center" : ""}`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  const values = Array.isArray(payload[screen.field])
+    ? (payload[screen.field] as string[])
+    : [];
   return (
     <div className="flex flex-col">
       <h1 className="font-display text-3xl leading-tight tracking-tight text-white sm:text-4xl md:text-[2.6rem]">
-        {title}
+        {renderTitle(screen.title)}
       </h1>
-      <p className="mt-3 text-sm font-light text-white/50">{hint}</p>
+      {screen.hint ? (
+        <p className="mt-3 text-sm font-light text-white/50">{screen.hint}</p>
+      ) : null}
       <div className="mt-8 flex flex-col gap-3">
-        {options.map((option) => {
+        {screen.options.map((option) => {
           const active = values.includes(option.value);
           return (
             <button
               key={option.value}
               type="button"
-              onClick={() => onToggle(option.value)}
               aria-pressed={active}
+              onClick={() => {
+                const next = active
+                  ? values.filter((item) => item !== option.value)
+                  : [...values, option.value];
+                onPayload({ [screen.field]: next });
+              }}
               className={choiceClass(active)}
             >
               {option.label}
@@ -956,12 +922,10 @@ function BirthStep({
   return (
     <div className="flex flex-col">
       <h1 className="font-display text-3xl leading-tight tracking-tight text-white sm:text-4xl md:text-[2.6rem]">
-        Твоя{" "}
-        <span className="font-display italic text-[#ff7b36]">натальная карта</span>
+        Твоя <span className="font-display italic text-[#ff7b36]">натальная карта</span>
       </h1>
       <p className="mt-3 text-sm font-light leading-relaxed text-white/50">
-        Введи данные рождения — посчитаем карту и покажем, что может влиять на фоне
-        текущих циклов.
+        Введи данные рождения — посчитаем карту и покажем, что может влиять на фоне текущих циклов.
       </p>
 
       <div className="mt-10 flex flex-col gap-8">
@@ -1098,15 +1062,14 @@ function ContactsStep({
   return (
     <div className="flex flex-col">
       <h1 className="font-display text-3xl leading-tight tracking-tight text-white sm:text-4xl md:text-[2.6rem]">
-        Твоя карта{" "}
-        <span className="font-display italic text-[#ff7b36]">готова</span>
+        Твоя карта <span className="font-display italic text-[#ff7b36]">готова</span>
       </h1>
       <p className="mt-4 font-display text-xl leading-snug text-white/85 sm:text-2xl">
         Оставь контакты, чтобы открыть разбор
       </p>
       <p className="mt-3 text-sm font-light leading-relaxed text-white/50">
-        Мы используем твои контакты только для доступа к Cosmirror, уведомлений о запуске и
-        обновлений по продукту. Спамить не будем.
+        Мы используем твои контакты только для доступа к Cosmirror, уведомлений о запуске и обновлений
+        по продукту. Спамить не будем.
       </p>
 
       <div className="mt-10 flex flex-col gap-8">
@@ -1150,7 +1113,6 @@ function ContactsStep({
               if (!value.phone || value.phone === "+") {
                 onChange({ ...value, phone: "+" });
               }
-              // Курсор после `+`
               requestAnimationFrame(() => {
                 const el = event.target;
                 const pos = el.value.length;
@@ -1185,18 +1147,42 @@ function ContactsStep({
 
 function InsightView({
   insight,
-  answers,
+  payloadByStep,
+  steps,
 }: {
   insight: OnboardingInsight;
-  answers: Answers;
+  payloadByStep: Record<string, Record<string, unknown>>;
+  steps: OnboardingStep[];
 }) {
+  const contentPayload =
+    steps
+      .filter((step) => step.step_type === "content")
+      .map((step) => payloadByStep[step.slug])
+      .find((item) => item && Object.keys(item).length > 0) ?? {};
+
+  const name = typeof contentPayload.name === "string" ? contentPayload.name.trim() : "";
+  const focus = Array.isArray(contentPayload.focus) ? (contentPayload.focus as string[]) : [];
+  const allScreens = steps.flatMap((step) => screensForStep(step));
+  const focusScreen = allScreens.find((screen) => screen.field === "focus");
+  const intentScreen = allScreens.find((screen) => screen.field === "intent");
+  const lifeScreen = allScreens.find((screen) => screen.field === "life_stage");
+
+  const focusLabels =
+    focusScreen && focusScreen.kind === "multi"
+      ? focus.map((f) => labelFor(focusScreen.options, f)).filter(Boolean)
+      : [];
+  const intentLabel =
+    typeof contentPayload.intent === "string" && intentScreen && intentScreen.kind !== "text"
+      ? labelFor(intentScreen.options, contentPayload.intent)
+      : "";
+  const lifeStageLabel =
+    typeof contentPayload.life_stage === "string" && lifeScreen && lifeScreen.kind !== "text"
+      ? labelFor(lifeScreen.options, contentPayload.life_stage)
+      : "";
+
   const sun = insight.natal.planets?.sun;
   const moon = insight.natal.planets?.moon;
   const asc = insight.natal.ascendant;
-  const name = answers.name.trim();
-  const focusLabels = answers.focus.map((f) => labelFor(FOCUS_AREAS, f)).filter(Boolean);
-  const intentLabel = labelFor(INTENTS, answers.intent);
-  const lifeStageLabel = labelFor(LIFE_STAGES, answers.lifeStage);
 
   return (
     <div className="reveal mx-auto flex w-full max-w-lg min-h-0 flex-1 flex-col overflow-y-auto pt-8 pb-4 md:pt-10">
@@ -1204,13 +1190,11 @@ function InsightView({
       <h1 className="mt-3 font-display text-3xl leading-tight tracking-tight text-white sm:text-4xl">
         {name ? (
           <>
-            {name},{" "}
-            <span className="font-display italic text-[#ff7b36]">вот что может влиять</span>
+            {name}, <span className="font-display italic text-[#ff7b36]">вот что может влиять</span>
           </>
         ) : (
           <>
-            Вот что может{" "}
-            <span className="font-display italic text-[#ff7b36]">влиять сейчас</span>
+            Вот что может <span className="font-display italic text-[#ff7b36]">влиять сейчас</span>
           </>
         )}
       </h1>
@@ -1256,6 +1240,18 @@ function InsightView({
         )}
       </div>
 
+      {insight.insight.offer ? (
+        <section className="mt-10 border-t border-white/10 pt-6">
+          <p className="text-xs uppercase tracking-[0.18em] text-white/40">Для тебя</p>
+          <h2 className="mt-4 font-display text-2xl leading-snug text-white sm:text-3xl">
+            {insight.insight.offer.title}
+          </h2>
+          <p className="mt-3 text-[15px] font-light leading-relaxed text-white/65">
+            {insight.insight.offer.text}
+          </p>
+        </section>
+      ) : null}
+
       <InsightSection title="База" items={insight.insight.base} />
       <InsightSection title="Что может влиять" items={insight.insight.influences} />
       <InsightSection title="Фон циклов" items={insight.insight.cycles} />
@@ -1283,7 +1279,7 @@ function InsightView({
         href="/"
         className="mt-8 inline-flex w-full shrink-0 items-center justify-center rounded-full bg-white px-10 py-3.5 font-display text-lg font-semibold text-black shadow-[0_12px_36px_rgba(255,255,255,0.2)] transition-all hover:scale-[1.02] hover:bg-zinc-100 active:scale-[0.98] md:text-xl"
       >
-        На главную
+        {insight.insight.offer?.cta || "На главную"}
       </Link>
     </div>
   );
@@ -1303,9 +1299,7 @@ function InsightSection({
       <div className="mt-5 space-y-7">
         {items.map((item) => (
           <article key={item.key}>
-            <h2 className="font-display text-xl leading-snug text-white sm:text-2xl">
-              {item.title}
-            </h2>
+            <h2 className="font-display text-xl leading-snug text-white sm:text-2xl">{item.title}</h2>
             <p className="mt-2 text-[15px] font-light leading-relaxed text-white/65">{item.text}</p>
           </article>
         ))}
@@ -1316,7 +1310,14 @@ function InsightSection({
 
 function BackIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+    <svg
+      viewBox="0 0 24 24"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      aria-hidden
+    >
       <path d="M15 6l-6 6 6 6" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
