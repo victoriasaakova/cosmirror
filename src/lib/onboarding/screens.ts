@@ -178,7 +178,7 @@ export function screensForStep(step: OnboardingStep): ContentScreen[] {
   if (typeof ui === "string" && CONTENT_UIS[ui]) {
     return CONTENT_UIS[ui];
   }
-  // Back-compat: old seed without meta.ui still gets the quiz on `welcome`.
+  // Back-compat only: old monolith welcome step with no meta.
   if (step.slug === "welcome" && step.step_type === "content") {
     return CONTENT_UIS.profile_quiz;
   }
@@ -214,6 +214,18 @@ export function progressIndexFor(
   const segment = model.segments.find((item) => item.slug === slug);
   if (!segment) return 0;
   return segment.offset + Math.min(screenIndex, Math.max(0, segment.weight - 1));
+}
+
+export function mergeContentPayloads(
+  steps: OnboardingStep[],
+  payloadByStep: Record<string, Record<string, unknown>>,
+): Record<string, unknown> {
+  const merged: Record<string, unknown> = {};
+  for (const step of orderedSteps(steps)) {
+    if (step.step_type !== "content" && step.step_type !== "input") continue;
+    Object.assign(merged, payloadByStep[step.slug] ?? {});
+  }
+  return merged;
 }
 
 export function orderedSteps(steps: OnboardingStep[]): OnboardingStep[] {

@@ -20,6 +20,7 @@ import {
   firstIncompleteScreenIndex,
   INSIGHT_SLUG,
   isReservedSlug,
+  mergeContentPayloads,
   nextStepHref,
   prevStepHref,
   progressIndexFor,
@@ -492,11 +493,7 @@ export function OnboardingFlow({ slug }: { slug: string }) {
       }
 
       // Prefer name / quiz summary from any earlier content step.
-      const contentPayload =
-        steps
-          ?.filter((step) => step.step_type === "content")
-          .map((step) => payloadByStep[step.slug])
-          .find((item) => item && Object.keys(item).length > 0) ?? {};
+      const contentPayload = mergeContentPayloads(steps ?? [], payloadByStep);
 
       const focus = Array.isArray(contentPayload.focus)
         ? (contentPayload.focus as string[])
@@ -1154,11 +1151,7 @@ function InsightView({
   payloadByStep: Record<string, Record<string, unknown>>;
   steps: OnboardingStep[];
 }) {
-  const contentPayload =
-    steps
-      .filter((step) => step.step_type === "content")
-      .map((step) => payloadByStep[step.slug])
-      .find((item) => item && Object.keys(item).length > 0) ?? {};
+  const contentPayload = mergeContentPayloads(steps, payloadByStep);
 
   const name = typeof contentPayload.name === "string" ? contentPayload.name.trim() : "";
   const focus = Array.isArray(contentPayload.focus) ? (contentPayload.focus as string[]) : [];
