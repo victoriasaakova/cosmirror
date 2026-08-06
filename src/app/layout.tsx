@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Playfair_Display, Roboto } from "next/font/google";
+import { YandexMetrika } from "@/components/YandexMetrika";
 import "./globals.css";
 
 const display = Playfair_Display({
@@ -33,6 +34,7 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="flex min-h-full flex-col" suppressHydrationWarning>
+        <YandexMetrika />
         {children}
       </body>
     </html>
