@@ -114,14 +114,13 @@ function fallbackProductPitch(
   focusLabels: string[],
   intentLabel: string,
   cycles: InsightItem[],
-  insight: OnboardingInsight,
+  _insight: OnboardingInsight,
 ) {
   const focus = focusLabels[0] ?? "жизни";
-  const sun = insight.natal.planets?.sun?.sign_ru;
-  const cycleHint = cycles[0]?.title ? ` Сейчас в фоне — «${cycles[0].title}».` : "";
+  const cycleHint = cycles[0]?.title ? ` На фоне сейчас громче «${cycles[0].title}».` : "";
   return {
-    title: `Cosmirror для твоей карты${sun ? ` · Солнце в ${sun}` : ""}`,
-    text: `Свяжем натальную карту, текущие циклы и твой фокус «${focus}», чтобы ${intentLabel.toLowerCase() || "разобраться в себе"}.${cycleHint} Без общих гороскопов — только то, что относится к тебе.`,
+    title: `Увидеть свой паттерн в теме «${focus}»`,
+    text: `Cosmirror помогает заметить, как повторяющиеся сценарии сходятся с фокусом «${focus}», чтобы ${intentLabel.toLowerCase() || "разобраться в себе"}.${cycleHint} Не общий гороскоп — разбор того, что уже происходит у тебя.`,
   };
 }
 
