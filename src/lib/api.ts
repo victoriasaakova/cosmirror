@@ -236,8 +236,13 @@ export type OnboardingInsight = {
     opening?: { bridge: string; insight: string };
     body?: string;
     sky_now: Record<string, unknown>;
+    product_pitch?: { title: string; text: string };
     cycle_pitches?: { cycle_key: string; title: string; text: string }[];
-    outcomes?: { title: string; items: string[] };
+    outcomes?: {
+      title: string;
+      cards?: { key: string; label: string; before: string; after: string; hint?: string }[];
+      items?: string[];
+    };
     offer?: { title: string; text: string; cta: string; price?: string };
     source?: "polza" | "groq" | "templates" | string;
   };

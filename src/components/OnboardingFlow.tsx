@@ -49,12 +49,10 @@ type BirthAnswers = {
   birth_lat: number | null;
   birth_lng: number | null;
   timezone: string;
-  pd_consent: boolean;
 };
 
 type ContactsAnswers = {
   email: string;
-  phone: string;
   telegram: string;
   pd_consent: boolean;
 };
@@ -67,12 +65,10 @@ const EMPTY_BIRTH: BirthAnswers = {
   birth_lat: null,
   birth_lng: null,
   timezone: "",
-  pd_consent: false,
 };
 
 const EMPTY_CONTACTS: ContactsAnswers = {
   email: "",
-  phone: "+",
   telegram: "",
   pd_consent: false,
 };
@@ -110,16 +106,6 @@ function toIsoDate(value: string): string | null {
     return null;
   }
   return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-}
-
-function isValidPhone(value: string) {
-  const digits = value.replace(/\D/g, "");
-  return digits.length >= 8 && digits.length <= 15;
-}
-
-function formatPhoneInput(raw: string): string {
-  const digits = raw.replace(/\D/g, "").slice(0, 15);
-  return `+${digits}`;
 }
 
 function isValidEmail(value: string) {
@@ -174,7 +160,6 @@ function birthFromPayload(payload: Record<string, unknown> | undefined): BirthAn
     birth_lat: typeof payload.birth_lat === "number" ? payload.birth_lat : null,
     birth_lng: typeof payload.birth_lng === "number" ? payload.birth_lng : null,
     timezone: typeof payload.timezone === "string" ? payload.timezone : "",
-    pd_consent: Boolean(payload.pd_consent),
   };
 }
 
@@ -182,7 +167,6 @@ function contactsFromPayload(payload: Record<string, unknown> | undefined): Cont
   if (!payload) return { ...EMPTY_CONTACTS };
   return {
     email: typeof payload.email === "string" ? payload.email : "",
-    phone: typeof payload.phone === "string" && payload.phone ? payload.phone : "+",
     telegram: typeof payload.telegram === "string" ? payload.telegram : "",
     pd_consent: Boolean(payload.pd_consent),
   };
@@ -469,17 +453,11 @@ export function OnboardingFlow({ slug }: { slug: string }) {
         setError("Укажи город рождения");
         return;
       }
-      if (!birth.pd_consent) {
-        setError("Нужно согласие на обработку персональных данных");
-        return;
-      }
       const payload: Record<string, unknown> = {
         birth_date: isoDate,
         birth_date_display: birth.birth_date,
         birth_place: birth.birth_place.trim(),
         unknown_time: birth.unknown_time,
-        pd_consent: true,
-        pd_consent_at: new Date().toISOString(),
       };
       if (!birth.unknown_time && birth.birth_time) payload.birth_time = birth.birth_time;
       if (birth.birth_lat != null && birth.birth_lng != null) {
@@ -495,10 +473,6 @@ export function OnboardingFlow({ slug }: { slug: string }) {
       const contacts = contactsFromPayload(payloadByStep[currentStep.slug]);
       if (!contacts.telegram.trim()) {
         setError("Укажи Telegram");
-        return;
-      }
-      if (!isValidPhone(contacts.phone)) {
-        setError("Укажи телефон с кодом страны, например +1 415… или +44…");
         return;
       }
       if (!isValidEmail(contacts.email)) {
@@ -528,7 +502,6 @@ export function OnboardingFlow({ slug }: { slug: string }) {
 
       await completeCurrentStep({
         email: contacts.email.trim(),
-        phone: contacts.phone.trim(),
         telegram: contacts.telegram.trim(),
         name: typeof contentPayload.name === "string" ? contentPayload.name.trim() : "",
         source: "onboarding",
@@ -557,10 +530,21 @@ export function OnboardingFlow({ slug }: { slug: string }) {
   const ready = (() => {
     if (!currentStep || submitting) return !submitting && Boolean(currentStep);
     if (currentStep.step_type === "birth_data") {
-      return !submitting && birthFromPayload(payload).pd_consent;
+      const birth = birthFromPayload(payload);
+      return (
+        !submitting &&
+        Boolean(toIsoDate(birth.birth_date)) &&
+        birth.birth_place.trim().length >= 2
+      );
     }
     if (currentStep.step_type === "waitlist") {
-      return !submitting && contactsFromPayload(payload).pd_consent;
+      const contacts = contactsFromPayload(payload);
+      return (
+        !submitting &&
+        Boolean(contacts.telegram.trim()) &&
+        isValidEmail(contacts.email) &&
+        contacts.pd_consent
+      );
     }
     if (contentScreens.length > 0) {
       return screenIsComplete(contentScreens[screenIndex], payload);
@@ -1092,13 +1076,6 @@ function BirthStep({
             </p>
           ) : null}
         </div>
-
-        <PdConsentCheckbox
-          id="birth-pd-consent"
-          checked={value.pd_consent}
-          disabled={submitting}
-          onChange={(checked) => onChange({ ...value, pd_consent: checked })}
-        />
       </div>
     </div>
   );
@@ -1143,36 +1120,6 @@ function ContactsStep({
             placeholder="@username"
             value={value.telegram}
             onChange={(event) => onChange({ ...value, telegram: event.target.value })}
-            className={fieldClass()}
-          />
-        </div>
-
-        <div>
-          <label htmlFor="contact-phone" className="text-xs uppercase tracking-[0.16em] text-white/40">
-            Телефон
-          </label>
-          <input
-            id="contact-phone"
-            type="tel"
-            name="phone"
-            required
-            autoComplete="tel"
-            inputMode="numeric"
-            disabled={submitting}
-            value={value.phone || "+"}
-            onChange={(event) =>
-              onChange({ ...value, phone: formatPhoneInput(event.target.value) })
-            }
-            onFocus={(event) => {
-              if (!value.phone || value.phone === "+") {
-                onChange({ ...value, phone: "+" });
-              }
-              requestAnimationFrame(() => {
-                const el = event.target;
-                const pos = el.value.length;
-                el.setSelectionRange(pos, pos);
-              });
-            }}
             className={fieldClass()}
           />
         </div>
