@@ -96,31 +96,26 @@ function fallbackBody(
   influences: InsightItem[],
   focusLabels: string[],
   intentLabel: string,
-  lifeStageLabel: string,
+  _lifeStageLabel: string,
 ): string {
   const focus = focusLabels[0] ?? "жизни";
-  const lead = lifeStageLabel
-    ? `Когда ${lifeStageLabel.toLowerCase()}, в центре внимания оказывается «${focus}». Чтобы ${intentLabel.toLowerCase()}, важно честно назвать, что уже не работает. `
-    : `Сейчас особенно заметно, где привычная роль перестала давать опору — особенно в теме «${focus}». `;
-  const infText = influences[0]?.text?.trim();
-  return (
-    lead +
-    (infText ||
-      "Не нужно резко всё менять: сначала полезно назвать то, что больше не подходит — и дать себе право выбирать иначе.")
-  );
+  const primary = influences[0]?.text?.split(".")[0]?.trim();
+  if (primary) {
+    return `${primary}. Чтобы ${intentLabel.toLowerCase() || "разобраться в себе"}, важно сначала назвать, что уже не даёт опоры в теме «${focus}».`;
+  }
+  return `Сейчас особенно заметно, где привычная роль стала тесной в теме «${focus}». Чтобы ${intentLabel.toLowerCase() || "разобраться в себе"}, полезно честно увидеть, что больше не работает.`;
 }
 
 function fallbackProductPitch(
   focusLabels: string[],
   intentLabel: string,
-  cycles: InsightItem[],
+  _cycles: InsightItem[],
   _insight: OnboardingInsight,
 ) {
   const focus = focusLabels[0] ?? "жизни";
-  const cycleHint = cycles[0]?.title ? ` На фоне сейчас громче «${cycles[0].title}».` : "";
   return {
-    title: `Увидеть свой паттерн в теме «${focus}»`,
-    text: `Cosmirror помогает заметить, как повторяющиеся сценарии сходятся с фокусом «${focus}», чтобы ${intentLabel.toLowerCase() || "разобраться в себе"}.${cycleHint} Не общий гороскоп — разбор того, что уже происходит у тебя.`,
+    title: "Связываем карту, циклы и твои реакции",
+    text: `В теме «${focus}» покажем повторяющийся сценарий раньше — чтобы ${intentLabel.toLowerCase() || "разобраться в себе"}, а не снова действовать на автомате.`,
   };
 }
 
@@ -239,7 +234,7 @@ export function InsightFunnel({
             </>
           )}
         </h1>
-        <p className="mt-8 text-[17px] font-light leading-[1.75] text-white/75 sm:text-[18px]">
+        <p className="mt-8 text-[16px] font-light leading-[1.65] text-white/75 sm:text-[17px]">
           {body}
         </p>
       </div>

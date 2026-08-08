@@ -404,11 +404,17 @@ export function OnboardingFlow({ slug }: { slug: string }) {
       }
 
       if (currentStep.step_type === "waitlist") {
-        if (!insight) {
-          const data = await fetchOnboardingInsight(token);
-          setInsight(data);
-        }
+        // Не ждём LLM на кнопке «Открываем…» — разбор догрузится на /insight.
         patchDraft({ insightReady: true });
+        if (!insight) {
+          void fetchOnboardingInsight(token)
+            .then((data) => {
+              setInsight(data);
+            })
+            .catch(() => {
+              /* warm() на insight-странице повторит запрос */
+            });
+        }
         await goTo(stepHref(INSIGHT_SLUG));
         return;
       }
