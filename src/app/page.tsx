@@ -506,12 +506,15 @@ export default function Home() {
       <footer className="relative border-t border-white/8 bg-[#050508] py-10">
         <div className="mx-auto flex w-full max-w-6xl flex-col items-start justify-between gap-6 px-5 md:flex-row md:items-center md:px-8">
           <p className="font-display text-xl text-white">Cosmirror</p>
-          <div className="flex items-center gap-5 text-sm text-white/50">
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-white/50">
             <a href="mailto:hello@cosmirror.app" className="transition hover:text-white">
-              Contact
+              Контакты
             </a>
-            <a href="#" className="transition hover:text-white">
-              Privacy
+            <a href="/privacy" className="transition hover:text-white">
+              Политика конфиденциальности
+            </a>
+            <a href="/terms" className="transition hover:text-white">
+              Пользовательское соглашение
             </a>
           </div>
         </div>

@@ -31,6 +31,11 @@ import {
   type TitlePart,
 } from "@/lib/onboarding/screens";
 import {
+  INSIGHT_SCREEN_COUNT,
+  InsightFunnel,
+  insightCtaLabel,
+} from "@/components/InsightFunnel";
+import {
   ensureSessionToken,
   patchDraft,
   readDraft,
@@ -44,22 +49,14 @@ type BirthAnswers = {
   birth_lat: number | null;
   birth_lng: number | null;
   timezone: string;
+  pd_consent: boolean;
 };
 
 type ContactsAnswers = {
   email: string;
   phone: string;
   telegram: string;
-};
-
-const PLANET_LABELS: Record<string, string> = {
-  sun: "Солнце",
-  moon: "Луна",
-  mercury: "Меркурий",
-  venus: "Венера",
-  mars: "Марс",
-  jupiter: "Юпитер",
-  saturn: "Сатурн",
+  pd_consent: boolean;
 };
 
 const EMPTY_BIRTH: BirthAnswers = {
@@ -70,12 +67,14 @@ const EMPTY_BIRTH: BirthAnswers = {
   birth_lat: null,
   birth_lng: null,
   timezone: "",
+  pd_consent: false,
 };
 
 const EMPTY_CONTACTS: ContactsAnswers = {
   email: "",
   phone: "+",
   telegram: "",
+  pd_consent: false,
 };
 
 function formatBirthDateInput(raw: string): string {
@@ -175,6 +174,7 @@ function birthFromPayload(payload: Record<string, unknown> | undefined): BirthAn
     birth_lat: typeof payload.birth_lat === "number" ? payload.birth_lat : null,
     birth_lng: typeof payload.birth_lng === "number" ? payload.birth_lng : null,
     timezone: typeof payload.timezone === "string" ? payload.timezone : "",
+    pd_consent: Boolean(payload.pd_consent),
   };
 }
 
@@ -184,6 +184,7 @@ function contactsFromPayload(payload: Record<string, unknown> | undefined): Cont
     email: typeof payload.email === "string" ? payload.email : "",
     phone: typeof payload.phone === "string" && payload.phone ? payload.phone : "+",
     telegram: typeof payload.telegram === "string" ? payload.telegram : "",
+    pd_consent: Boolean(payload.pd_consent),
   };
 }
 
@@ -224,6 +225,9 @@ export function OnboardingFlow({ slug }: { slug: string }) {
 
   const progress = useMemo(() => {
     if (!steps) return { total: 0, index: 0 };
+    if (isReservedSlug(slug)) {
+      return { total: INSIGHT_SCREEN_COUNT, index: screenIndex };
+    }
     const model = buildProgressModel(steps);
     return {
       total: model.total,
@@ -331,6 +335,10 @@ export function OnboardingFlow({ slug }: { slug: string }) {
   function goBack() {
     setError("");
     if (isReservedSlug(slug)) {
+      if (screenIndex > 0) {
+        setScreen(screenIndex - 1);
+        return;
+      }
       if (steps?.length) {
         void goTo(stepHref(steps[steps.length - 1].slug));
       }
@@ -461,11 +469,17 @@ export function OnboardingFlow({ slug }: { slug: string }) {
         setError("Укажи город рождения");
         return;
       }
+      if (!birth.pd_consent) {
+        setError("Нужно согласие на обработку персональных данных");
+        return;
+      }
       const payload: Record<string, unknown> = {
         birth_date: isoDate,
         birth_date_display: birth.birth_date,
         birth_place: birth.birth_place.trim(),
         unknown_time: birth.unknown_time,
+        pd_consent: true,
+        pd_consent_at: new Date().toISOString(),
       };
       if (!birth.unknown_time && birth.birth_time) payload.birth_time = birth.birth_time;
       if (birth.birth_lat != null && birth.birth_lng != null) {
@@ -491,6 +505,10 @@ export function OnboardingFlow({ slug }: { slug: string }) {
         setError("Укажи корректный email");
         return;
       }
+      if (!contacts.pd_consent) {
+        setError("Нужно согласие на обработку персональных данных");
+        return;
+      }
 
       // Prefer name / quiz summary from any earlier content step.
       const contentPayload = mergeContentPayloads(steps ?? [], payloadByStep);
@@ -514,6 +532,8 @@ export function OnboardingFlow({ slug }: { slug: string }) {
         telegram: contacts.telegram.trim(),
         name: typeof contentPayload.name === "string" ? contentPayload.name.trim() : "",
         source: "onboarding",
+        pd_consent: true,
+        pd_consent_at: new Date().toISOString(),
         message: [
           focus.length && focusScreens && focusScreens.kind === "multi"
             ? `Фокус: ${focus.map((f) => labelFor(focusScreens.options, f)).join(", ")}`
@@ -536,8 +556,11 @@ export function OnboardingFlow({ slug }: { slug: string }) {
   const payload = currentStep ? (payloadByStep[currentStep.slug] ?? {}) : {};
   const ready = (() => {
     if (!currentStep || submitting) return !submitting && Boolean(currentStep);
-    if (currentStep.step_type === "birth_data" || currentStep.step_type === "waitlist") {
-      return !submitting;
+    if (currentStep.step_type === "birth_data") {
+      return !submitting && birthFromPayload(payload).pd_consent;
+    }
+    if (currentStep.step_type === "waitlist") {
+      return !submitting && contactsFromPayload(payload).pd_consent;
     }
     if (contentScreens.length > 0) {
       return screenIsComplete(contentScreens[screenIndex], payload);
@@ -545,7 +568,7 @@ export function OnboardingFlow({ slug }: { slug: string }) {
     return true;
   })();
 
-  const showProgress = Boolean(currentStep) && !isReservedSlug(slug);
+  const showProgress = Boolean(currentStep) || (isReservedSlug(slug) && Boolean(insight));
   const isFirstScreen =
     Boolean(currentStep) &&
     !prevStepHref(steps ?? [], slug) &&
@@ -649,7 +672,34 @@ export function OnboardingFlow({ slug }: { slug: string }) {
         ) : null}
 
         {isReservedSlug(slug) && insight ? (
-          <InsightView insight={insight} payloadByStep={payloadByStep} steps={steps} />
+          <div className="mx-auto flex w-full max-w-lg min-h-0 flex-1 flex-col pt-2 md:pt-4">
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-4 [-webkit-overflow-scrolling:touch]">
+              <InsightFunnel
+                screenIndex={screenIndex}
+                insight={insight}
+                steps={steps}
+                payloadByStep={payloadByStep}
+              />
+            </div>
+            <div className="shrink-0 bg-gradient-to-t from-[#07070c] via-[#07070c]/95 to-transparent pt-3">
+              {screenIndex >= INSIGHT_SCREEN_COUNT - 1 ? (
+                <Link
+                  href="/"
+                  className="inline-flex w-full items-center justify-center rounded-full bg-white px-10 py-3.5 font-display text-lg font-semibold text-black shadow-[0_12px_36px_rgba(255,255,255,0.2)] transition-all hover:scale-[1.02] hover:bg-zinc-100 active:scale-[0.98] md:text-xl"
+                >
+                  {insightCtaLabel(screenIndex, insight)}
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setScreen(screenIndex + 1)}
+                  className="inline-flex w-full items-center justify-center rounded-full bg-white px-10 py-3.5 font-display text-lg font-semibold text-black shadow-[0_12px_36px_rgba(255,255,255,0.2)] transition-all hover:scale-[1.02] hover:bg-zinc-100 active:scale-[0.98] md:text-xl"
+                >
+                  {insightCtaLabel(screenIndex, insight)}
+                </button>
+              )}
+            </div>
+          </div>
         ) : currentStep ? (
           <form
             noValidate
@@ -1042,6 +1092,13 @@ function BirthStep({
             </p>
           ) : null}
         </div>
+
+        <PdConsentCheckbox
+          id="birth-pd-consent"
+          checked={value.pd_consent}
+          disabled={submitting}
+          onChange={(checked) => onChange({ ...value, pd_consent: checked })}
+        />
       </div>
     </div>
   );
@@ -1137,167 +1194,72 @@ function ContactsStep({
             className={fieldClass()}
           />
         </div>
+
+        <PdConsentCheckbox
+          id="contact-pd-consent"
+          checked={value.pd_consent}
+          disabled={submitting}
+          onChange={(checked) => onChange({ ...value, pd_consent: checked })}
+          includeTerms
+        />
       </div>
     </div>
   );
 }
 
-function InsightView({
-  insight,
-  payloadByStep,
-  steps,
+function PdConsentCheckbox({
+  id,
+  checked,
+  disabled,
+  onChange,
+  includeTerms = false,
 }: {
-  insight: OnboardingInsight;
-  payloadByStep: Record<string, Record<string, unknown>>;
-  steps: OnboardingStep[];
+  id: string;
+  checked: boolean;
+  disabled?: boolean;
+  onChange: (checked: boolean) => void;
+  includeTerms?: boolean;
 }) {
-  const contentPayload = mergeContentPayloads(steps, payloadByStep);
-
-  const name = typeof contentPayload.name === "string" ? contentPayload.name.trim() : "";
-  const focus = Array.isArray(contentPayload.focus) ? (contentPayload.focus as string[]) : [];
-  const allScreens = steps.flatMap((step) => screensForStep(step));
-  const focusScreen = allScreens.find((screen) => screen.field === "focus");
-  const intentScreen = allScreens.find((screen) => screen.field === "intent");
-  const lifeScreen = allScreens.find((screen) => screen.field === "life_stage");
-
-  const focusLabels =
-    focusScreen && focusScreen.kind === "multi"
-      ? focus.map((f) => labelFor(focusScreen.options, f)).filter(Boolean)
-      : [];
-  const intentLabel =
-    typeof contentPayload.intent === "string" && intentScreen && intentScreen.kind !== "text"
-      ? labelFor(intentScreen.options, contentPayload.intent)
-      : "";
-  const lifeStageLabel =
-    typeof contentPayload.life_stage === "string" && lifeScreen && lifeScreen.kind !== "text"
-      ? labelFor(lifeScreen.options, contentPayload.life_stage)
-      : "";
-
-  const sun = insight.natal.planets?.sun;
-  const moon = insight.natal.planets?.moon;
-  const asc = insight.natal.ascendant;
-
   return (
-    <div className="reveal mx-auto flex w-full max-w-lg min-h-0 flex-1 flex-col overflow-y-auto pt-8 pb-4 md:pt-10">
-      <p className="text-xs uppercase tracking-[0.18em] text-white/40">Разбор</p>
-      <h1 className="mt-3 font-display text-3xl leading-tight tracking-tight text-white sm:text-4xl">
-        {name ? (
+    <label htmlFor={id} className="flex cursor-pointer items-start gap-3 text-sm leading-snug text-white/65">
+      <input
+        id={id}
+        type="checkbox"
+        name="pd_consent"
+        required
+        checked={checked}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.checked)}
+        className="mt-0.5 h-4 w-4 shrink-0 accent-[#ff7b36]"
+      />
+      <span>
+        Соглашаюсь на{" "}
+        <a
+          href="/privacy"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[#ffb099] underline-offset-2 hover:underline"
+          onClick={(event) => event.stopPropagation()}
+        >
+          обработку персональных данных
+        </a>
+        {includeTerms ? (
           <>
-            {name}, <span className="font-display italic text-[#ff7b36]">вот что может влиять</span>
+            {" "}
+            и принимаю{" "}
+            <a
+              href="/terms"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#ffb099] underline-offset-2 hover:underline"
+              onClick={(event) => event.stopPropagation()}
+            >
+              Пользовательское соглашение
+            </a>
           </>
-        ) : (
-          <>
-            Вот что может <span className="font-display italic text-[#ff7b36]">влиять сейчас</span>
-          </>
-        )}
-      </h1>
-
-      {(focusLabels.length > 0 || intentLabel || lifeStageLabel) && (
-        <p className="mt-4 text-sm font-light leading-relaxed text-white/50">
-          {[
-            lifeStageLabel ? `Сейчас: ${lifeStageLabel}` : "",
-            focusLabels.length ? `в фокусе — ${focusLabels.join(", ")}` : "",
-            intentLabel ? `цель: ${intentLabel}` : "",
-          ]
-            .filter(Boolean)
-            .join(". ")}
-          . Ниже — как это пересекается с картой и текущими циклами.
-        </p>
-      )}
-
-      <div className="mt-8 space-y-2 border-t border-white/10 pt-6 font-display text-lg text-white/85">
-        {sun ? (
-          <p>
-            Солнце · <span className="text-[#ff7b36]">{sun.sign_ru}</span>
-            <span className="text-white/40"> {Math.round(sun.degree)}°</span>
-          </p>
         ) : null}
-        {moon ? (
-          <p>
-            Луна · <span className="text-[#ff7b36]">{moon.sign_ru}</span>
-            <span className="text-white/40"> {Math.round(moon.degree)}°</span>
-            {!insight.has_birth_time ? (
-              <span className="text-sm font-sans font-light text-white/40"> · ориентир</span>
-            ) : null}
-          </p>
-        ) : null}
-        {asc ? (
-          <p>
-            Асцендент · <span className="text-[#ff7b36]">{asc.sign_ru}</span>
-            <span className="text-white/40"> {Math.round(asc.degree)}°</span>
-          </p>
-        ) : (
-          <p className="text-sm font-sans font-light text-white/40">
-            Асцендент появится, когда укажешь точное время
-          </p>
-        )}
-      </div>
-
-      {insight.insight.offer ? (
-        <section className="mt-10 border-t border-white/10 pt-6">
-          <p className="text-xs uppercase tracking-[0.18em] text-white/40">Для тебя</p>
-          <h2 className="mt-4 font-display text-2xl leading-snug text-white sm:text-3xl">
-            {insight.insight.offer.title}
-          </h2>
-          <p className="mt-3 text-[15px] font-light leading-relaxed text-white/65">
-            {insight.insight.offer.text}
-          </p>
-        </section>
-      ) : null}
-
-      <InsightSection title="База" items={insight.insight.base} />
-      <InsightSection title="Что может влиять" items={insight.insight.influences} />
-      <InsightSection title="Фон циклов" items={insight.insight.cycles} />
-
-      {insight.natal.planets ? (
-        <div className="mt-10 border-t border-white/10 pt-6">
-          <p className="text-xs uppercase tracking-[0.18em] text-white/40">Планеты</p>
-          <ul className="mt-4 space-y-2 text-sm text-white/65">
-            {Object.entries(insight.natal.planets)
-              .filter(([key]) => PLANET_LABELS[key])
-              .map(([key, body]) => (
-                <li key={key} className="flex justify-between gap-4 border-b border-white/[0.06] py-2">
-                  <span>{PLANET_LABELS[key]}</span>
-                  <span className="text-white/90">
-                    {body.sign_ru}{" "}
-                    <span className="text-white/40">{Math.round(body.degree)}°</span>
-                  </span>
-                </li>
-              ))}
-          </ul>
-        </div>
-      ) : null}
-
-      <Link
-        href="/"
-        className="mt-8 inline-flex w-full shrink-0 items-center justify-center rounded-full bg-white px-10 py-3.5 font-display text-lg font-semibold text-black shadow-[0_12px_36px_rgba(255,255,255,0.2)] transition-all hover:scale-[1.02] hover:bg-zinc-100 active:scale-[0.98] md:text-xl"
-      >
-        {insight.insight.offer?.cta || "На главную"}
-      </Link>
-    </div>
-  );
-}
-
-function InsightSection({
-  title,
-  items,
-}: {
-  title: string;
-  items: { key: string; title: string; text: string }[];
-}) {
-  if (!items?.length) return null;
-  return (
-    <section className="mt-10 border-t border-white/10 pt-6">
-      <p className="text-xs uppercase tracking-[0.18em] text-white/40">{title}</p>
-      <div className="mt-5 space-y-7">
-        {items.map((item) => (
-          <article key={item.key}>
-            <h2 className="font-display text-xl leading-snug text-white sm:text-2xl">{item.title}</h2>
-            <p className="mt-2 text-[15px] font-light leading-relaxed text-white/65">{item.text}</p>
-          </article>
-        ))}
-      </div>
-    </section>
+      </span>
+    </label>
   );
 }
 
