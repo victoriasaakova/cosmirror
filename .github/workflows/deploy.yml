@@ -32,4 +32,4 @@ jobs:
             -o StrictHostKeyChecking=accept-new \
             -o ConnectTimeout=30 \
             "${SSH_USER}@${SSH_HOST}" \
-            '/opt/cosmirror/web/deploy/deploy.sh'
+            'cd /opt/cosmirror/web && git fetch origin main && git reset --hard origin/main && ./deploy/deploy.sh'
