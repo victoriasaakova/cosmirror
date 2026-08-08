@@ -43,6 +43,67 @@ function quizContext(
   return { name, focusLabels, intentLabel, lifeStageLabel };
 }
 
+const OPENING_BRIDGES = [
+  "сейчас подсвечивается, что",
+  "сейчас видно, что",
+  "сейчас пространство показывает, что",
+  "сейчас тебе подсвечивается, что",
+  "сейчас особенно заметно, что",
+  "сейчас на фоне циклов видно, что",
+  "сейчас карта подсказывает, что",
+];
+
+function titleToInsightClause(title: string): string {
+  const t = title.trim();
+  if (!t) return "пора прислушаться к себе";
+  const low = t.toLowerCase();
+  const map: Record<string, string> = {
+    "тяга выйти из тесной роли": "пора выйти из тесной роли",
+    "эмоциональная нагрузка цикла": "важно беречь эмоциональные границы",
+    "что может отзываться сейчас": "важно замедлиться и прислушаться к себе",
+    "размытие и чувствительность": "легко потерять ясность — стоит чаще сверяться с собой",
+    "глубинная перестройка": "назрела внутренняя перестройка",
+    "что имеет смысл наблюдать": "стоит внимательнее смотреть на свои автоматические реакции",
+  };
+  if (map[low]) return map[low];
+  for (const prefix of ["тяга ", "желание ", "ощущение ", "тема "]) {
+    if (low.startsWith(prefix)) {
+      const rest = t.slice(prefix.length).trim();
+      if (rest) return rest.charAt(0).toLowerCase() + rest.slice(1);
+    }
+  }
+  return t.charAt(0).toLowerCase() + t.slice(1);
+}
+
+function fallbackOpening(
+  influences: InsightItem[],
+  focusLabels: string[],
+  intentLabel: string,
+): { bridge: string; insight: string } {
+  const seed = focusLabels.join("") + intentLabel;
+  const bridge = OPENING_BRIDGES[Math.abs(seed.length) % OPENING_BRIDGES.length];
+  const title = influences[0]?.title ?? "";
+  return { bridge, insight: titleToInsightClause(title) };
+}
+
+function fallbackBody(
+  influences: InsightItem[],
+  focusLabels: string[],
+  intentLabel: string,
+  lifeStageLabel: string,
+): string {
+  const focus = focusLabels[0] ?? "жизни";
+  const lead = lifeStageLabel
+    ? `Когда ${lifeStageLabel.toLowerCase()}, в центре внимания оказывается «${focus}». Чтобы ${intentLabel.toLowerCase()}, важно честно назвать, что уже не работает. `
+    : `Сейчас особенно заметно, где привычная роль перестала давать опору — особенно в теме «${focus}». `;
+  const infText = influences[0]?.text?.trim();
+  return (
+    lead +
+    (infText ||
+      "Не нужно резко всё менять: сначала полезно назвать то, что больше не подходит — и дать себе право выбирать иначе.")
+  );
+}
+
 function fallbackPitches(cycles: InsightItem[]): CyclePitch[] {
   const mk = (cycle: InsightItem, idx: number): CyclePitch => ({
     cycle_key: cycle.key,
@@ -105,13 +166,12 @@ export function InsightFunnel({
     price: "777 ₽/мес",
   };
 
-  const contextLine = [
-    lifeStageLabel ? `Сейчас: ${lifeStageLabel}` : "",
-    focusLabels.length ? `в фокусе — ${focusLabels.join(", ")}` : "",
-    intentLabel ? `цель: ${intentLabel}` : "",
-  ]
-    .filter(Boolean)
-    .join(". ");
+  const opening =
+    insight.insight.opening ??
+    fallbackOpening(influences, focusLabels, intentLabel);
+  const body =
+    insight.insight.body?.trim() ||
+    fallbackBody(influences, focusLabels, intentLabel, lifeStageLabel);
 
   if (screenIndex === 0) {
     return (
@@ -121,19 +181,21 @@ export function InsightFunnel({
           {name ? (
             <>
               {name},{" "}
-              <span className="font-display italic text-[#ff7b36]">вот что может влиять</span>
+              <span className="text-white/90">{opening.bridge} </span>
+              <span className="font-display italic text-[#ff7b36]">{opening.insight}</span>
             </>
           ) : (
             <>
-              Вот что может{" "}
-              <span className="font-display italic text-[#ff7b36]">влиять сейчас</span>
+              <span className="text-white/90">
+                {opening.bridge.charAt(0).toUpperCase() + opening.bridge.slice(1)}{" "}
+              </span>
+              <span className="font-display italic text-[#ff7b36]">{opening.insight}</span>
             </>
           )}
         </h1>
-        {contextLine ? (
-          <p className="mt-4 text-sm font-light leading-relaxed text-white/50">{contextLine}.</p>
-        ) : null}
-        <InsightItems items={influences} className="mt-8" />
+        <p className="mt-8 text-[17px] font-light leading-[1.75] text-white/75 sm:text-[18px]">
+          {body}
+        </p>
       </div>
     );
   }
@@ -191,21 +253,5 @@ export function InsightFunnel({
       </p>
       <p className="mt-2 text-sm font-light text-white/40">отмена в любой момент</p>
     </div>
-  );
-}
-
-function InsightItems({ items, className = "" }: { items: InsightItem[]; className?: string }) {
-  if (!items.length) return null;
-  return (
-    <section className={className}>
-      <div className="space-y-7 border-t border-white/10 pt-6">
-        {items.map((item) => (
-          <article key={item.key}>
-            <h2 className="font-display text-xl leading-snug text-white sm:text-2xl">{item.title}</h2>
-            <p className="mt-2 text-[15px] font-light leading-relaxed text-white/65">{item.text}</p>
-          </article>
-        ))}
-      </div>
-    </section>
   );
 }

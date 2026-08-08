@@ -233,6 +233,8 @@ export type OnboardingInsight = {
     base: { key: string; title: string; text: string }[];
     cycles: { key: string; title: string; text: string }[];
     influences: { key: string; title: string; text: string }[];
+    opening?: { bridge: string; insight: string };
+    body?: string;
     sky_now: Record<string, unknown>;
     cycle_pitches?: { cycle_key: string; title: string; text: string }[];
     outcomes?: { title: string; items: string[] };
