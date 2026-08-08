@@ -372,13 +372,15 @@ export function OnboardingFlow({ slug }: { slug: string }) {
       const token = await persistStep(currentStep.slug, payload, true);
 
       if (currentStep.step_type === "birth_data") {
-        try {
-          const data = await fetchOnboardingInsight(token);
-          setInsight(data);
-          patchDraft({ insightReady: true });
-        } catch {
-          // Contacts still unlock; insight fetched again there / on insight page.
-        }
+        // Карта уже посчитана на PUT birth. LLM-разбор тяжёлый — не блокируем переход.
+        void fetchOnboardingInsight(token)
+          .then((data) => {
+            setInsight(data);
+            patchDraft({ insightReady: true });
+          })
+          .catch(() => {
+            // Подтянем на contacts / insight.
+          });
       }
 
       if (currentStep.step_type === "waitlist") {
