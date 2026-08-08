@@ -280,7 +280,7 @@ export default function Home() {
           {/* Single White CTA Button with Black Text and Headline Font */}
           <div className="reveal reveal-delay-2 mt-9 flex justify-center">
             <a
-              href="/onboarding"
+              href="/onboarding?new=1"
               className="inline-flex items-center justify-center rounded-full bg-white hover:bg-zinc-100 text-black font-display font-semibold text-lg md:text-xl px-10 py-3.5 shadow-[0_12px_36px_rgba(255,255,255,0.25)] transition-all transform hover:scale-[1.03] active:scale-[0.98] cursor-pointer"
             >
               Начать бесплатно
@@ -411,7 +411,7 @@ export default function Home() {
 
           <div className="mt-14 flex justify-center">
             <a
-              href="/onboarding"
+              href="/onboarding?new=1"
               className="inline-flex items-center justify-center rounded-full bg-white px-10 py-3.5 font-display text-lg font-semibold text-black shadow-[0_12px_36px_rgba(255,255,255,0.25)] transition-all hover:scale-[1.03] hover:bg-zinc-100 active:scale-[0.98] md:text-xl"
             >
               Построить карту
@@ -493,7 +493,7 @@ export default function Home() {
 
           <div className="mx-auto mt-12 max-w-2xl text-center">
             <a
-              href="/onboarding"
+              href="/onboarding?new=1"
               className="inline-flex items-center justify-center rounded-full bg-white px-10 py-3.5 font-display text-lg font-semibold text-black shadow-[0_12px_36px_rgba(255,255,255,0.25)] transition-all hover:scale-[1.03] hover:bg-zinc-100 active:scale-[0.98] md:text-xl"
             >
               Попробовать бесплатно

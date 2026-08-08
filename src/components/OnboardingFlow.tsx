@@ -18,6 +18,7 @@ import {
   adjacentStep,
   buildProgressModel,
   firstIncompleteScreenIndex,
+  firstStepHref,
   INSIGHT_SLUG,
   isReservedSlug,
   mergeContentPayloads,
@@ -39,6 +40,7 @@ import {
   ensureSessionToken,
   patchDraft,
   readDraft,
+  startFreshOnboardingSession,
 } from "@/lib/onboarding/session";
 
 type BirthAnswers = {
@@ -262,6 +264,7 @@ export function OnboardingFlow({ slug }: { slug: string }) {
           const data = await fetchOnboardingInsight(token);
           setInsight(data);
           setInsightStatus("ready");
+          patchDraft({ insightReady: true });
         } catch {
           setInsightStatus("missing");
         }
@@ -310,6 +313,23 @@ export function OnboardingFlow({ slug }: { slug: string }) {
   function setScreen(nextIndex: number) {
     setScreenIndex(nextIndex);
     patchDraft({ stepSlug: slug, screenIndex: nextIndex });
+  }
+
+  async function restartOnboarding() {
+    setSubmitting(true);
+    setError("");
+    try {
+      const stepsList = steps ?? (await fetchOnboardingSteps());
+      await startFreshOnboardingSession();
+      setInsight(null);
+      setInsightStatus("idle");
+      setPayloadByStep({});
+      await goTo(firstStepHref(stepsList));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Не удалось начать сначала");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   async function goTo(href: string) {
@@ -724,8 +744,27 @@ export function OnboardingFlow({ slug }: { slug: string }) {
             </div>
           </form>
         ) : (
-          <div className="mx-auto flex w-full max-w-lg flex-1 items-center justify-center text-white/50">
-            Загружаем…
+          <div className="mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center gap-6 text-center">
+            <p className="text-white/50">
+              {isReservedSlug(slug)
+                ? "Готовим персональный разбор… это может занять до минуты"
+                : "Загружаем…"}
+            </p>
+            {isReservedSlug(slug) ? (
+              <div className="flex flex-col items-center gap-3">
+                <button
+                  type="button"
+                  disabled={submitting}
+                  onClick={() => void restartOnboarding()}
+                  className="rounded-full border border-white/20 px-6 py-2.5 text-sm text-white/80 transition hover:border-white/40 hover:text-white disabled:opacity-40"
+                >
+                  Начать онбординг сначала
+                </button>
+                <Link href="/" className="text-sm text-white/45 hover:text-white/70">
+                  На главную
+                </Link>
+              </div>
+            ) : null}
           </div>
         )}
       </div>

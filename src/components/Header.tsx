@@ -43,7 +43,7 @@ export function Header() {
 
         {/* Desktop CTA Button */}
         <a
-          href="/onboarding"
+          href="/onboarding?new=1"
           className="hidden md:inline-flex rounded-full bg-white hover:bg-zinc-100 text-black font-display text-sm font-semibold px-5 py-2 shadow-md transition hover:scale-[1.02] active:scale-[0.98]"
         >
           Начать путешествие
@@ -91,7 +91,7 @@ export function Header() {
               ))}
             </nav>
             <a
-              href="/onboarding"
+              href="/onboarding?new=1"
               onClick={() => setIsOpen(false)}
               className="mt-2 w-full rounded-full bg-white text-center text-black font-display text-base font-semibold py-3 shadow-md transition hover:bg-zinc-100"
             >

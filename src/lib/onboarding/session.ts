@@ -83,6 +83,23 @@ export async function ensureSessionToken(): Promise<string> {
   return session.token;
 }
 
+/** Сброс клиентского состояния онбординга (токен + черновик). */
+export function clearOnboardingClientState() {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(SESSION_KEY);
+  sessionStorage.removeItem(DRAFT_KEY);
+}
+
+/** Новая серверная сессия с чистым клиентским стейтом. */
+export async function startFreshOnboardingSession(): Promise<OnboardingSession> {
+  clearOnboardingClientState();
+  const session = await createOnboardingSession();
+  if (typeof window !== "undefined") {
+    localStorage.setItem(SESSION_KEY, session.token);
+  }
+  return session;
+}
+
 export async function loadOrCreateSession(): Promise<OnboardingSession> {
   const token = await ensureSessionToken();
   return fetchOnboardingSession(token);
