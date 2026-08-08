@@ -18,7 +18,6 @@ import {
   adjacentStep,
   buildProgressModel,
   firstIncompleteScreenIndex,
-  firstStepHref,
   INSIGHT_SLUG,
   isReservedSlug,
   mergeContentPayloads,
@@ -40,7 +39,6 @@ import {
   ensureSessionToken,
   patchDraft,
   readDraft,
-  startFreshOnboardingSession,
 } from "@/lib/onboarding/session";
 
 type BirthAnswers = {
@@ -185,16 +183,38 @@ function ctaLabel(step: OnboardingStep | null, submitting: boolean): string {
   return "Продолжить";
 }
 
+/** Переживает remount при смене /onboarding/[slug] — иначе каждый шаг мигает «Загружаем…». */
+const flowCache: {
+  steps: OnboardingStep[] | null;
+  token: string | null;
+  payloadByStep: Record<string, Record<string, unknown>>;
+  insight: OnboardingInsight | null;
+} = {
+  steps: null,
+  token: null,
+  payloadByStep: {},
+  insight: null,
+};
+
+export function resetOnboardingFlowCache() {
+  flowCache.steps = null;
+  flowCache.token = null;
+  flowCache.payloadByStep = {};
+  flowCache.insight = null;
+}
+
 export function OnboardingFlow({ slug }: { slug: string }) {
   const router = useRouter();
-  const [steps, setSteps] = useState<OnboardingStep[] | null>(null);
+  const [steps, setSteps] = useState<OnboardingStep[] | null>(() => flowCache.steps);
   const [loadError, setLoadError] = useState("");
-  const [sessionToken, setSessionToken] = useState<string | null>(null);
-  const [payloadByStep, setPayloadByStep] = useState<Record<string, Record<string, unknown>>>({});
+  const [sessionToken, setSessionToken] = useState<string | null>(() => flowCache.token);
+  const [payloadByStep, setPayloadByStep] = useState<Record<string, Record<string, unknown>>>(
+    () => flowCache.payloadByStep,
+  );
   const [screenIndex, setScreenIndex] = useState(0);
-  const [insight, setInsight] = useState<OnboardingInsight | null>(null);
+  const [insight, setInsight] = useState<OnboardingInsight | null>(() => flowCache.insight);
   const [insightStatus, setInsightStatus] = useState<"idle" | "loading" | "ready" | "missing">(
-    "idle",
+    () => (flowCache.insight ? "ready" : "idle"),
   );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -221,37 +241,69 @@ export function OnboardingFlow({ slug }: { slug: string }) {
     };
   }, [steps, slug, screenIndex]);
 
+  const applySteps = useCallback((apiSteps: OnboardingStep[]) => {
+    flowCache.steps = apiSteps;
+    setSteps(apiSteps);
+  }, []);
+
+  const applyToken = useCallback((token: string) => {
+    flowCache.token = token;
+    setSessionToken(token);
+  }, []);
+
+  const applyPayload = useCallback((byStep: Record<string, Record<string, unknown>>) => {
+    flowCache.payloadByStep = byStep;
+    setPayloadByStep(byStep);
+  }, []);
+
+  const applyInsight = useCallback((data: OnboardingInsight | null) => {
+    flowCache.insight = data;
+    setInsight(data);
+  }, []);
+
   const warm = useCallback(async () => {
     try {
-      const [apiSteps, token] = await Promise.all([
-        fetchOnboardingSteps(),
-        ensureSessionToken(),
-      ]);
-      setSessionToken(token);
-      setSteps(apiSteps);
+      setLoadError("");
+      const hasCache = Boolean(flowCache.steps && flowCache.token);
 
-      const [draft, session] = await Promise.all([
-        Promise.resolve(readDraft()),
-        fetchOnboardingSession(token),
-      ]);
+      let apiSteps = flowCache.steps;
+      let token = flowCache.token;
 
-      const byStep: Record<string, Record<string, unknown>> = { ...draft.byStep };
-      for (const answer of session.answers) {
-        const payload =
-          answer.payload && typeof answer.payload === "object"
-            ? (answer.payload as Record<string, unknown>)
-            : {};
-        byStep[answer.step_slug] = { ...(byStep[answer.step_slug] ?? {}), ...payload };
+      if (!apiSteps || !token) {
+        const [fetchedSteps, ensuredToken] = await Promise.all([
+          fetchOnboardingSteps(),
+          ensureSessionToken(),
+        ]);
+        apiSteps = fetchedSteps;
+        token = ensuredToken;
+        applySteps(fetchedSteps);
+        applyToken(ensuredToken);
+
+        const [draft, session] = await Promise.all([
+          Promise.resolve(readDraft()),
+          fetchOnboardingSession(ensuredToken),
+        ]);
+
+        const byStep: Record<string, Record<string, unknown>> = { ...draft.byStep };
+        for (const answer of session.answers) {
+          const payload =
+            answer.payload && typeof answer.payload === "object"
+              ? (answer.payload as Record<string, unknown>)
+              : {};
+          byStep[answer.step_slug] = { ...(byStep[answer.step_slug] ?? {}), ...payload };
+        }
+        applyPayload(byStep);
+        patchDraft({ byStep });
       }
-      setPayloadByStep(byStep);
-      patchDraft({ byStep });
 
-      const stepMeta = apiSteps.find((step) => step.slug === slug);
+      const draft = readDraft();
+      const byStep = flowCache.payloadByStep;
+      const stepMeta = apiSteps!.find((step) => step.slug === slug);
       const screens = stepMeta ? screensForStep(stepMeta) : [];
-      const payload = byStep[slug] ?? {};
+      const stepPayload = byStep[slug] ?? {};
       const resumeScreen =
         screens.length > 0
-          ? firstIncompleteScreenIndex(screens, payload)
+          ? firstIncompleteScreenIndex(screens, stepPayload)
           : typeof draft.screenIndexByStep[slug] === "number"
             ? draft.screenIndexByStep[slug]
             : 0;
@@ -259,10 +311,15 @@ export function OnboardingFlow({ slug }: { slug: string }) {
       patchDraft({ stepSlug: slug, screenIndex: resumeScreen });
 
       if (isReservedSlug(slug)) {
+        if (flowCache.insight) {
+          applyInsight(flowCache.insight);
+          setInsightStatus("ready");
+          return;
+        }
         setInsightStatus("loading");
         try {
-          const data = await fetchOnboardingInsight(token);
-          setInsight(data);
+          const data = await fetchOnboardingInsight(token!);
+          applyInsight(data);
           setInsightStatus("ready");
           patchDraft({ insightReady: true });
         } catch {
@@ -272,15 +329,34 @@ export function OnboardingFlow({ slug }: { slug: string }) {
       }
 
       setInsightStatus("idle");
-      const known = apiSteps.some((step) => step.slug === slug);
+      const known = apiSteps!.some((step) => step.slug === slug);
       if (!known) {
-        const first = apiSteps[0];
+        const first = apiSteps![0];
         router.replace(first ? stepHref(first.slug) : "/");
+      }
+
+      // Фоновый refresh сессии без сброса UI (только если уже были в кэше).
+      if (hasCache && token) {
+        void fetchOnboardingSession(token)
+          .then((session) => {
+            const next = { ...flowCache.payloadByStep };
+            for (const answer of session.answers) {
+              const payload =
+                answer.payload && typeof answer.payload === "object"
+                  ? (answer.payload as Record<string, unknown>)
+                  : {};
+              next[answer.step_slug] = { ...(next[answer.step_slug] ?? {}), ...payload };
+            }
+            applyPayload(next);
+          })
+          .catch(() => {
+            /* ignore soft refresh errors */
+          });
       }
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : "Не удалось загрузить онбординг");
     }
-  }, [router, slug]);
+  }, [applyInsight, applyPayload, applySteps, applyToken, router, slug]);
 
   useEffect(() => {
     void warm();
@@ -305,6 +381,7 @@ export function OnboardingFlow({ slug }: { slug: string }) {
         ...prev,
         [stepSlug]: { ...(prev[stepSlug] ?? {}), ...patch },
       };
+      flowCache.payloadByStep = next;
       patchDraft({ byStep: next });
       return next;
     });
@@ -313,23 +390,6 @@ export function OnboardingFlow({ slug }: { slug: string }) {
   function setScreen(nextIndex: number) {
     setScreenIndex(nextIndex);
     patchDraft({ stepSlug: slug, screenIndex: nextIndex });
-  }
-
-  async function restartOnboarding() {
-    setSubmitting(true);
-    setError("");
-    try {
-      const stepsList = steps ?? (await fetchOnboardingSteps());
-      await startFreshOnboardingSession();
-      setInsight(null);
-      setInsightStatus("idle");
-      setPayloadByStep({});
-      await goTo(firstStepHref(stepsList));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Не удалось начать сначала");
-    } finally {
-      setSubmitting(false);
-    }
   }
 
   async function goTo(href: string) {
@@ -395,6 +455,7 @@ export function OnboardingFlow({ slug }: { slug: string }) {
         // Карта уже посчитана на PUT birth. LLM-разбор тяжёлый — не блокируем переход.
         void fetchOnboardingInsight(token)
           .then((data) => {
+            flowCache.insight = data;
             setInsight(data);
             patchDraft({ insightReady: true });
           })
@@ -409,6 +470,7 @@ export function OnboardingFlow({ slug }: { slug: string }) {
         if (!insight) {
           void fetchOnboardingInsight(token)
             .then((data) => {
+              flowCache.insight = data;
               setInsight(data);
             })
             .catch(() => {
@@ -581,6 +643,7 @@ export function OnboardingFlow({ slug }: { slug: string }) {
   })();
 
   const showProgress = Boolean(currentStep) || (isReservedSlug(slug) && Boolean(insight));
+  const insightLoading = isReservedSlug(slug) && !insight;
   const isFirstScreen =
     Boolean(currentStep) &&
     !prevStepHref(steps ?? [], slug) &&
@@ -632,7 +695,9 @@ export function OnboardingFlow({ slug }: { slug: string }) {
 
       <div className="relative z-10 flex h-full min-h-0 flex-col px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-6 md:px-8 md:pt-8">
         <div className="mx-auto flex w-full max-w-lg shrink-0 items-center justify-between">
-          {isFirstScreen && !isReservedSlug(slug) ? (
+          {insightLoading ? (
+            <span className="w-11" aria-hidden />
+          ) : isFirstScreen && !isReservedSlug(slug) ? (
             <Link
               href="/"
               className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-white/[0.04] text-white/80 transition hover:border-white/30 hover:text-white"
@@ -651,12 +716,18 @@ export function OnboardingFlow({ slug }: { slug: string }) {
             </button>
           )}
 
-          <Link
-            href="/"
-            className="font-display text-xl font-medium tracking-tight text-white transition hover:opacity-90"
-          >
-            Cosmirror
-          </Link>
+          {insightLoading ? (
+            <span className="font-display text-xl font-medium tracking-tight text-white">
+              Cosmirror
+            </span>
+          ) : (
+            <Link
+              href="/"
+              className="font-display text-xl font-medium tracking-tight text-white transition hover:opacity-90"
+            >
+              Cosmirror
+            </Link>
+          )}
 
           <span className="w-11" aria-hidden />
         </div>
@@ -750,27 +821,12 @@ export function OnboardingFlow({ slug }: { slug: string }) {
             </div>
           </form>
         ) : (
-          <div className="mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center gap-6 text-center">
+          <div className="mx-auto flex w-full max-w-lg flex-1 items-center justify-center text-center">
             <p className="text-white/50">
               {isReservedSlug(slug)
                 ? "Готовим персональный разбор… это может занять до минуты"
                 : "Загружаем…"}
             </p>
-            {isReservedSlug(slug) ? (
-              <div className="flex flex-col items-center gap-3">
-                <button
-                  type="button"
-                  disabled={submitting}
-                  onClick={() => void restartOnboarding()}
-                  className="rounded-full border border-white/20 px-6 py-2.5 text-sm text-white/80 transition hover:border-white/40 hover:text-white disabled:opacity-40"
-                >
-                  Начать онбординг сначала
-                </button>
-                <Link href="/" className="text-sm text-white/45 hover:text-white/70">
-                  На главную
-                </Link>
-              </div>
-            ) : null}
           </div>
         )}
       </div>

@@ -8,6 +8,7 @@ import {
   loadOrCreateSession,
   startFreshOnboardingSession,
 } from "@/lib/onboarding/session";
+import { resetOnboardingFlowCache } from "@/components/OnboardingFlow";
 
 function LoadingScreen({ message = "Загружаем…" }: { message?: string }) {
   return (
@@ -36,6 +37,7 @@ function OnboardingIndexInner() {
           : await loadOrCreateSession();
         if (cancelled) return;
         if (forceNew) {
+          resetOnboardingFlowCache();
           router.replace(firstStepHref(steps));
           return;
         }
