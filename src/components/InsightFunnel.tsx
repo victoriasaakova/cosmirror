@@ -174,7 +174,8 @@ export function insightCtaLabel(screenIndex: number, insight: OnboardingInsight)
   if (screenIndex === 0) return "Узнать больше";
   if (screenIndex === 1 || screenIndex === 2) return "Продолжить";
   if (screenIndex >= INSIGHT_SCREEN_COUNT - 1) {
-    return insight.insight.offer?.cta || "Получить за 777";
+    const cta = insight.insight.offer?.cta || "Получить за 777 ₽";
+    return /₽|руб/i.test(cta) ? cta : `${cta} ₽`;
   }
   return "Продолжить";
 }
@@ -203,8 +204,8 @@ export function InsightFunnel({
   const offer = insight.insight.offer ?? {
     title: "Стань ближе к своему истинному я через подробный разбор",
     text: "Персональный разбор под твою карту и текущие циклы.\nОтслеживание энергии и паттернов без общих гороскопов.",
-    cta: "Получить за 777",
-    price: "777 ₽/мес",
+    cta: "Получить за 777 ₽",
+    price: "777 ₽",
   };
   const offerLines = offer.text.split(/\n+/).filter(Boolean);
 
@@ -285,8 +286,7 @@ export function InsightFunnel({
           </p>
         ))}
       </div>
-      <p className="mt-10 font-display text-4xl tracking-tight text-[#F6E7A1] sm:text-5xl">777 ₽</p>
-      <p className="mt-2 text-sm font-light text-white/40">в месяц · отмена в любой момент</p>
+      <p className="mt-10 text-sm font-light text-white/40">разовый доступ · без подписки</p>
     </div>
   );
 }

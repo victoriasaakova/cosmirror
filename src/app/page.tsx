@@ -89,6 +89,10 @@ const FAQ_ITEMS = [
     a: "Мы используем астрологию как инструмент для глубокого понимания себя. Связываем карту, циклы и твои реакции — и показываем повторяющиеся сценарии раньше, через паттерны поведения, энергии и выбора.",
   },
   {
+    q: "Что входит в персональный отчёт?",
+    a: "Персонализированный разбор твоей натальной карты: планеты и их положения, твои паттерны поведения, энергии и выбора, текущие астрологические циклы и то, что может отзываться именно тебе. Плюс мягкие рекомендации по циклам и событиям и вопросы.",
+  },
+  {
     q: "Вы предсказываете будущее?",
     a: "Нет. Мы не даём прогнозов и не обещаем, что произойдёт дальше. Это способ заметить, какие внутренние темы могут быть громче на фоне текущих циклов.",
   },
@@ -390,6 +394,8 @@ export default function Home() {
             ))}
           </div>
 
+          <WhatYouGet />
+
           <div className="mt-12 flex justify-center sm:mt-14">
             <a
               href="/onboarding?new=1"
@@ -398,13 +404,36 @@ export default function Home() {
               Попробовать
             </a>
           </div>
+        </div>
+      </section>
 
-          <WhatYouGet />
+      {/* ── Natal chart and changing life ── */}
+      <section className="relative overflow-hidden bg-[#050d4a] pb-24 pt-16 md:pb-32 md:pt-20">
+        <div className="road-panorama pointer-events-none absolute inset-x-0 bottom-0 z-0 h-64 sm:h-72 md:h-80">
+          <Image
+            src="/images/landscape_natal_map_2.png"
+            alt=""
+            fill
+            sizes="100vw"
+            className="object-cover object-[center_78%]"
+          />
+          <div
+            aria-hidden
+            className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-[#050d4a] via-[#050d4a]/70 to-transparent sm:h-32 md:h-36"
+          />
+        </div>
+
+        <div className="relative z-10 mx-auto max-w-6xl px-5 md:px-8">
+          <h3 className="font-display mx-auto max-w-[34rem] text-center text-2xl leading-snug text-white sm:text-3xl md:text-4xl lg:text-[2.35rem]">
+            <span className="block">Твоя натальная карта не меняется,</span>
+            <span className="font-display italic text-[#F6E7A1]">меняешься ты:</span>
+          </h3>
+          <FallingPills />
         </div>
       </section>
 
       {/* ── FAQ ── */}
-      <section id="faq" className="relative scroll-mt-20 py-20 md:py-24">
+      <section id="faq" className="relative scroll-mt-20 bg-[#050d4a] py-20 md:py-24">
         <div className="mx-auto max-w-6xl px-5 md:px-8">
           <div className="mx-auto max-w-3xl text-center">
             <h2 className="font-display text-3xl leading-tight tracking-tight text-white md:text-5xl lg:text-6xl">
@@ -449,33 +478,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── Natal chart and changing life (temporarily lower) ── */}
-      <section className="relative overflow-hidden bg-[#050d4a] pb-24 pt-16 md:pb-32 md:pt-20">
-        <div className="road-panorama pointer-events-none absolute inset-x-0 bottom-0 z-0 h-64 sm:h-72 md:h-80">
-          <Image
-            src="/images/landscape_natal_map_2.png"
-            alt=""
-            fill
-            sizes="100vw"
-            className="object-cover object-[center_78%]"
-          />
-          <div
-            aria-hidden
-            className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-[#050d4a] via-[#050d4a]/70 to-transparent sm:h-32 md:h-36"
-          />
-        </div>
-
-        <div className="relative z-10 mx-auto max-w-6xl px-5 md:px-8">
-          <h3 className="font-display mx-auto max-w-[34rem] text-center text-2xl leading-snug text-white sm:text-3xl md:text-4xl lg:text-[2.35rem]">
-            <span className="block">Твоя натальная карта не меняется,</span>
-            <span className="font-display italic text-[#F6E7A1]">меняешься ты:</span>
-          </h3>
-          <FallingPills />
-        </div>
-      </section>
-
       {/* ── Footer ── */}
-      <footer className="relative border-t border-white/8 bg-[#050508] py-10">
+      <footer className="relative border-t border-white/10 bg-[#050d4a] py-10">
         <div className="mx-auto flex w-full max-w-6xl flex-col items-start justify-between gap-6 px-5 md:flex-row md:items-center md:px-8">
           <p className="font-display text-xl text-white">Cosmirror</p>
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-white/50">

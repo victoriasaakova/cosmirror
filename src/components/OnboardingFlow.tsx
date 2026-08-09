@@ -677,20 +677,20 @@ export function OnboardingFlow({ slug }: { slug: string }) {
   return (
     <main className="relative flex h-[100dvh] flex-1 flex-col overflow-hidden">
       <Image
-        src="/images/cosmirror-bottom-landscape.png"
+        src="/images/hero-coastal-moon-trail_4.png"
         alt=""
         fill
         priority
-        className="object-cover object-bottom"
+        className="object-cover object-[center_68%]"
         sizes="100vw"
       />
       <div
         aria-hidden
-        className="absolute inset-0 bg-gradient-to-b from-[#050d4a] via-[#050d4a]/75 to-[#050d4a]/35"
+        className="absolute inset-0 bg-gradient-to-b from-[#050d4a]/85 via-[#050d4a]/55 to-[#050d4a]/75"
       />
       <div
         aria-hidden
-        className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#050508]/90"
+        className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#050d4a]/90"
       />
 
       <div className="relative z-10 flex h-full min-h-0 flex-col px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-6 md:px-8 md:pt-8">

@@ -74,7 +74,7 @@ function BirthChart() {
       role="img"
       aria-label="Пример натальной карты"
     >
-      <circle cx="100" cy="100" r="91" fill="#0e0c11" stroke="currentColor" strokeOpacity="0.55" />
+      <circle cx="100" cy="100" r="91" fill="#071240" stroke="currentColor" strokeOpacity="0.55" />
       <circle cx="100" cy="100" r="72" fill="none" stroke="currentColor" strokeOpacity="0.35" />
       <circle cx="100" cy="100" r="52" fill="none" stroke="currentColor" strokeOpacity="0.16" />
 
@@ -108,7 +108,7 @@ function BirthChart() {
 
       {PLANETS.map((planet) => (
         <g key={planet.glyph}>
-          <circle cx={planet.x} cy={planet.y} r="8" fill="#151119" stroke="#F6E7A1" strokeOpacity="0.45" />
+          <circle cx={planet.x} cy={planet.y} r="8" fill="#0a1856" stroke="#F6E7A1" strokeOpacity="0.55" />
           <text
             x={planet.x}
             y={planet.y + 0.5}
@@ -128,33 +128,33 @@ function BirthChart() {
 
 function PortraitPreview() {
   return (
-    <div className="flex h-full min-h-[20rem] flex-col bg-[#0b0a0e] p-4 sm:p-5">
-      <div className="flex items-center justify-between border-b border-white/8 pb-4">
+    <div className="flex h-full min-h-[20rem] flex-col bg-[#050d4a] p-4 sm:p-5">
+      <div className="flex items-center justify-between border-b border-[#F6E7A1]/20 pb-4">
         <span className="font-display text-lg text-white">Твой портрет</span>
-        <span className="rounded-full bg-[#F6E7A1]/12 px-3 py-1 text-[10px] text-[#F6E7A1]">
+        <span className="rounded-full border border-[#F6E7A1]/40 bg-[#F6E7A1]/12 px-3 py-1 text-[10px] text-[#F6E7A1]">
           Натальная карта
         </span>
       </div>
       <div className="grid flex-1 gap-3 pt-4 sm:grid-cols-[0.9fr_1.1fr]">
-        <div className="relative flex min-h-40 items-center justify-center overflow-hidden rounded-[1.4rem] bg-[#131119]">
+        <div className="relative flex min-h-40 items-center justify-center overflow-hidden rounded-[1.4rem] border border-[#F6E7A1]/25 bg-[#071240]">
           <BirthChart />
         </div>
         <div className="flex flex-col gap-3">
-          <div className="rounded-[1.25rem] bg-[#17141b] p-3.5">
-            <p className="text-[10px] uppercase tracking-[0.16em] text-white/40">Сильная сторона</p>
+          <div className="rounded-[1.25rem] border border-[#F6E7A1]/25 bg-white/[0.04] p-3.5">
+            <p className="text-[10px] uppercase tracking-[0.16em] text-white/45">Сильная сторона</p>
             <p className="mt-2 font-display text-base leading-tight text-white">
               Ты видишь связи там, где другие замечают только детали.
             </p>
           </div>
           <div className="grid flex-1 grid-cols-2 gap-3">
-            <div className="rounded-[1.25rem] bg-[#17141b] p-3.5">
+            <div className="rounded-[1.25rem] border border-[#F6E7A1]/25 bg-white/[0.04] p-3.5">
               <p className="text-[9px] uppercase tracking-[0.14em] text-[#F6E7A1]">Текущий цикл</p>
               <p className="mt-2 font-display text-sm leading-tight text-white">Юпитер во Льве</p>
               <p className="mt-2 text-[10px] leading-relaxed text-white/55">
                 Фокус на смелом самовыражении, творчестве и праве занимать больше места.
               </p>
             </div>
-            <div className="rounded-[1.25rem] bg-[#21171a] p-3.5">
+            <div className="rounded-[1.25rem] border border-[#F6E7A1]/35 bg-[#F6E7A1]/08 p-3.5">
               <p className="text-[9px] uppercase tracking-[0.14em] text-[#F6E7A1]">Паттерн</p>
               <p className="mt-2 font-display text-sm leading-tight text-white">Сначала уверенность, потом шаг</p>
               <p className="mt-2 text-[10px] leading-relaxed text-white/55">
@@ -170,35 +170,40 @@ function PortraitPreview() {
 
 function PerspectivePreview() {
   return (
-    <div className="flex h-full min-h-[20rem] flex-col bg-[#0b0a0e] p-4 sm:p-6">
+    <div className="flex h-full min-h-[20rem] flex-col bg-[#050d4a] p-4 sm:p-6">
       <div className="flex items-center justify-between">
         <span className="font-display text-lg text-white">Кто я?</span>
-        <span className="text-xs text-white/35">02 августа</span>
+        <span className="text-xs text-white/40">02 августа</span>
       </div>
-      <div className="mt-5 rounded-[1.5rem] bg-[#161319] p-5">
-        <p className="text-xs leading-relaxed text-white/45">Тема, которая возвращается</p>
+      <div className="mt-5 rounded-[1.5rem] border border-[#F6E7A1]/30 bg-white/[0.04] p-5">
+        <p className="text-xs leading-relaxed text-white/50">Тема, которая возвращается</p>
         <p className="mt-2 font-display text-xl leading-snug text-white">
           Ты ищешь определённость до того, как разрешаешь себе двигаться.
         </p>
       </div>
       <div className="mt-3 grid flex-1 gap-3 sm:grid-cols-2">
-        <div className="rounded-[1.4rem] bg-[#1d1619] p-4">
+        <div className="rounded-[1.4rem] border border-[#F6E7A1]/35 bg-[#F6E7A1]/08 p-4">
           <p className="text-xs text-[#F6E7A1]">Что стоит проверить</p>
-          <p className="mt-5 text-sm leading-relaxed text-white/70">
+          <p className="mt-5 text-sm leading-relaxed text-white/75">
             Где осторожность действительно защищает тебя, а где становится способом отложить выбор?
           </p>
         </div>
-        <div className="flex flex-col justify-between rounded-[1.4rem] bg-[#131119] p-4">
+        <div className="flex flex-col justify-between rounded-[1.4rem] border border-[#F6E7A1]/25 bg-[#071240] p-4">
           <div className="flex gap-2">
             {["свобода", "отношения", "контроль"].map((tag) => (
-              <span key={tag} className="rounded-full bg-white/5 px-2.5 py-1 text-[9px] text-white/50">
+              <span
+                key={tag}
+                className="rounded-full border border-[#F6E7A1]/25 bg-[#F6E7A1]/10 px-2.5 py-1 text-[9px] text-[#F6E7A1]"
+              >
                 {tag}
               </span>
             ))}
           </div>
           <div>
-            <p className="text-xs text-white/35">Новая гипотеза</p>
-            <p className="mt-2 text-sm leading-relaxed text-white/70">Сравни её со своим опытом, а не принимай как готовый ответ.</p>
+            <p className="text-xs text-white/40">Новая гипотеза</p>
+            <p className="mt-2 text-sm leading-relaxed text-white/75">
+              Сравни её со своим опытом, а не принимай как готовый ответ.
+            </p>
           </div>
         </div>
       </div>
@@ -208,38 +213,40 @@ function PerspectivePreview() {
 
 function AccessPreview() {
   return (
-    <div className="flex h-full min-h-[20rem] bg-[#0b0a0e] p-3 sm:p-4">
-      <aside className="flex w-16 shrink-0 flex-col items-center rounded-[1.25rem] bg-[#131119] py-4">
+    <div className="flex h-full min-h-[20rem] bg-[#050d4a] p-3 sm:p-4">
+      <aside className="flex w-16 shrink-0 flex-col items-center rounded-[1.25rem] border border-[#F6E7A1]/25 bg-[#071240] py-4">
         <span className="h-7 w-7 rounded-full bg-[#F6E7A1] shadow-[0_0_18px_rgba(246,231,161,0.45)]" />
         <div className="mt-8 flex flex-col gap-4">
           {[true, false, false, false].map((active, index) => (
             <span
               key={index}
-              className={`h-7 w-7 rounded-lg ${active ? "bg-white/10" : "border border-white/8"}`}
+              className={`h-7 w-7 rounded-lg ${
+                active ? "bg-[#F6E7A1]/20 border border-[#F6E7A1]/45" : "border border-white/15"
+              }`}
             />
           ))}
         </div>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col p-2 pl-4 sm:p-3 sm:pl-5">
         <div>
-          <p className="text-xs text-white/35">Сегодня</p>
+          <p className="text-xs text-white/40">Сегодня</p>
           <p className="mt-1 font-display text-xl text-white">Что происходит сейчас?</p>
         </div>
         <div className="mt-4 grid flex-1 grid-cols-2 gap-3">
-          <div className="col-span-2 rounded-[1.35rem] bg-[#20171a] p-4">
+          <div className="col-span-2 rounded-[1.35rem] border border-[#F6E7A1]/35 bg-[#F6E7A1]/08 p-4">
             <p className="text-[10px] uppercase tracking-[0.15em] text-[#F6E7A1]">Текущий цикл</p>
             <p className="mt-2 font-display text-lg text-white">Время пересобрать привычный ритм</p>
-            <div className="mt-5 h-1.5 overflow-hidden rounded-full bg-white/5">
+            <div className="mt-5 h-1.5 overflow-hidden rounded-full bg-white/10">
               <div className="h-full w-2/3 rounded-full bg-[#F6E7A1]" />
             </div>
           </div>
-          <div className="rounded-[1.35rem] bg-[#151219] p-4">
-            <p className="text-xs text-white/40">Энергия</p>
+          <div className="rounded-[1.35rem] border border-[#F6E7A1]/25 bg-white/[0.04] p-4">
+            <p className="text-xs text-white/45">Энергия</p>
             <p className="mt-4 text-2xl text-white">7.2</p>
-            <p className="mt-1 text-[10px] text-white/35">сегодня</p>
+            <p className="mt-1 text-[10px] text-white/40">сегодня</p>
           </div>
-          <div className="rounded-[1.35rem] bg-[#151219] p-4">
-            <p className="text-xs text-white/40">Наблюдения</p>
+          <div className="rounded-[1.35rem] border border-[#F6E7A1]/25 bg-white/[0.04] p-4">
+            <p className="text-xs text-white/45">Наблюдения</p>
             <div className="mt-5 flex items-end gap-1.5">
               {[35, 55, 42, 75, 62].map((height, index) => (
                 <span
@@ -317,7 +324,7 @@ export function WhatYouGet() {
           })}
         </div>
 
-        <div className="relative min-h-[20rem] overflow-hidden rounded-[2rem] border border-white/10 bg-[#0b0a0e] shadow-[0_28px_80px_rgba(0,0,0,0.38)] sm:aspect-[4/3]">
+        <div className="relative min-h-[20rem] overflow-hidden rounded-2xl border border-[#F6E7A1]/55 bg-[#050d4a] sm:aspect-[4/3]">
           <div
             key={activeIndex}
             className="h-full animate-[fade-up_0.55s_cubic-bezier(0.22,1,0.36,1)_both]"
