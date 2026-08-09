@@ -17,9 +17,41 @@ const body = Roboto({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://cosmirror.ru"),
   title: "Cosmirror — Живая карта себя",
   description:
     "Cosmirror превращает натальную карту в Живую карту — историю, которая развивается вместе с тобой. Не чтобы предсказывать будущее, а чтобы лучше понимать себя.",
+  icons: {
+    icon: [
+      { url: "/icons/favicon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
+  openGraph: {
+    type: "website",
+    locale: "ru_RU",
+    url: "https://cosmirror.ru",
+    siteName: "Cosmirror",
+    title: "Cosmirror — Живая карта себя",
+    description:
+      "Cosmirror превращает натальную карту в Живую карту — историю, которая развивается вместе с тобой. Не чтобы предсказывать будущее, а чтобы лучше понимать себя.",
+    images: [
+      {
+        url: "/images/hero-coastal-moon-trail_4.png",
+        width: 1254,
+        height: 1254,
+        alt: "Cosmirror",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Cosmirror — Живая карта себя",
+    description:
+      "Cosmirror превращает натальную карту в Живую карту — историю, которая развивается вместе с тобой.",
+    images: ["/images/hero-coastal-moon-trail_4.png"],
+  },
 };
 
 export default function RootLayout({
