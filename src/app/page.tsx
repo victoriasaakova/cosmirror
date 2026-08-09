@@ -5,116 +5,17 @@ import { WhatYouGet } from "@/components/WhatYouGet";
 
 const FAMILIAR_CARDS = [
   {
-    icon: (
-      <svg
-        viewBox="0 0 48 48"
-        className="h-12 w-12 text-[#ff7b36]"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.25"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden
-      >
-        <path
-          d="M24 24
-             C24 21 26.5 19 29.5 19
-             C34 19 37.5 22.5 37.5 27
-             C37.5 33.5 32 39 24.5 39
-             C15.5 39 9 32.5 9 24
-             C9 13.5 17.5 6 28 6
-             C36.5 6 43 12 43 20"
-          strokeOpacity="0.95"
-        />
-        <circle cx="29.5" cy="19" r="1.15" fill="currentColor" stroke="none" />
-        <circle cx="37.5" cy="27" r="1.15" fill="currentColor" stroke="none" />
-        <circle cx="24.5" cy="39" r="1.15" fill="currentColor" stroke="none" />
-        <circle cx="9" cy="24" r="1.15" fill="currentColor" stroke="none" />
-        <circle cx="28" cy="6" r="1.15" fill="currentColor" stroke="none" />
-        <circle cx="43" cy="20" r="1.15" fill="currentColor" stroke="none" />
-        <circle cx="24" cy="24" r="1.35" fill="currentColor" stroke="none" />
-      </svg>
-    ),
+    icon: "/images/spiral.png",
     title: "Замкнутый круг",
     text: "Попадаешь в похожие сюжеты в разных сферах жизни и не видишь закономерность, которая за ними стоит.",
   },
   {
-    icon: (
-      <svg
-        viewBox="0 0 48 48"
-        className="h-12 w-12 text-[#ff7b36]"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.25"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden
-      >
-        <rect x="8" y="14" width="28" height="20" rx="3.5" strokeOpacity="0.95" />
-        <path
-          d="M36 20 H39.5 C40.9 20 42 21.1 42 22.5 V25.5 C42 26.9 40.9 28 39.5 28 H36"
-          strokeOpacity="0.95"
-        />
-      </svg>
-    ),
+    icon: "/images/battery.png",
     title: "Ощущение тупика",
     text: "Продуктивность есть, но в важных делах появляется сопротивление и чувство, что силы уходят не туда, куда хотелось.",
   },
   {
-    icon: (
-      <svg
-        viewBox="0 0 48 48"
-        className="h-12 w-12 text-[#ff7b36]"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.25"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden
-      >
-        <path
-          d="M9 18
-             H15.5
-             C15.5 15.2 17.7 13.5 20 13.5
-             C22.3 13.5 24.5 15.2 24.5 18
-             V21.5
-             H28
-             C30.5 21.5 32 23.2 32 25.5
-             C32 27.8 30.5 29.5 28 29.5
-             H24.5
-             V33
-             C24.5 35.8 22.3 37.5 20 37.5
-             C17.7 37.5 15.5 35.8 15.5 33
-             V29.5
-             H9
-             C6.5 29.5 5 27.8 5 25.5
-             C5 23.2 6.5 21.5 9 21.5
-             Z"
-          strokeOpacity="0.95"
-        />
-        <path
-          d="M26 11
-             H31.5
-             C31.5 8.5 33.5 7 35.5 7
-             C37.5 7 39.5 8.5 39.5 11
-             V14.5
-             H43
-             C45.2 14.5 46.5 16 46.5 18
-             C46.5 20 45.2 21.5 43 21.5
-             H39.5
-             V25
-             C39.5 27.5 37.5 29 35.5 29
-             C33.5 29 31.5 27.5 31.5 25
-             V21.5
-             H26
-             C23.8 21.5 22.5 20 22.5 18
-             C22.5 16 23.8 14.5 26 14.5
-             Z"
-          strokeOpacity="0.95"
-          transform="rotate(16 34.5 18)"
-        />
-      </svg>
-    ),
+    icon: "/images/puzzles.png",
     title: "Фоновый шум",
     text: "Постоянный поиск ответов снаружи вместо того, чтобы научиться слышать собственные сигналы и доверять себе.",
   },
@@ -122,113 +23,172 @@ const FAMILIAR_CARDS = [
 
 const HOW_CARDS = [
   {
-    title: "Понять свои циклы",
-    image: "/images/report-card-plot-1.png",
-    alt: "Астрологические циклы",
-    text: "Узнай, какие астрологические циклы ты проживаешь сейчас, и получи понятное объяснение того, как они могут проявляться именно в твоей жизни.",
-    icon: (
-      <svg viewBox="0 0 24 24" className="h-6 w-6 text-[#ff7b36]" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-      </svg>
-    ),
+    title: "Поймёшь свои циклы",
+    text: "Узнаешь, какие циклы ты проживаешь сейчас, поймёшь, как они могут проявляться именно в твоей жизни, и сможешь ими управлять.",
+    image: "/images/planet.png",
   },
   {
-    title: "Увидеть свою силу",
-    image: "/images/report-card-plot-2.png",
-    alt: "Сильные стороны и паттерны",
-    text: "Исследуй свои сильные стороны, внутренние потребности, мотивацию и повторяющиеся паттерны через натальную карту — без сложных астрологических терминов.",
-    icon: (
-      <svg viewBox="0 0 24 24" className="h-6 w-6 text-[#ff7b36]" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-        <circle cx="12" cy="12" r="9" />
-        <circle cx="12" cy="12" r="5" strokeOpacity="0.6" />
-        <circle cx="12" cy="12" r="1.5" fill="currentColor" />
-      </svg>
-    ),
+    title: "Раскроешь свою силу",
+    text: "Узнаешь, какие у тебя сильные стороны, и научишься опираться на них в жизни, чтобы раскрыть свой потенциал.",
+    image: "/images/flower.png",
   },
   {
-    title: "Заметить свои паттерны",
-    image: "/images/report-card-plot-3.png",
-    alt: "Закономерности и энергия",
-    text: "Отмечай свои состояния, события и уровень энергии. Cosmirror помогает увидеть, что действительно наполняет тебя, что истощает и какие сценарии повторяются снова и снова.",
-    icon: (
-      <svg viewBox="0 0 24 24" className="h-6 w-6 text-[#ff7b36]" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-        <path d="M3 17l6-6 4 4 8-8" />
-        <path d="M17 7h4v4" />
-      </svg>
-    ),
+    title: "Заметишь свои паттерны",
+    text: "Сможешь отслеживать свои состояния, повторяющиеся сценарии и уровень энергии, чтобы легче ими управлять.",
+    image: "/images/pattern.png",
   },
   {
-    title: "Переписать свою историю",
-    image: "/images/report-card-plot-4.png",
-    alt: "Инсайты от AI",
-    text: "AI знает твою карту, текущие циклы и историю наблюдений. Он помогает увидеть связи, которые легко упустить, когда находишься внутри ситуации.",
-    icon: (
-      <svg viewBox="0 0 24 24" className="h-6 w-6 text-[#ff7b36]" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-        <path d="M12 2v3M12 19v3M2 12h3M19 12h3" strokeOpacity="0.4" />
-        <path d="M12 5l2 4.5 4.5 2-4.5 2-2 4.5-2-4.5-4.5-2 4.5-2z" />
-      </svg>
-    ),
+    title: "Соберёшь живую карту себя",
+    text: "Увидишь взаимосвязи между своей историей и влиянием планет, сможешь делать более осознанные выборы с помощью AI-компаньона.",
+    image: "/images/moon.png",
   },
 ];
 
-const CONNECTS = [
-  "свои состояния",
-  "жизненные события",
-  "повторяющиеся сценарии",
-  "текущие астрологические циклы",
+/** Desktop constellation — original sketch proportions */
+const CONNECTS_DESKTOP = [
+  { label: "свою карту", x: 22, y: 80, labelAt: "right" as const },
+  { label: "свои состояния", x: 28, y: 50, labelAt: "right" as const },
+  { label: "астрологические циклы", x: 48, y: 14, labelAt: "right" as const },
+  { label: "жизненные события", x: 60, y: 46, labelAt: "right" as const },
+  { label: null, x: 86, y: 72, labelAt: "right" as const },
 ];
 
-const NOT_PROMISES = [
-  "Мы не предсказываем будущее.",
-  "Мы не говорим, какие решения тебе принимать.",
-  "Мы не утверждаем, что звезды определяют твою жизнь.",
-  "Мы не заменяем психолога или терапию.",
+const CONNECT_LINES_DESKTOP = [
+  { x1: 22, y1: 80, x2: 28, y2: 50 },
+  { x1: 28, y1: 50, x2: 48, y2: 14 },
+  { x1: 48, y1: 14, x2: 60, y2: 46 },
+  { x1: 60, y1: 46, x2: 60, y2: 72 },
+  { x1: 60, y1: 72, x2: 86, y2: 72 },
 ];
 
-function ConnectIcon({ index }: { index: number }) {
-  const common = {
-    fill: "none",
-    stroke: "currentColor",
-    strokeWidth: 1.35,
-    strokeLinecap: "round" as const,
-    strokeLinejoin: "round" as const,
-  };
+/** Mobile — zigzag from the sketch, compact & centered */
+const CONNECTS_MOBILE = [
+  { label: "свои состояния", x: 10, y: 8, labelAt: "right" as const },
+  { label: "жизненные события", x: 34, y: 30, labelAt: "right" as const },
+  { label: "свою карту", x: 14, y: 52, labelAt: "right" as const },
+  { label: "астрологические циклы", x: 8, y: 74, labelAt: "right" as const },
+];
 
-  const icons = [
-    <g key="state" {...common}>
-      <circle cx="24" cy="24" r="17" opacity="0.35" />
-      <path d="M24 24c0-4 6-4 6 1 0 7-12 8-14 0-3-11 12-17 20-8 9 11-1 26-15 23" />
-      <circle cx="24" cy="24" r="2" fill="currentColor" stroke="none" />
-    </g>,
-    <g key="events" {...common}>
-      <circle cx="24" cy="24" r="5" />
-      <circle cx="24" cy="8" r="2.5" />
-      <circle cx="40" cy="24" r="2.5" />
-      <circle cx="24" cy="40" r="2.5" />
-      <circle cx="8" cy="24" r="2.5" />
-      <path d="M24 10.5V19M37.5 24H29M24 29v8.5M10.5 24H19" opacity="0.75" />
-    </g>,
-    <g key="patterns" {...common}>
-      <circle cx="18" cy="24" r="11" />
-      <circle cx="30" cy="24" r="11" />
-      <path d="M18 13c7 5 7 17 0 22M30 13c-7 5-7 17 0 22" opacity="0.55" />
-    </g>,
-    <g key="cycles" {...common}>
-      <circle cx="24" cy="24" r="5" />
-      <ellipse cx="24" cy="24" rx="18" ry="8" />
-      <ellipse cx="24" cy="24" rx="18" ry="8" transform="rotate(60 24 24)" opacity="0.65" />
-      <circle cx="38" cy="19" r="2" fill="currentColor" stroke="none" />
-    </g>,
-  ];
+const CONNECT_LINES_MOBILE = [
+  { x1: 10, y1: 8, x2: 34, y2: 30 },
+  { x1: 34, y1: 30, x2: 14, y2: 52 },
+  { x1: 14, y1: 52, x2: 8, y2: 74 },
+];
 
+type ConnectNode = (typeof CONNECTS_DESKTOP)[number];
+type ConnectLine = (typeof CONNECT_LINES_DESKTOP)[number];
+
+const FAQ_ITEMS = [
+  {
+    q: "Что делает Cosmirror?",
+    a: "Мы используем астрологию как инструмент для глубокого понимания себя. Связываем карту, циклы и твои реакции — и показываем повторяющиеся сценарии раньше, через паттерны поведения, энергии и выбора.",
+  },
+  {
+    q: "Вы предсказываете будущее?",
+    a: "Нет. Мы не даём прогнозов и не обещаем, что произойдёт дальше. Это способ заметить, какие внутренние темы могут быть громче на фоне текущих циклов.",
+  },
+  {
+    q: "Вы говорите, какие решения принимать?",
+    a: "Нет. Мы подсвечиваем закономерности и опоры — выбор всегда остаётся за тобой. Без гарантий и готовых «правильных» ответов.",
+  },
+  {
+    q: "Значит ли это, что звёзды определяют мою жизнь?",
+    a: "Нет. Мы не утверждаем, что звёзды определяют твою жизнь. Натальная карта — внутренний контекст для наблюдения за собой, а не судьба и не приговор.",
+  },
+  {
+    q: "Это замена психологу или терапии?",
+    a: "Нет. Cosmirror не заменяет психолога или терапию и не ставит медицинских диагнозов. Это спокойный инструмент самонаблюдения рядом с твоим реальным опытом.",
+  },
+];
+
+function PulseDot({ className = "" }: { className?: string }) {
   return (
-    <svg
-      viewBox="0 0 48 48"
-      className="h-8 w-8 shrink-0 text-[#ff7b36]"
-      aria-hidden
-    >
-      {icons[index]}
-    </svg>
+    <span className={`relative inline-flex h-3 w-3 items-center justify-center sm:h-3.5 sm:w-3.5 md:h-4 md:w-4 ${className}`}>
+      <span
+        aria-hidden
+        className="absolute inset-0 animate-pulse-dot rounded-full bg-[#F6E7A1]/45"
+      />
+      <span className="relative h-2 w-2 rounded-full bg-[#F6E7A1] shadow-[0_0_12px_rgba(246,231,161,0.9)] sm:h-2.5 sm:w-2.5 md:h-3 md:w-3" />
+    </span>
+  );
+}
+
+function ConnectLabel({ text }: { text: string }) {
+  const [first, ...rest] = text.split(" ");
+  const second = rest.join(" ");
+  return (
+    <span className="inline-flex items-baseline gap-x-1.5 whitespace-nowrap font-display text-base leading-none sm:text-lg md:text-xl lg:text-2xl">
+      <span className="italic text-[#F6E7A1]">{first}</span>
+      {second ? <span className="not-italic text-white">{second}</span> : null}
+    </span>
+  );
+}
+
+function ConstellationPlot({
+  nodes,
+  lines,
+  className,
+}: {
+  nodes: readonly ConnectNode[];
+  lines: readonly ConnectLine[];
+  className?: string;
+}) {
+  return (
+    <div className={className}>
+      <svg
+        className="pointer-events-none absolute inset-0 z-0 h-full w-full"
+        viewBox="0 0 100 100"
+        preserveAspectRatio="none"
+        aria-hidden
+      >
+        {lines.map((line) => (
+          <line
+            key={`${line.x1},${line.y1}-${line.x2},${line.y2}`}
+            x1={line.x1}
+            y1={line.y1}
+            x2={line.x2}
+            y2={line.y2}
+            stroke="rgba(246,231,161,0.6)"
+            strokeWidth="0.5"
+            vectorEffect="non-scaling-stroke"
+          />
+        ))}
+      </svg>
+
+      {nodes.map((node, index) => (
+        <div
+          key={`${node.label ?? "tail"}-${index}`}
+          className="absolute z-10 -translate-y-1/2"
+          style={{ left: `${node.x}%`, top: `${node.y}%` }}
+        >
+          {node.labelAt === "below" ? (
+            <>
+              <div className="absolute left-0 top-0 -translate-x-1/2 -translate-y-1/2">
+                <PulseDot />
+              </div>
+              {node.label ? (
+                <div className="absolute left-0 top-0 -translate-x-1/2 translate-y-7 sm:translate-y-8 md:translate-y-9">
+                  <ConnectLabel text={node.label} />
+                </div>
+              ) : null}
+            </>
+          ) : (
+            <div className="flex items-center">
+              <div className="relative w-0 shrink-0">
+                <div className="absolute left-0 top-1/2 -translate-x-1/2 -translate-y-1/2">
+                  <PulseDot />
+                </div>
+              </div>
+              {node.label ? (
+                <div className="pl-5 sm:pl-6 md:pl-7">
+                  <ConnectLabel text={node.label} />
+                </div>
+              ) : null}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -239,139 +199,163 @@ export default function Home() {
       <Header />
 
       {/* ── Hero Section ── */}
-      <section id="top" className="relative flex min-h-[100dvh] items-center justify-center overflow-hidden pt-28 pb-16 md:pt-36 md:pb-24">
-        {/* Futuristic 3D Biomorphic Night World Background */}
+      {/*
+        Image is a true background. Section height follows text + a width-scaled
+        bottom pad (so the scene area shrinks/grows with viewport), not 100dvh + a separate square block.
+      */}
+      <section
+        id="top"
+        className="relative overflow-hidden bg-[#050d4a] pt-[7.5rem] pb-[min(58vw,22rem)] sm:pt-36 sm:pb-[min(52vw,24rem)] md:pt-40 md:pb-[min(42vw,26rem)] lg:pt-44"
+      >
         <Image
-          src="/images/hero-cosmirror-surreal-lake-v2.png"
-          alt="Cosmirror Futuristic Biomorphic Night World"
+          src="/images/hero-coastal-moon-trail_4.png"
+          alt=""
           fill
           priority
-          className="z-0 object-cover object-center"
+          quality={95}
+          className="z-0 object-cover object-[center_78%] sm:object-[center_72%] md:object-[center_68%] lg:object-[center_65%]"
           sizes="100vw"
+          aria-hidden
         />
 
-        {/* Soft vignette for text readability — keep the photo visible */}
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 z-[1] bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(0,0,0,0.22)_70%,rgba(0,0,0,0.45)_100%)]"
+          className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-[40%] bg-gradient-to-b from-[#050d4a]/70 via-[#050d4a]/25 to-transparent"
         />
 
-        {/* Seamless Bottom Gradient Fade into next section */}
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-48 bg-gradient-to-b from-transparent via-[#07070c]/50 to-[#07070c]"
+          className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-16 bg-gradient-to-b from-transparent to-[#050d4a] md:h-20"
         />
 
-        {/* Centered Hero Content */}
         <div className="relative z-10 mx-auto flex w-full max-w-4xl flex-col items-center px-5 text-center md:px-8">
-          {/* Centered Headline */}
           <h1 className="reveal font-display text-4xl leading-[1.06] tracking-tight text-white min-[420px]:text-5xl sm:text-6xl md:text-7xl lg:text-[4.8rem] max-w-3xl drop-shadow-[0_4px_24px_rgba(0,0,0,0.8)]">
             Начни замечать{" "}
-            <span className="font-display italic text-[#ff7b36]">закономерности</span>{" "}
+            <span className="font-display italic text-[#F6E7A1]">закономерности</span>{" "}
             своей жизни
           </h1>
 
-          {/* Centered Subtitle */}
-          <p className="reveal reveal-delay-1 mt-6 max-w-xl text-base font-light leading-relaxed text-white/90 sm:text-lg md:text-xl drop-shadow-[0_2px_12px_rgba(0,0,0,0.9)]">
-            Соединяем астрологию с твоим опытом в историю,
-            <br className="hidden sm:inline" /> которая развивается вместе с тобой.
+          <p className="reveal reveal-delay-1 mt-5 w-[min(100%,26rem)] text-base font-light leading-relaxed text-white/90 sm:mt-6 sm:w-[30rem] sm:text-lg md:w-[32rem] md:text-xl drop-shadow-[0_2px_12px_rgba(0,0,0,0.9)]">
+            Соединяем точность астрологии с&nbsp;твоим реальным опытом
+            в&nbsp;историю, которая развивается вместе с&nbsp;тобой.
           </p>
 
-          {/* Single White CTA Button with Black Text and Headline Font */}
-          <div className="reveal reveal-delay-2 mt-9 flex justify-center">
+          <div className="reveal reveal-delay-2 mt-8 flex justify-center sm:mt-9">
             <a
               href="/onboarding?new=1"
-              className="inline-flex items-center justify-center rounded-full bg-white hover:bg-zinc-100 text-black font-display font-semibold text-lg md:text-xl px-10 py-3.5 shadow-[0_12px_36px_rgba(255,255,255,0.25)] transition-all transform hover:scale-[1.03] active:scale-[0.98] cursor-pointer"
+              className="inline-flex items-center justify-center rounded-full bg-[#F6E7A1] hover:bg-[#f0dc82] text-[#0a1a3a] font-display font-semibold text-lg md:text-xl px-10 py-2.5 shadow-[0_10px_28px_rgba(246,231,161,0.28)] transition-all transform hover:scale-[1.03] active:scale-[0.98] cursor-pointer"
             >
-              Начать бесплатно
+              Начать путешествие
             </a>
           </div>
         </div>
       </section>
 
+      {/* ── Eye bridge — tight under hero ── */}
+      <div className="relative z-10 -mt-2 flex justify-center bg-[#050d4a] px-5 pb-3 pt-2 sm:-mt-3 sm:pb-4 sm:pt-3 md:pb-5">
+        <Image
+          src="/images/eye-silver.png"
+          alt=""
+          width={1254}
+          height={1254}
+          className="animate-eye-spin h-auto w-[min(42vw,11rem)] sm:w-[min(36vw,13rem)] md:w-[14rem]"
+          sizes="(max-width: 768px) 42vw, 14rem"
+          priority
+        />
+      </div>
+
       {/* ── If this is familiar ── */}
       <section
         id="for"
-        className="relative -mt-24 scroll-mt-20 overflow-hidden bg-[linear-gradient(to_bottom,transparent_0,#07070c_10rem,#07070c_100%)] pt-36 pb-24 md:-mt-32 md:pt-48 md:pb-32"
+        className="relative scroll-mt-20 overflow-hidden bg-[#050d4a] pt-3 pb-0 md:pt-5"
       >
-        {/* Section embedded background panorama */}
-        <div className="road-panorama pointer-events-none absolute inset-x-0 bottom-0 z-0 h-64 sm:h-72 md:h-80">
-          <Image
-            src="/images/natal-road-panorama-magenta.png"
-            alt=""
-            fill
-            sizes="100vw"
-            className="object-cover object-[center_78%]"
-          />
-          <div
-            aria-hidden
-            className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-[#07070c] via-[#07070c]/70 to-transparent sm:h-32 md:h-36"
-          />
-        </div>
-
         <div className="relative z-10 mx-auto max-w-6xl px-5 md:px-8">
           {/* Section Heading */}
           <div className="mx-auto max-w-3xl text-center">
             <h2 className="font-display text-3xl leading-tight tracking-tight text-white md:text-5xl lg:text-6xl">
-              Если тебе <span className="font-display italic text-white">знакомо</span> это…
+              Если тебе{" "}
+              <span className="font-display italic text-[#F6E7A1]">знакомо</span> это…
             </h2>
           </div>
 
-          {/* Familiar moments: open columns with solid accent hairlines */}
-          <div className="mt-10 flex flex-col items-center lg:mt-16 lg:flex-row lg:items-stretch lg:justify-center">
-            {FAMILIAR_CARDS.map((card, index) => (
-              <div
+          {/* Familiar moments as accent-bordered cards */}
+          <div className="mt-8 grid grid-cols-1 gap-5 sm:mt-10 sm:gap-6 md:grid-cols-3 lg:mt-12 lg:gap-7">
+            {FAMILIAR_CARDS.map((card) => (
+              <article
                 key={card.title}
-                className="flex w-full max-w-[17rem] flex-col items-center lg:max-w-none lg:flex-1 lg:flex-row lg:items-stretch"
+                className="flex flex-col items-center rounded-2xl border border-[#F6E7A1]/55 bg-white/[0.03] px-5 py-7 text-center sm:px-6 sm:py-8"
               >
-                {index > 0 ? (
-                  <>
-                    <div
-                      aria-hidden
-                      className="my-5 h-px w-full bg-[#ff7b36]/60 lg:hidden"
-                    />
-                    <div
-                      aria-hidden
-                      className="mx-0 hidden w-px shrink-0 self-stretch bg-[#ff7b36]/60 lg:block"
-                    />
-                  </>
-                ) : null}
-
-                <article className="flex w-full flex-col items-center py-1 text-center lg:px-8 lg:py-2">
-                  <div className="mb-4 flex h-12 w-12 items-center justify-center lg:mb-6 lg:h-14 lg:w-14">
-                    {card.icon}
-                  </div>
-                  <h3 className="mb-2 max-w-[17rem] font-display text-lg font-normal leading-snug text-white lg:mb-3 lg:text-xl">
-                    {card.title}
-                  </h3>
-                  <p className="max-w-[17rem] text-sm font-light leading-relaxed text-white/65 lg:text-[0.95rem]">
-                    {card.text}
-                  </p>
-                </article>
-              </div>
+                <div className="mb-4 flex h-12 w-12 items-center justify-center sm:mb-5 sm:h-14 sm:w-14">
+                  <Image
+                    src={card.icon}
+                    alt=""
+                    width={56}
+                    height={56}
+                    className="h-full w-full object-contain"
+                    sizes="56px"
+                  />
+                </div>
+                <h3 className="mb-2 font-display text-lg font-normal leading-snug text-[#F6E7A1] sm:mb-3 sm:text-xl">
+                  {card.title}
+                </h3>
+                <p className="mx-auto w-full max-w-[28rem] text-sm font-light leading-relaxed text-white/80 sm:text-[0.95rem]">
+                  {card.text}
+                </p>
+              </article>
             ))}
           </div>
+        </div>
 
-          {/* Natal chart and changing life */}
-          <div className="mt-16">
-            <h3 className="font-display mx-auto max-w-[34rem] text-center text-2xl leading-snug text-white sm:text-3xl md:text-4xl lg:text-[2.35rem]">
-              <span className="block">Твоя натальная карта не меняется,</span>
-              <span className="font-display italic text-[#ff7b36]">меняешься ты:</span>
-            </h3>
+        {/* Constellation — full-bleed stars background */}
+        <div
+          id="access"
+          className="relative mt-8 min-h-[36rem] scroll-mt-24 overflow-hidden pb-8 pt-10 sm:mt-10 sm:min-h-[42rem] sm:pb-10 sm:pt-12 md:min-h-[52rem] md:pb-44 md:pt-14"
+        >
+          <Image
+            src="/images/landscape_stars.png"
+            alt=""
+            fill
+            className="object-cover object-[center_58%]"
+            sizes="100vw"
+          />
+          {/* Top seam + mountains soft darken; button zone clearer; bottom seam */}
+          <div
+            aria-hidden
+            className="absolute inset-0 bg-[linear-gradient(to_bottom,#050d4a_0%,rgba(5,13,74,0.75)_8%,transparent_24%,transparent_48%,rgba(5,13,74,0.35)_60%,rgba(5,13,74,0.2)_72%,transparent_80%,rgba(5,13,74,0.5)_92%,#050d4a_100%)]"
+          />
 
-            {/* Changing life, framed by the surreal night garden */}
-            <FallingPills />
+          <div className="relative z-10 mx-auto max-w-6xl px-5 md:px-8">
+            <div className="mx-auto max-w-3xl text-center">
+              <h2 className="font-display text-3xl leading-tight tracking-tight text-white md:text-5xl lg:text-6xl">
+                Cosmirror <span className="italic text-[#F6E7A1]">помогает</span>{" "}
+                связывать
+              </h2>
+            </div>
+
+            <ConstellationPlot
+              nodes={CONNECTS_MOBILE}
+              lines={CONNECT_LINES_MOBILE}
+              className="relative mx-auto mt-8 h-[16rem] w-full max-w-[22rem] md:hidden"
+            />
+            <ConstellationPlot
+              nodes={CONNECTS_DESKTOP}
+              lines={CONNECT_LINES_DESKTOP}
+              className="relative mx-auto mt-12 hidden h-[30rem] w-full max-w-3xl md:block"
+            />
+
+            {/* Desktop spacer — former button height so landscape doesn’t collide */}
+            <div className="hidden h-28 md:block lg:h-32" aria-hidden />
           </div>
         </div>
       </section>
 
       {/* ── How it works / Report Cards ── */}
-      <section id="how" className="relative overflow-hidden bg-[#07070c] py-24 md:py-32">
+      <section id="how" className="relative overflow-hidden bg-[#050d4a] pb-24 pt-10 md:pb-32 md:pt-12">
         <div className="relative z-10 mx-auto max-w-6xl px-5 md:px-8">
           {/* Как это работает */}
           <div id="how-it-works" className="mx-auto max-w-3xl scroll-mt-28 text-center">
             <h2 className="font-display text-3xl leading-tight tracking-tight text-white md:text-5xl lg:text-6xl">
-              С чем <span className="font-display italic text-[#ff7b36]">помогает</span> Cosmirror
+              Как это <span className="font-display italic text-[#F6E7A1]">работает</span>
             </h2>
           </div>
 
@@ -379,126 +363,109 @@ export default function Home() {
             {HOW_CARDS.map((card) => (
               <div
                 key={card.title}
-                className="group relative flex flex-col justify-between rounded-[2rem] border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/20 p-6 shadow-[0_16px_40px_rgba(0,0,0,0.4)] backdrop-blur-md transition-all duration-300 hover:-translate-y-1.5"
+                className="group relative flex flex-col rounded-2xl border border-[#F6E7A1]/55 bg-white/[0.03] p-6 backdrop-blur-md transition-all duration-300 hover:-translate-y-1.5 hover:border-[#F6E7A1]/80 hover:bg-white/[0.06]"
               >
-                <div>
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/[0.05] border border-white/10 group-hover:border-[#ff7b36]/40 transition-all">
-                    {card.icon}
-                  </div>
-                  <h3 className="font-display text-xl md:text-2xl font-normal leading-snug text-white mt-3 mb-4">
-                    {card.title}
-                  </h3>
-                </div>
-
-                <div className="relative my-2 aspect-[16/9] w-full overflow-hidden rounded-2xl">
+                <div className="mb-4 flex h-24 w-full items-start justify-start sm:h-28 md:h-[7.7rem]">
                   <Image
                     src={card.image}
-                    alt={card.alt}
-                    fill
-                    className="object-cover object-center group-hover:scale-105 transition-transform duration-500"
-                    sizes="(max-width: 768px) 100vw, 25vw"
+                    alt=""
+                    width={196}
+                    height={196}
+                    className="h-full w-auto max-w-full object-contain object-left"
+                    sizes="(max-width: 1024px) 28vw, 12vw"
                   />
                 </div>
-
-                <p className="mt-4 text-sm leading-relaxed text-white/65 font-light">
+                <h3 className="mb-3 font-display text-xl font-normal leading-snug text-[#F6E7A1] md:text-2xl">
+                  {card.title}
+                </h3>
+                <p className="text-sm font-light leading-relaxed text-white/80">
                   {card.text}
                 </p>
               </div>
             ))}
           </div>
 
-          <WhatYouGet />
-
-          <div className="mt-14 flex justify-center">
+          <div className="mt-12 flex justify-center sm:mt-14">
             <a
               href="/onboarding?new=1"
-              className="inline-flex items-center justify-center rounded-full bg-white px-10 py-3.5 font-display text-lg font-semibold text-black shadow-[0_12px_36px_rgba(255,255,255,0.25)] transition-all hover:scale-[1.03] hover:bg-zinc-100 active:scale-[0.98] md:text-xl"
+              className="inline-flex items-center justify-center rounded-full bg-[#F6E7A1] px-10 py-2.5 font-display text-lg font-semibold text-[#0a1a3a] shadow-[0_10px_28px_rgba(246,231,161,0.28)] transition-all hover:scale-[1.03] hover:bg-[#f0dc82] active:scale-[0.98] md:text-xl"
             >
-              Построить карту
+              Попробовать
             </a>
           </div>
+
+          <WhatYouGet />
         </div>
       </section>
 
-      {/* ── What we don't promise ── */}
-      <section className="relative py-20 md:py-24">
+      {/* ── FAQ ── */}
+      <section id="faq" className="relative scroll-mt-20 py-20 md:py-24">
         <div className="mx-auto max-w-6xl px-5 md:px-8">
           <div className="mx-auto max-w-3xl text-center">
-            <h2 className="font-display text-3xl leading-tight tracking-tight text-white md:text-5xl">
-              Мы используем астрологию как{" "}
-              <span className="font-display italic text-[#ff7b36]">инструмент</span> для глубокого
-              понимания себя.
+            <h2 className="font-display text-3xl leading-tight tracking-tight text-white md:text-5xl lg:text-6xl">
+              Частые{" "}
+              <span className="font-display italic text-[#F6E7A1]">вопросы</span>
             </h2>
           </div>
 
-          <div className="mx-auto mt-8 max-w-2xl space-y-2 text-center text-sm leading-relaxed text-white/60 md:text-[15px]">
-            {NOT_PROMISES.map((item) => (
-              <p key={item}>{item}</p>
+          <div className="mx-auto mt-10 max-w-2xl divide-y divide-white/10 border-y border-white/10 md:mt-12">
+            {FAQ_ITEMS.map((item) => (
+              <details
+                key={item.q}
+                className="group open:pb-5 [&_summary::-webkit-details-marker]:hidden"
+              >
+                <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-4 py-3 text-left md:min-h-16 md:py-4">
+                  <span className="font-display text-lg leading-snug text-white md:text-xl">
+                    {item.q}
+                  </span>
+                  <span
+                    aria-hidden
+                    className="flex h-11 w-11 shrink-0 items-center justify-center text-[#F6E7A1] transition-transform duration-200 group-open:rotate-45 md:h-12 md:w-12"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      className="h-7 w-7 md:h-8 md:w-8"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      aria-hidden
+                    >
+                      <path d="M12 5v14M5 12h14" />
+                    </svg>
+                  </span>
+                </summary>
+                <p className="pb-2 max-w-xl text-sm font-light leading-relaxed text-white/70 md:text-[15px]">
+                  {item.a}
+                </p>
+              </details>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── Connecting the story / CTA ── */}
-      <section
-        id="access"
-        className="relative min-h-[42rem] scroll-mt-24 overflow-hidden pb-32 pt-20 md:min-h-[48rem] md:pb-40 md:pt-28"
-      >
-        <Image
-          src="/images/cosmirror-bottom-landscape.png"
-          alt=""
-          fill
-          className="object-cover object-bottom"
-          sizes="100vw"
-        />
-        <div
-          aria-hidden
-          className="absolute inset-0 bg-gradient-to-b from-[#07070c] via-[#07070c]/25 to-transparent"
-        />
-        <div
-          aria-hidden
-          className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#050508]/90"
-        />
+      {/* ── Natal chart and changing life (temporarily lower) ── */}
+      <section className="relative overflow-hidden bg-[#050d4a] pb-24 pt-16 md:pb-32 md:pt-20">
+        <div className="road-panorama pointer-events-none absolute inset-x-0 bottom-0 z-0 h-64 sm:h-72 md:h-80">
+          <Image
+            src="/images/landscape_natal_map_2.png"
+            alt=""
+            fill
+            sizes="100vw"
+            className="object-cover object-[center_78%]"
+          />
+          <div
+            aria-hidden
+            className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-[#050d4a] via-[#050d4a]/70 to-transparent sm:h-32 md:h-36"
+          />
+        </div>
 
         <div className="relative z-10 mx-auto max-w-6xl px-5 md:px-8">
-          <div className="mx-auto max-w-3xl text-center">
-            <h2 className="font-display text-3xl leading-tight tracking-tight text-white md:text-5xl">
-              Cosmirror помогает <span className="font-display italic text-[#ff7b36]">увидеть</span>{" "}
-              закономерности,
-              <br className="hidden sm:inline" /> и постепенно ты начинаешь связывать:
-            </h2>
-          </div>
-
-          <div className="mx-auto mt-8 max-w-2xl">
-            <div className="glass overflow-hidden rounded-[1.75rem] px-6 md:px-9">
-              <ul>
-                {CONNECTS.map((item, index) => (
-                  <li
-                    key={item}
-                    className="flex items-center gap-4 border-b border-white/10 py-4 text-left last:border-b-0 md:gap-5"
-                  >
-                    <ConnectIcon index={index} />
-                    <span className="flex-1 text-base font-normal text-white/90 md:text-lg">
-                      {item}
-                    </span>
-                    <span
-                      aria-hidden
-                      className="h-2.5 w-2.5 shrink-0 rounded-full bg-[#ffb099] shadow-[0_0_14px_rgba(255,123,54,0.6)]"
-                    />
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-
-          <div className="mx-auto mt-12 max-w-2xl text-center">
-            <a
-              href="/onboarding?new=1"
-              className="inline-flex items-center justify-center rounded-full bg-white px-10 py-3.5 font-display text-lg font-semibold text-black shadow-[0_12px_36px_rgba(255,255,255,0.25)] transition-all hover:scale-[1.03] hover:bg-zinc-100 active:scale-[0.98] md:text-xl"
-            >
-              Попробовать бесплатно
-            </a>
-          </div>
+          <h3 className="font-display mx-auto max-w-[34rem] text-center text-2xl leading-snug text-white sm:text-3xl md:text-4xl lg:text-[2.35rem]">
+            <span className="block">Твоя натальная карта не меняется,</span>
+            <span className="font-display italic text-[#F6E7A1]">меняешься ты:</span>
+          </h3>
+          <FallingPills />
         </div>
       </section>
 

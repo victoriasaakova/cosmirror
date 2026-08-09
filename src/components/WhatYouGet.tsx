@@ -70,7 +70,7 @@ function BirthChart() {
   return (
     <svg
       viewBox="0 0 200 200"
-      className="h-[92%] w-[92%] text-[#ffad82]"
+      className="h-[92%] w-[92%] text-[#F6E7A1]"
       role="img"
       aria-label="Пример натальной карты"
     >
@@ -101,14 +101,14 @@ function BirthChart() {
       ))}
 
       <g fill="none" strokeLinecap="round">
-        <path d="M100 48 L72 126 L137 126 L58 76 L109 142 Z" stroke="#ff7b36" strokeOpacity="0.48" />
-        <path d="M46 111 L126 90 L72 126 M58 76 L137 126" stroke="#ffad82" strokeOpacity="0.32" />
+        <path d="M100 48 L72 126 L137 126 L58 76 L109 142 Z" stroke="#F6E7A1" strokeOpacity="0.48" />
+        <path d="M46 111 L126 90 L72 126 M58 76 L137 126" stroke="#F6E7A1" strokeOpacity="0.32" />
         <path d="M100 48 L46 111 L109 142 M126 90 L109 142" stroke="#fff" strokeOpacity="0.16" strokeDasharray="3 3" />
       </g>
 
       {PLANETS.map((planet) => (
         <g key={planet.glyph}>
-          <circle cx={planet.x} cy={planet.y} r="8" fill="#151119" stroke="#ffad82" strokeOpacity="0.45" />
+          <circle cx={planet.x} cy={planet.y} r="8" fill="#151119" stroke="#F6E7A1" strokeOpacity="0.45" />
           <text
             x={planet.x}
             y={planet.y + 0.5}
@@ -121,7 +121,7 @@ function BirthChart() {
           </text>
         </g>
       ))}
-      <circle cx="100" cy="100" r="2.5" fill="#ff7b36" />
+      <circle cx="100" cy="100" r="2.5" fill="#F6E7A1" />
     </svg>
   );
 }
@@ -131,7 +131,7 @@ function PortraitPreview() {
     <div className="flex h-full min-h-[20rem] flex-col bg-[#0b0a0e] p-4 sm:p-5">
       <div className="flex items-center justify-between border-b border-white/8 pb-4">
         <span className="font-display text-lg text-white">Твой портрет</span>
-        <span className="rounded-full bg-[#ff7b36]/12 px-3 py-1 text-[10px] text-[#ffad82]">
+        <span className="rounded-full bg-[#F6E7A1]/12 px-3 py-1 text-[10px] text-[#F6E7A1]">
           Натальная карта
         </span>
       </div>
@@ -148,14 +148,14 @@ function PortraitPreview() {
           </div>
           <div className="grid flex-1 grid-cols-2 gap-3">
             <div className="rounded-[1.25rem] bg-[#17141b] p-3.5">
-              <p className="text-[9px] uppercase tracking-[0.14em] text-[#ffad82]">Текущий цикл</p>
+              <p className="text-[9px] uppercase tracking-[0.14em] text-[#F6E7A1]">Текущий цикл</p>
               <p className="mt-2 font-display text-sm leading-tight text-white">Юпитер во Льве</p>
               <p className="mt-2 text-[10px] leading-relaxed text-white/55">
                 Фокус на смелом самовыражении, творчестве и праве занимать больше места.
               </p>
             </div>
             <div className="rounded-[1.25rem] bg-[#21171a] p-3.5">
-              <p className="text-[9px] uppercase tracking-[0.14em] text-[#ffad82]">Паттерн</p>
+              <p className="text-[9px] uppercase tracking-[0.14em] text-[#F6E7A1]">Паттерн</p>
               <p className="mt-2 font-display text-sm leading-tight text-white">Сначала уверенность, потом шаг</p>
               <p className="mt-2 text-[10px] leading-relaxed text-white/55">
                 Перед важным выбором ты долго ищешь подтверждение, что всё получится.
@@ -183,7 +183,7 @@ function PerspectivePreview() {
       </div>
       <div className="mt-3 grid flex-1 gap-3 sm:grid-cols-2">
         <div className="rounded-[1.4rem] bg-[#1d1619] p-4">
-          <p className="text-xs text-[#ffad82]">Что стоит проверить</p>
+          <p className="text-xs text-[#F6E7A1]">Что стоит проверить</p>
           <p className="mt-5 text-sm leading-relaxed text-white/70">
             Где осторожность действительно защищает тебя, а где становится способом отложить выбор?
           </p>
@@ -210,7 +210,7 @@ function AccessPreview() {
   return (
     <div className="flex h-full min-h-[20rem] bg-[#0b0a0e] p-3 sm:p-4">
       <aside className="flex w-16 shrink-0 flex-col items-center rounded-[1.25rem] bg-[#131119] py-4">
-        <span className="h-7 w-7 rounded-full bg-[#ff7b36] shadow-[0_0_18px_rgba(255,123,54,0.45)]" />
+        <span className="h-7 w-7 rounded-full bg-[#F6E7A1] shadow-[0_0_18px_rgba(246,231,161,0.45)]" />
         <div className="mt-8 flex flex-col gap-4">
           {[true, false, false, false].map((active, index) => (
             <span
@@ -227,10 +227,10 @@ function AccessPreview() {
         </div>
         <div className="mt-4 grid flex-1 grid-cols-2 gap-3">
           <div className="col-span-2 rounded-[1.35rem] bg-[#20171a] p-4">
-            <p className="text-[10px] uppercase tracking-[0.15em] text-[#ffad82]">Текущий цикл</p>
+            <p className="text-[10px] uppercase tracking-[0.15em] text-[#F6E7A1]">Текущий цикл</p>
             <p className="mt-2 font-display text-lg text-white">Время пересобрать привычный ритм</p>
             <div className="mt-5 h-1.5 overflow-hidden rounded-full bg-white/5">
-              <div className="h-full w-2/3 rounded-full bg-[#ff7b36]" />
+              <div className="h-full w-2/3 rounded-full bg-[#F6E7A1]" />
             </div>
           </div>
           <div className="rounded-[1.35rem] bg-[#151219] p-4">
@@ -244,7 +244,7 @@ function AccessPreview() {
               {[35, 55, 42, 75, 62].map((height, index) => (
                 <span
                   key={index}
-                  className="w-2 rounded-full bg-[#ff7b36]/70"
+                  className="w-2 rounded-full bg-[#F6E7A1]/70"
                   style={{ height: `${height / 2}px` }}
                 />
               ))}
@@ -265,7 +265,7 @@ export function WhatYouGet() {
   return (
     <section id="get" className="mt-28 scroll-mt-24">
       <h2 className="text-center font-display text-3xl leading-tight tracking-tight text-white md:text-5xl lg:text-6xl">
-        Что ты <span className="font-display italic text-[#ff7b36]">получишь</span>
+        Что ты <span className="font-display italic text-[#F6E7A1]">получишь</span>
       </h2>
 
       <div className="mt-14 grid items-stretch gap-8 lg:grid-cols-[0.86fr_1.14fr] lg:gap-14">
@@ -280,13 +280,13 @@ export function WhatYouGet() {
                   onClick={() => setActiveIndex(index)}
                   aria-expanded={isActive}
                   aria-controls={`what-you-get-panel-${index}`}
-                  className="flex min-h-20 w-full items-center gap-4 py-5 text-left focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#ff7b36]"
+                  className="flex min-h-20 w-full items-center gap-4 py-5 text-left focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#F6E7A1]"
                 >
                   <span
                     aria-hidden
                     className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-lg transition-all duration-300 ${
                       isActive
-                        ? "rotate-45 border-[#ff7b36] bg-[#ff7b36] text-black"
+                        ? "rotate-45 border-[#F6E7A1] bg-[#F6E7A1] text-[#0a1a3a]"
                         : "border-white/20 text-white/55"
                     }`}
                   >

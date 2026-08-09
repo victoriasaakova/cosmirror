@@ -223,14 +223,14 @@ export function InsightFunnel({
             <>
               {name},{" "}
               <span className="text-white/90">{opening.bridge} </span>
-              <span className="font-display italic text-[#ff7b36]">{opening.insight}</span>
+              <span className="font-display italic text-[#F6E7A1]">{opening.insight}</span>
             </>
           ) : (
             <>
               <span className="text-white/90">
                 {opening.bridge.charAt(0).toUpperCase() + opening.bridge.slice(1)}{" "}
               </span>
-              <span className="font-display italic text-[#ff7b36]">{opening.insight}</span>
+              <span className="font-display italic text-[#F6E7A1]">{opening.insight}</span>
             </>
           )}
         </h1>
@@ -285,7 +285,7 @@ export function InsightFunnel({
           </p>
         ))}
       </div>
-      <p className="mt-10 font-display text-4xl tracking-tight text-[#ff7b36] sm:text-5xl">777 ₽</p>
+      <p className="mt-10 font-display text-4xl tracking-tight text-[#F6E7A1] sm:text-5xl">777 ₽</p>
       <p className="mt-2 text-sm font-light text-white/40">в месяц · отмена в любой момент</p>
     </div>
   );
@@ -307,8 +307,8 @@ function OutcomeMetricCard({ card }: { card: OutcomeCard }) {
           →
         </span>
         <div className="text-right">
-          <p className="text-[11px] text-[#ff7b36]/70">через неделю</p>
-          <p className="font-display text-xl text-[#ff7b36]">{card.after}</p>
+          <p className="text-[11px] text-[#F6E7A1]/70">через неделю</p>
+          <p className="font-display text-xl text-[#F6E7A1]">{card.after}</p>
         </div>
       </div>
       <div className="mt-3 space-y-1.5">
@@ -318,9 +318,9 @@ function OutcomeMetricCard({ card }: { card: OutcomeCard }) {
             style={{ width: `${beforePct}%` }}
           />
         </div>
-        <div className="h-1.5 overflow-hidden rounded-full bg-[#ff7b36]/15">
+        <div className="h-1.5 overflow-hidden rounded-full bg-[#F6E7A1]/15">
           <div
-            className="h-full rounded-full bg-[#ff7b36] transition-all duration-700"
+            className="h-full rounded-full bg-[#F6E7A1] transition-all duration-700"
             style={{ width: `${afterPct}%` }}
           />
         </div>

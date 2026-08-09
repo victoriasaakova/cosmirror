@@ -8,7 +8,7 @@ type LegalDocumentProps = {
 
 export function LegalDocument({ title, updatedAt, children }: LegalDocumentProps) {
   return (
-    <main className="min-h-full bg-[#07070c] text-[#f4efe8]">
+    <main className="min-h-full bg-[#050d4a] text-[#f4efe8]">
       <div className="mx-auto max-w-3xl px-5 pb-20 pt-10 md:px-8 md:pt-14">
         <a
           href="/"

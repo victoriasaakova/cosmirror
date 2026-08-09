@@ -28,7 +28,7 @@ export function FallingPills() {
           <p
             key={message}
             aria-hidden={index !== messageIndex}
-            className="message-swap font-display absolute inset-0 flex items-start justify-center px-4 pt-2 text-center text-2xl leading-snug italic text-[#ff7b36] sm:text-3xl md:text-4xl lg:text-[2.35rem]"
+            className="message-swap font-display absolute inset-0 flex items-start justify-center px-4 pt-2 text-center text-2xl leading-snug italic text-[#F6E7A1] sm:text-3xl md:text-4xl lg:text-[2.35rem]"
             data-active={index === messageIndex}
           >
             {message}

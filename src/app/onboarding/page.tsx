@@ -12,7 +12,7 @@ import { resetOnboardingFlowCache } from "@/components/OnboardingFlow";
 
 function LoadingScreen({ message = "Загружаем…" }: { message?: string }) {
   return (
-    <div className="flex h-[100dvh] items-center justify-center bg-[#07070c] text-white/50">
+    <div className="flex h-[100dvh] items-center justify-center bg-[#050d4a] text-white/50">
       {message}
     </div>
   );
@@ -55,10 +55,10 @@ function OnboardingIndexInner() {
 
   if (error) {
     return (
-      <div className="flex h-[100dvh] items-center justify-center bg-[#07070c] px-5 text-center text-white">
+      <div className="flex h-[100dvh] items-center justify-center bg-[#050d4a] px-5 text-center text-white">
         <div>
           <p className="text-white/70">{error}</p>
-          <a href="/" className="mt-6 inline-block text-[#ff7b36]">
+          <a href="/" className="mt-6 inline-block text-[#F6E7A1]">
             На главную
           </a>
         </div>

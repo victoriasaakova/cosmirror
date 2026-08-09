@@ -6,7 +6,8 @@ const NAV = [
   { href: "#for", label: "Для кого" },
   { href: "#how-it-works", label: "Как это работает" },
   { href: "#get", label: "Что ты получишь" },
-];
+  { href: "#", label: "Блог", soon: true },
+] as const;
 
 export function Header() {
   const [isOpen, setIsOpen] = useState(false);
@@ -23,19 +24,25 @@ export function Header() {
   }, [isOpen]);
 
   return (
-    <header className="fixed inset-x-0 top-4 z-50 mx-auto px-4 flex justify-center">
-      <div className="relative flex w-full max-w-4xl items-center justify-between rounded-full border border-white/20 bg-black/50 px-5 py-3 shadow-[0_12px_40px_rgba(0,0,0,0.5)] backdrop-blur-2xl md:px-7 md:py-3.5">
+    <header className="fixed inset-x-0 top-3 z-50 mx-auto flex justify-center px-4">
+      <div className="relative flex w-full max-w-4xl items-center justify-between rounded-full border border-white/20 bg-[#050d4a]/55 px-4 py-1.5 shadow-[0_12px_40px_rgba(5,13,74,0.5)] backdrop-blur-2xl md:px-6 md:py-2">
         <a
           href="#top"
-          className="font-display text-xl font-medium tracking-tight text-white transition hover:opacity-90"
+          className="font-display text-lg font-medium tracking-tight text-white transition hover:opacity-90"
         >
           Cosmirror
         </a>
 
         {/* Desktop Navigation */}
-        <nav className="hidden items-center gap-7 text-sm font-medium text-white/80 md:flex">
+        <nav className="hidden items-center gap-6 text-sm font-medium text-white/80 md:flex">
           {NAV.map((item) => (
-            <a key={item.href} href={item.href} className="transition hover:text-white">
+            <a
+              key={item.label}
+              href={item.href}
+              onClick={"soon" in item && item.soon ? (e) => e.preventDefault() : undefined}
+              className="transition hover:text-white"
+              aria-disabled={"soon" in item && item.soon ? true : undefined}
+            >
               {item.label}
             </a>
           ))}
@@ -44,7 +51,7 @@ export function Header() {
         {/* Desktop CTA Button */}
         <a
           href="/onboarding?new=1"
-          className="hidden md:inline-flex rounded-full bg-white hover:bg-zinc-100 text-black font-display text-sm font-semibold px-5 py-2 shadow-md transition hover:scale-[1.02] active:scale-[0.98]"
+          className="hidden md:inline-flex rounded-full bg-[#F6E7A1] px-4 py-1.5 font-display text-sm font-semibold text-[#0a1a3a] shadow-[0_8px_20px_rgba(246,231,161,0.22)] transition hover:scale-[1.02] hover:bg-[#f0dc82] active:scale-[0.98]"
         >
           Начать путешествие
         </a>
@@ -53,16 +60,16 @@ export function Header() {
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          className="flex h-9 w-9 items-center justify-center text-white/90 transition hover:text-white md:hidden"
+          className="flex h-8 w-8 items-center justify-center text-white/90 transition hover:text-white md:hidden"
           aria-label={isOpen ? "Закрыть меню" : "Открыть меню"}
           aria-expanded={isOpen}
         >
           {isOpen ? (
-            <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.7">
+            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.7">
               <path d="M6 18L18 6M6 6l12 12" />
             </svg>
           ) : (
-            <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.7">
+            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.7">
               <path d="M4 7h16M4 12h16M4 17h16" />
             </svg>
           )}
@@ -77,26 +84,30 @@ export function Header() {
               onClick={() => setIsOpen(false)}
               className="fixed inset-0 cursor-default bg-transparent md:hidden"
             />
-            <div className="absolute left-0 right-0 top-full mt-3 flex flex-col items-center gap-4 rounded-3xl border border-white/20 bg-black/85 p-6 shadow-2xl backdrop-blur-2xl md:hidden">
-            <nav className="flex flex-col items-center gap-4 text-base font-medium text-white/90">
-              {NAV.map((item) => (
-                <a
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setIsOpen(false)}
-                  className="transition hover:text-white"
-                >
-                  {item.label}
-                </a>
-              ))}
-            </nav>
-            <a
-              href="/onboarding?new=1"
-              onClick={() => setIsOpen(false)}
-              className="mt-2 w-full rounded-full bg-white text-center text-black font-display text-base font-semibold py-3 shadow-md transition hover:bg-zinc-100"
-            >
-              Начать путешествие
-            </a>
+            <div className="absolute left-0 right-0 top-full mt-2 flex flex-col items-center gap-4 rounded-3xl border border-white/20 bg-[#050d4a]/92 p-5 shadow-2xl backdrop-blur-2xl md:hidden">
+              <nav className="flex flex-col items-center gap-4 text-base font-medium text-white/90">
+                {NAV.map((item) => (
+                  <a
+                    key={item.label}
+                    href={item.href}
+                    onClick={(e) => {
+                      if ("soon" in item && item.soon) e.preventDefault();
+                      setIsOpen(false);
+                    }}
+                    className="transition hover:text-white"
+                    aria-disabled={"soon" in item && item.soon ? true : undefined}
+                  >
+                    {item.label}
+                  </a>
+                ))}
+              </nav>
+              <a
+                href="/onboarding?new=1"
+                onClick={() => setIsOpen(false)}
+                className="mt-1 w-full rounded-full bg-[#F6E7A1] py-2.5 text-center font-display text-base font-semibold text-[#0a1a3a] shadow-[0_8px_20px_rgba(246,231,161,0.22)] transition hover:bg-[#f0dc82]"
+              >
+                Начать путешествие
+              </a>
             </div>
           </>
         )}

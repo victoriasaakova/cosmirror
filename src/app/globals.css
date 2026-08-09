@@ -1,17 +1,20 @@
 @import "tailwindcss";
 
 :root {
-  --background: #07070c;
+  --background: #050d4a;
   --foreground: #f4efe8;
   --muted: rgba(244, 239, 232, 0.62);
   --muted-soft: rgba(244, 239, 232, 0.42);
-  --copper: #e8a07a;
-  --copper-bright: #f0b896;
-  --peach: #f2c4a8;
-  --rose: #e89a8c;
-  --glass: rgba(18, 18, 28, 0.45);
-  --glass-border: rgba(255, 220, 190, 0.18);
-  --glow: rgba(232, 160, 122, 0.35);
+  --accent: #f6e7a1;
+  --accent-hover: #f0dc82;
+  --accent-ink: #0a1a3a;
+  --copper: #f6e7a1;
+  --copper-bright: #f0dc82;
+  --peach: #f8efc0;
+  --rose: #f0dc82;
+  --glass: rgba(5, 13, 74, 0.45);
+  --glass-border: rgba(246, 231, 161, 0.18);
+  --glow: rgba(246, 231, 161, 0.35);
 }
 
 @theme inline {
@@ -36,8 +39,8 @@ body {
 }
 
 ::selection {
-  background: rgba(232, 160, 122, 0.35);
-  color: #fff;
+  background: rgba(246, 231, 161, 0.35);
+  color: #0a1a3a;
 }
 
 .font-display {
@@ -60,23 +63,23 @@ body {
   justify-content: center;
   gap: 0.5rem;
   border-radius: 9999px;
-  background: linear-gradient(135deg, #f2c4a8 0%, #e89a8c 45%, #d98a6a 100%);
-  color: #1a1210;
+  background: #f6e7a1;
+  color: #0a1a3a;
   font-weight: 600;
   letter-spacing: -0.01em;
   box-shadow:
-    0 10px 30px rgba(232, 160, 122, 0.28),
-    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+    0 10px 28px rgba(246, 231, 161, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
   transition:
     transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
     box-shadow 0.35s ease,
-    filter 0.35s ease;
+    background 0.35s ease;
 }
 
 .btn-primary:hover {
   transform: translateY(-1px);
-  filter: brightness(1.04);
-  box-shadow: 0 14px 36px rgba(232, 160, 122, 0.38);
+  background: #f0dc82;
+  box-shadow: 0 14px 36px rgba(246, 231, 161, 0.38);
 }
 
 .btn-primary:active {
@@ -232,6 +235,37 @@ body {
   animation-delay: 0.36s;
 }
 
+@keyframes eye-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-eye-spin {
+  animation: eye-spin 48s linear infinite;
+  transform-origin: center;
+  will-change: transform;
+}
+
+@keyframes pulse-dot {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+  50% {
+    transform: scale(2.35);
+    opacity: 0;
+  }
+}
+
+.animate-pulse-dot {
+  animation: pulse-dot 2.4s ease-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
@@ -240,6 +274,8 @@ body {
   .animate-float,
   .animate-float-delayed,
   .animate-pulse-glow,
+  .animate-eye-spin,
+  .animate-pulse-dot,
   .reveal,
   .reveal-delay-1,
   .reveal-delay-2,

@@ -115,13 +115,13 @@ function isValidEmail(value: string) {
 function choiceClass(active: boolean) {
   return `w-full rounded-[1.35rem] border px-5 py-4 text-left font-display text-lg leading-snug transition-all sm:text-xl ${
     active
-      ? "border-[#ff7b36]/70 bg-[#ff7b36]/15 text-white shadow-[0_0_28px_rgba(255,123,54,0.18)]"
+      ? "border-[#F6E7A1]/70 bg-[#F6E7A1]/15 text-white shadow-[0_0_28px_rgba(246,231,161,0.18)]"
       : "border-white/15 bg-white/[0.03] text-white/75 hover:border-white/30 hover:text-white"
   }`;
 }
 
 function fieldClass() {
-  return "mt-3 w-full border-b border-white/20 bg-transparent pb-3 font-display text-xl text-white outline-none placeholder:text-white/30 focus:border-[#ff7b36] sm:text-2xl [color-scheme:dark]";
+  return "mt-3 w-full border-b border-white/20 bg-transparent pb-3 font-display text-xl text-white outline-none placeholder:text-white/30 focus:border-[#F6E7A1] sm:text-2xl [color-scheme:dark]";
 }
 
 function labelFor(options: { value: string; label: string }[], value: string) {
@@ -131,7 +131,7 @@ function labelFor(options: { value: string; label: string }[], value: string) {
 function renderTitle(parts: TitlePart[]) {
   return parts.map((part, index) =>
     part.accent ? (
-      <span key={index} className="font-display italic text-[#ff7b36]">
+      <span key={index} className="font-display italic text-[#F6E7A1]">
         {part.t}
       </span>
     ) : (
@@ -651,12 +651,12 @@ export function OnboardingFlow({ slug }: { slug: string }) {
 
   if (loadError) {
     return (
-      <main className="relative flex h-[100dvh] flex-1 items-center justify-center bg-[#07070c] px-5 text-center text-white">
+      <main className="relative flex h-[100dvh] flex-1 items-center justify-center bg-[#050d4a] px-5 text-center text-white">
         <div>
           <p className="text-white/70">{loadError}</p>
           <button
             type="button"
-            className="mt-6 rounded-full bg-white px-8 py-3 font-display text-black"
+            className="mt-6 rounded-full bg-[#F6E7A1] px-8 py-2.5 font-display text-[#0a1a3a] hover:bg-[#f0dc82]"
             onClick={() => void warm()}
           >
             Повторить
@@ -668,7 +668,7 @@ export function OnboardingFlow({ slug }: { slug: string }) {
 
   if (!steps) {
     return (
-      <main className="relative flex h-[100dvh] flex-1 items-center justify-center bg-[#07070c] text-white/50">
+      <main className="relative flex h-[100dvh] flex-1 items-center justify-center bg-[#050d4a] text-white/50">
         Загружаем…
       </main>
     );
@@ -686,7 +686,7 @@ export function OnboardingFlow({ slug }: { slug: string }) {
       />
       <div
         aria-hidden
-        className="absolute inset-0 bg-gradient-to-b from-[#07070c] via-[#07070c]/75 to-[#07070c]/35"
+        className="absolute inset-0 bg-gradient-to-b from-[#050d4a] via-[#050d4a]/75 to-[#050d4a]/35"
       />
       <div
         aria-hidden
@@ -743,9 +743,9 @@ export function OnboardingFlow({ slug }: { slug: string }) {
                   aria-hidden
                   className={`h-1.5 rounded-full transition-all duration-300 ${
                     active
-                      ? "w-7 bg-[#ff7b36]"
+                      ? "w-7 bg-[#F6E7A1]"
                       : done
-                        ? "w-4 bg-[#ff7b36]/55"
+                        ? "w-4 bg-[#F6E7A1]/55"
                         : "w-4 bg-white/20"
                   }`}
                 />
@@ -764,11 +764,11 @@ export function OnboardingFlow({ slug }: { slug: string }) {
                 payloadByStep={payloadByStep}
               />
             </div>
-            <div className="shrink-0 bg-gradient-to-t from-[#07070c] via-[#07070c]/95 to-transparent pt-3">
+            <div className="shrink-0 pt-3">
               {screenIndex >= INSIGHT_SCREEN_COUNT - 1 ? (
                 <Link
                   href="/"
-                  className="inline-flex w-full items-center justify-center rounded-full bg-white px-10 py-3.5 font-display text-lg font-semibold text-black shadow-[0_12px_36px_rgba(255,255,255,0.2)] transition-all hover:scale-[1.02] hover:bg-zinc-100 active:scale-[0.98] md:text-xl"
+                  className="inline-flex w-full items-center justify-center rounded-full bg-[#F6E7A1] px-10 py-2.5 font-display text-lg font-semibold text-[#0a1a3a] transition-all hover:scale-[1.02] hover:bg-[#f0dc82] active:scale-[0.98] md:text-xl"
                 >
                   {insightCtaLabel(screenIndex, insight)}
                 </Link>
@@ -776,7 +776,7 @@ export function OnboardingFlow({ slug }: { slug: string }) {
                 <button
                   type="button"
                   onClick={() => setScreen(screenIndex + 1)}
-                  className="inline-flex w-full items-center justify-center rounded-full bg-white px-10 py-3.5 font-display text-lg font-semibold text-black shadow-[0_12px_36px_rgba(255,255,255,0.2)] transition-all hover:scale-[1.02] hover:bg-zinc-100 active:scale-[0.98] md:text-xl"
+                  className="inline-flex w-full items-center justify-center rounded-full bg-[#F6E7A1] px-10 py-2.5 font-display text-lg font-semibold text-[#0a1a3a] transition-all hover:scale-[1.02] hover:bg-[#f0dc82] active:scale-[0.98] md:text-xl"
                 >
                   {insightCtaLabel(screenIndex, insight)}
                 </button>
@@ -810,11 +810,11 @@ export function OnboardingFlow({ slug }: { slug: string }) {
               </p>
             ) : null}
 
-            <div className="shrink-0 bg-gradient-to-t from-[#07070c] via-[#07070c]/95 to-transparent pt-3">
+            <div className="shrink-0 pt-3">
               <button
                 type="submit"
                 disabled={!ready}
-                className="inline-flex w-full items-center justify-center rounded-full bg-white px-10 py-3.5 font-display text-lg font-semibold text-black shadow-[0_12px_36px_rgba(255,255,255,0.2)] transition-all hover:scale-[1.02] hover:bg-zinc-100 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:scale-100 md:text-xl"
+                className="inline-flex w-full items-center justify-center rounded-full bg-[#F6E7A1] px-10 py-2.5 font-display text-lg font-semibold text-[#0a1a3a] transition-all hover:scale-[1.02] hover:bg-[#f0dc82] active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-white/12 disabled:text-white/35 disabled:hover:scale-100 disabled:hover:bg-white/12 md:text-xl"
               >
                 {ctaLabel(currentStep, submitting)}
               </button>
@@ -927,7 +927,7 @@ function ContentScreenView({
           placeholder={screen.placeholder}
           value={value}
           onChange={(event) => onPayload({ [screen.field]: event.target.value })}
-          className="mt-10 w-full border-b border-white/20 bg-transparent pb-3 font-display text-2xl text-white outline-none placeholder:text-white/30 focus:border-[#ff7b36] sm:text-3xl"
+          className="mt-10 w-full border-b border-white/20 bg-transparent pb-3 font-display text-2xl text-white outline-none placeholder:text-white/30 focus:border-[#F6E7A1] sm:text-3xl"
         />
       </div>
     );
@@ -1056,7 +1056,7 @@ function BirthStep({
   return (
     <div className="flex flex-col">
       <h1 className="font-display text-3xl leading-tight tracking-tight text-white sm:text-4xl md:text-[2.6rem]">
-        Твоя <span className="font-display italic text-[#ff7b36]">натальная карта</span>
+        Твоя <span className="font-display italic text-[#F6E7A1]">натальная карта</span>
       </h1>
       <p className="mt-3 text-sm font-light leading-relaxed text-white/50">
         Введи данные рождения — посчитаем карту и покажем, что может влиять на фоне текущих циклов.
@@ -1081,7 +1081,7 @@ function BirthStep({
               onChange({ ...value, birth_date: formatBirthDateInput(event.target.value) })
             }
             aria-invalid={dateInvalid}
-            className={`${fieldClass()} ${dateInvalid ? "!border-[#ff7b36]" : ""}`}
+            className={`${fieldClass()} ${dateInvalid ? "!border-[#F6E7A1]" : ""}`}
           />
         </div>
 
@@ -1115,7 +1115,7 @@ function BirthStep({
             aria-invalid={placeInvalid}
             aria-autocomplete="list"
             aria-expanded={suggestOpen}
-            className={`${fieldClass()} ${placeInvalid ? "!border-[#ff7b36]" : ""}`}
+            className={`${fieldClass()} ${placeInvalid ? "!border-[#F6E7A1]" : ""}`}
           />
           {suggestLoading ? (
             <p className="mt-2 text-xs font-light text-white/35">Ищем города…</p>
@@ -1169,7 +1169,7 @@ function BirthStep({
                   birth_time: event.target.checked ? "" : value.birth_time,
                 })
               }
-              className="mt-0.5 h-4 w-4 accent-[#ff7b36]"
+              className="mt-0.5 h-4 w-4 accent-[#F6E7A1]"
             />
             <span>Не знаю точное время рождения</span>
           </label>
@@ -1196,7 +1196,7 @@ function ContactsStep({
   return (
     <div className="flex flex-col">
       <h1 className="font-display text-3xl leading-tight tracking-tight text-white sm:text-4xl md:text-[2.6rem]">
-        Твоя карта <span className="font-display italic text-[#ff7b36]">готова</span>
+        Твоя карта <span className="font-display italic text-[#F6E7A1]">готова</span>
       </h1>
       <p className="mt-4 font-display text-xl leading-snug text-white/85 sm:text-2xl">
         Оставь контакты, чтобы открыть разбор
@@ -1280,7 +1280,7 @@ function PdConsentCheckbox({
         checked={checked}
         disabled={disabled}
         onChange={(event) => onChange(event.target.checked)}
-        className="mt-0.5 h-4 w-4 shrink-0 accent-[#ff7b36]"
+        className="mt-0.5 h-4 w-4 shrink-0 accent-[#F6E7A1]"
       />
       <span>
         Соглашаюсь на{" "}
