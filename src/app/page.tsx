@@ -75,7 +75,12 @@ const CONNECT_LINES_MOBILE = [
   { x1: 14, y1: 52, x2: 8, y2: 74 },
 ];
 
-type ConnectNode = (typeof CONNECTS_DESKTOP)[number];
+type ConnectNode = {
+  label: string | null;
+  x: number;
+  y: number;
+  labelAt: "right" | "below";
+};
 type ConnectLine = (typeof CONNECT_LINES_DESKTOP)[number];
 
 const FAQ_ITEMS = [
