@@ -3,17 +3,23 @@ import { Onest, Playfair_Display } from "next/font/google";
 import { YandexMetrika } from "@/components/YandexMetrika";
 import "./globals.css";
 
+// Keep font files minimal: each weight/style is a separate mobile download.
+// Display is italic accents; body uses 400/500 only.
 const display = Playfair_Display({
   variable: "--font-display",
   subsets: ["latin", "cyrillic"],
-  weight: ["400", "500", "600", "700", "800", "900"],
+  weight: ["400"],
   style: ["normal", "italic"],
+  display: "swap",
+  preload: true,
 });
 
 const grotesk = Onest({
   variable: "--font-grotesk",
   subsets: ["latin", "cyrillic"],
-  weight: ["300", "400", "500", "600", "700"],
+  weight: ["400", "500"],
+  display: "swap",
+  preload: true,
 });
 
 export const metadata: Metadata = {

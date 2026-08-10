@@ -274,7 +274,8 @@ export default function Home() {
           height={512}
           className="animate-eye-spin h-auto w-[min(42vw,11rem)] sm:w-[min(36vw,13rem)] md:w-[14rem]"
           sizes="(max-width: 768px) 42vw, 14rem"
-          priority
+          // Don't compete with CSS/hero on slow LTE — load after first paint
+          loading="lazy"
         />
       </div>
 
