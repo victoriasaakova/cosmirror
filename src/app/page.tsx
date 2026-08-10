@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { CosmirrorMark } from "@/components/CosmirrorMark";
 import { Header } from "@/components/Header";
 import { FallingPills } from "@/components/FallingPills";
 import { WhatYouGet } from "@/components/WhatYouGet";
@@ -126,8 +127,8 @@ function ConnectLabel({ text }: { text: string }) {
   const [first, ...rest] = text.split(" ");
   const second = rest.join(" ");
   return (
-    <span className="inline-flex items-baseline gap-x-1.5 whitespace-nowrap font-display text-base leading-none sm:text-lg md:text-xl lg:text-2xl">
-      <span className="italic text-[#F6E7A1]">{first}</span>
+    <span className="inline-flex items-baseline gap-x-1.5 whitespace-nowrap text-base leading-none sm:text-lg md:text-xl lg:text-2xl">
+      <span className="font-display italic text-[#F6E7A1]">{first}</span>
       {second ? <span className="not-italic text-white">{second}</span> : null}
     </span>
   );
@@ -238,21 +239,25 @@ export default function Home() {
         />
 
         <div className="relative z-10 mx-auto flex w-full max-w-4xl flex-col items-center px-5 text-center md:px-8">
-          <h1 className="reveal font-display text-4xl leading-[1.06] tracking-tight text-white min-[420px]:text-5xl sm:text-6xl md:text-7xl lg:text-[4.8rem] max-w-3xl drop-shadow-[0_4px_24px_rgba(0,0,0,0.8)]">
+          <h1 className="reveal font-grotesk text-4xl font-normal leading-[1.08] tracking-[-0.03em] text-white min-[420px]:text-5xl sm:text-6xl md:text-7xl lg:text-[4.8rem] max-w-3xl drop-shadow-[0_4px_24px_rgba(0,0,0,0.8)]">
             Начни замечать{" "}
-            <span className="font-display italic text-[#F6E7A1]">закономерности</span>{" "}
-            своей жизни
+            <span className="font-display inline-block pb-1 font-normal italic leading-[1.12] tracking-normal text-[#F6E7A1]">
+              закономерности
+            </span>
+            <br className="hidden sm:block lg:hidden" />
+            {" "}
+            своей&nbsp;жизни
           </h1>
 
-          <p className="reveal reveal-delay-1 mt-5 w-[min(100%,26rem)] text-base font-light leading-relaxed text-white/90 sm:mt-6 sm:w-[30rem] sm:text-lg md:w-[32rem] md:text-xl drop-shadow-[0_2px_12px_rgba(0,0,0,0.9)]">
+          <p className="reveal reveal-delay-1 mt-5 w-[min(100%,26rem)] font-grotesk text-base font-normal leading-relaxed text-white/80 sm:mt-6 sm:w-[34rem] sm:text-lg md:w-[38rem] md:text-xl drop-shadow-[0_2px_12px_rgba(0,0,0,0.9)]">
             Соединяем точность астрологии с&nbsp;твоим реальным опытом
-            в&nbsp;историю, которая развивается вместе с&nbsp;тобой.
+            в&nbsp;историю, которая меняется вместе с&nbsp;тобой.
           </p>
 
           <div className="reveal reveal-delay-2 mt-8 flex justify-center sm:mt-9">
             <a
               href="/onboarding?new=1"
-              className="inline-flex items-center justify-center rounded-full bg-[#F6E7A1] hover:bg-[#f0dc82] text-[#0a1a3a] font-display font-semibold text-lg md:text-xl px-10 py-2.5 shadow-[0_10px_28px_rgba(246,231,161,0.28)] transition-all transform hover:scale-[1.03] active:scale-[0.98] cursor-pointer"
+              className="inline-flex items-center justify-center rounded-full bg-[#F6E7A1] hover:bg-[#f0dc82] text-[#0a1a3a] font-grotesk font-medium text-lg md:text-xl px-10 py-2.5 shadow-[0_10px_28px_rgba(246,231,161,0.28)] transition-all transform hover:scale-[1.03] active:scale-[0.98] cursor-pointer"
             >
               Начать путешествие
             </a>
@@ -281,7 +286,7 @@ export default function Home() {
         <div className="relative z-10 mx-auto max-w-6xl px-5 md:px-8">
           {/* Section Heading */}
           <div className="mx-auto max-w-3xl text-center">
-            <h2 className="font-display text-3xl leading-tight tracking-tight text-white md:text-5xl lg:text-6xl">
+            <h2 className="text-3xl font-normal leading-tight tracking-tight text-white md:text-5xl lg:text-6xl">
               Если тебе{" "}
               <span className="font-display italic text-[#F6E7A1]">знакомо</span> это…
             </h2>
@@ -304,10 +309,10 @@ export default function Home() {
                     sizes="56px"
                   />
                 </div>
-                <h3 className="mb-2 font-display text-lg font-normal leading-snug text-[#F6E7A1] sm:mb-3 sm:text-xl">
+                <h3 className="mb-2 text-lg font-normal leading-snug text-[#F6E7A1] sm:mb-3 sm:text-xl">
                   {card.title}
                 </h3>
-                <p className="mx-auto w-full max-w-[28rem] text-sm font-light leading-relaxed text-white/80 sm:text-[0.95rem]">
+                <p className="mx-auto w-full max-w-[28rem] text-sm font-normal leading-relaxed text-white/80 sm:text-[0.95rem]">
                   {card.text}
                 </p>
               </article>
@@ -335,8 +340,8 @@ export default function Home() {
 
           <div className="relative z-10 mx-auto max-w-6xl px-5 md:px-8">
             <div className="mx-auto max-w-3xl text-center">
-              <h2 className="font-display text-3xl leading-tight tracking-tight text-white md:text-5xl lg:text-6xl">
-                Cosmirror <span className="italic text-[#F6E7A1]">помогает</span>{" "}
+              <h2 className="text-3xl font-normal leading-tight tracking-tight text-white md:text-5xl lg:text-6xl">
+                Cosmirror <span className="font-display italic text-[#F6E7A1]">помогает</span>{" "}
                 связывать
               </h2>
             </div>
@@ -363,31 +368,34 @@ export default function Home() {
         <div className="relative z-10 mx-auto max-w-6xl px-5 md:px-8">
           {/* Как это работает */}
           <div id="how-it-works" className="mx-auto max-w-3xl scroll-mt-28 text-center">
-            <h2 className="font-display text-3xl leading-tight tracking-tight text-white md:text-5xl lg:text-6xl">
+            <h2 className="text-3xl font-normal leading-tight tracking-tight text-white md:text-5xl lg:text-6xl">
               Как это <span className="font-display italic text-[#F6E7A1]">работает</span>
             </h2>
           </div>
 
-          <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {HOW_CARDS.map((card) => (
+          <div className="mt-14 grid gap-6 sm:grid-cols-2">
+            {HOW_CARDS.map((card, index) => (
               <div
                 key={card.title}
-                className="group relative flex flex-col rounded-2xl border border-[#F6E7A1]/55 bg-white/[0.03] p-6 backdrop-blur-md transition-all duration-300 hover:-translate-y-1.5 hover:border-[#F6E7A1]/80 hover:bg-white/[0.06]"
+                className="group relative flex flex-col rounded-2xl border border-[#F6E7A1]/55 bg-white/[0.03] p-6 backdrop-blur-md transition-all duration-300 hover:-translate-y-1.5 hover:border-[#F6E7A1]/80 hover:bg-white/[0.06] sm:p-7"
               >
-                <div className="mb-4 flex h-24 w-full items-start justify-start sm:h-28 md:h-[7.7rem]">
+                <span className="mb-3 self-end font-display text-xl italic leading-none text-[#F6E7A1]/80 sm:text-2xl">
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+                <div className="mb-4 flex h-28 w-full items-start justify-start sm:h-32 md:h-36">
                   <Image
                     src={card.image}
                     alt=""
                     width={196}
                     height={196}
                     className="h-full w-auto max-w-full object-contain object-left"
-                    sizes="(max-width: 1024px) 28vw, 12vw"
+                    sizes="(max-width: 768px) 80vw, 40vw"
                   />
                 </div>
-                <h3 className="mb-3 font-display text-xl font-normal leading-snug text-[#F6E7A1] md:text-2xl">
+                <h3 className="mb-3 text-lg font-normal leading-snug text-[#F6E7A1] sm:text-xl">
                   {card.title}
                 </h3>
-                <p className="text-sm font-light leading-relaxed text-white/80">
+                <p className="text-sm font-normal leading-relaxed text-white/80 sm:text-[0.95rem]">
                   {card.text}
                 </p>
               </div>
@@ -399,7 +407,7 @@ export default function Home() {
           <div className="mt-12 flex justify-center sm:mt-14">
             <a
               href="/onboarding?new=1"
-              className="inline-flex items-center justify-center rounded-full bg-[#F6E7A1] px-10 py-2.5 font-display text-lg font-semibold text-[#0a1a3a] shadow-[0_10px_28px_rgba(246,231,161,0.28)] transition-all hover:scale-[1.03] hover:bg-[#f0dc82] active:scale-[0.98] md:text-xl"
+              className="inline-flex items-center justify-center rounded-full bg-[#F6E7A1] px-10 py-2.5 font-grotesk text-lg font-medium text-[#0a1a3a] shadow-[0_10px_28px_rgba(246,231,161,0.28)] transition-all hover:scale-[1.03] hover:bg-[#f0dc82] active:scale-[0.98] md:text-xl"
             >
               Попробовать
             </a>
@@ -424,7 +432,7 @@ export default function Home() {
         </div>
 
         <div className="relative z-10 mx-auto max-w-6xl px-5 md:px-8">
-          <h3 className="font-display mx-auto max-w-[34rem] text-center text-2xl leading-snug text-white sm:text-3xl md:text-4xl lg:text-[2.35rem]">
+          <h3 className="mx-auto max-w-[34rem] text-center text-2xl font-normal leading-snug text-white sm:text-3xl md:text-4xl lg:text-[2.35rem]">
             <span className="block">Твоя натальная карта не меняется,</span>
             <span className="font-display italic text-[#F6E7A1]">меняешься ты:</span>
           </h3>
@@ -436,7 +444,7 @@ export default function Home() {
       <section id="faq" className="relative scroll-mt-20 bg-[#050d4a] py-20 md:py-24">
         <div className="mx-auto max-w-6xl px-5 md:px-8">
           <div className="mx-auto max-w-3xl text-center">
-            <h2 className="font-display text-3xl leading-tight tracking-tight text-white md:text-5xl lg:text-6xl">
+            <h2 className="text-3xl font-normal leading-tight tracking-tight text-white md:text-5xl lg:text-6xl">
               Частые{" "}
               <span className="font-display italic text-[#F6E7A1]">вопросы</span>
             </h2>
@@ -449,7 +457,7 @@ export default function Home() {
                 className="group open:pb-5 [&_summary::-webkit-details-marker]:hidden"
               >
                 <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-4 py-3 text-left md:min-h-16 md:py-4">
-                  <span className="font-display text-lg leading-snug text-white md:text-xl">
+                  <span className="text-lg font-normal leading-snug text-white md:text-xl">
                     {item.q}
                   </span>
                   <span
@@ -469,7 +477,7 @@ export default function Home() {
                     </svg>
                   </span>
                 </summary>
-                <p className="pb-2 max-w-xl text-sm font-light leading-relaxed text-white/70 md:text-[15px]">
+                <p className="pb-2 max-w-xl text-sm font-normal leading-relaxed text-white/80 md:text-[15px]">
                   {item.a}
                 </p>
               </details>
@@ -481,7 +489,9 @@ export default function Home() {
       {/* ── Footer ── */}
       <footer className="relative border-t border-white/10 bg-[#050d4a] py-10">
         <div className="mx-auto flex w-full max-w-6xl flex-col items-start justify-between gap-6 px-5 md:flex-row md:items-center md:px-8">
-          <p className="font-display text-xl text-white">Cosmirror</p>
+          <p className="text-xl font-medium">
+            <CosmirrorMark />
+          </p>
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-white/50">
             <a href="mailto:hello@cosmirror.ru" className="transition hover:text-white">
               Контакты

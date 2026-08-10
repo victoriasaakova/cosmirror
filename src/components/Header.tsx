@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { CosmirrorMark } from "@/components/CosmirrorMark";
 
 const NAV = [
   { href: "#for", label: "Для кого" },
@@ -28,9 +29,9 @@ export function Header() {
       <div className="relative flex w-full max-w-4xl items-center justify-between gap-4 rounded-full border border-white/20 bg-[#050d4a]/55 py-2.5 pl-5 pr-2.5 shadow-[0_12px_40px_rgba(5,13,74,0.5)] backdrop-blur-2xl md:py-3 md:pl-7 md:pr-3">
         <a
           href="#top"
-          className="font-display text-lg font-medium tracking-tight text-white transition hover:opacity-90"
+          className="text-lg font-medium transition hover:opacity-90"
         >
-          Cosmirror
+          <CosmirrorMark />
         </a>
 
         {/* Desktop Navigation */}
@@ -51,7 +52,7 @@ export function Header() {
         {/* Desktop CTA Button */}
         <a
           href="/onboarding?new=1"
-          className="hidden md:inline-flex rounded-full bg-[#F6E7A1] px-4 py-1.5 font-display text-sm font-semibold text-[#0a1a3a] shadow-[0_8px_20px_rgba(246,231,161,0.22)] transition hover:scale-[1.02] hover:bg-[#f0dc82] active:scale-[0.98]"
+          className="hidden md:inline-flex rounded-full bg-[#F6E7A1] px-4 py-1.5 font-grotesk text-sm font-medium text-[#0a1a3a] shadow-[0_8px_20px_rgba(246,231,161,0.22)] transition hover:scale-[1.02] hover:bg-[#f0dc82] active:scale-[0.98]"
         >
           Начать путешествие
         </a>
@@ -104,7 +105,7 @@ export function Header() {
               <a
                 href="/onboarding?new=1"
                 onClick={() => setIsOpen(false)}
-                className="mt-1 w-full rounded-full bg-[#F6E7A1] py-2.5 text-center font-display text-base font-semibold text-[#0a1a3a] shadow-[0_8px_20px_rgba(246,231,161,0.22)] transition hover:bg-[#f0dc82]"
+                className="mt-1 w-full rounded-full bg-[#F6E7A1] py-2.5 text-center font-grotesk text-base font-medium text-[#0a1a3a] shadow-[0_8px_20px_rgba(246,231,161,0.22)] transition hover:bg-[#f0dc82]"
               >
                 Начать путешествие
               </a>

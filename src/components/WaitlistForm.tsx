@@ -117,7 +117,7 @@ export function WaitlistForm({ variant = "section" }: WaitlistFormProps) {
             aria-label="Получить портрет"
           >
             <span className="mb-1 text-2xl transition group-hover:translate-x-0.5">→</span>
-            <span className="max-w-[5.5rem] text-center text-[11px] font-semibold uppercase leading-tight tracking-[0.12em]">
+            <span className="max-w-[5.5rem] text-center text-[11px] font-medium uppercase leading-tight tracking-[0.12em]">
               {status === "loading" ? "Отправляем" : "Получить портрет"}
             </span>
           </button>

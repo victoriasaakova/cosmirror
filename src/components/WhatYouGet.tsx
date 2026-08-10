@@ -130,7 +130,7 @@ function PortraitPreview() {
   return (
     <div className="flex h-full min-h-[20rem] flex-col bg-[#050d4a] p-4 sm:p-5">
       <div className="flex items-center justify-between border-b border-[#F6E7A1]/20 pb-4">
-        <span className="font-display text-lg text-white">Твой портрет</span>
+        <span className="text-lg text-white">Твой портрет</span>
         <span className="rounded-full border border-[#F6E7A1]/40 bg-[#F6E7A1]/12 px-3 py-1 text-[10px] text-[#F6E7A1]">
           Натальная карта
         </span>
@@ -142,21 +142,21 @@ function PortraitPreview() {
         <div className="flex flex-col gap-3">
           <div className="rounded-[1.25rem] border border-[#F6E7A1]/25 bg-white/[0.04] p-3.5">
             <p className="text-[10px] uppercase tracking-[0.16em] text-white/45">Сильная сторона</p>
-            <p className="mt-2 font-display text-base leading-tight text-white">
+            <p className="mt-2 text-base leading-tight text-white">
               Ты видишь связи там, где другие замечают только детали.
             </p>
           </div>
           <div className="grid flex-1 grid-cols-2 gap-3">
             <div className="rounded-[1.25rem] border border-[#F6E7A1]/25 bg-white/[0.04] p-3.5">
               <p className="text-[9px] uppercase tracking-[0.14em] text-[#F6E7A1]">Текущий цикл</p>
-              <p className="mt-2 font-display text-sm leading-tight text-white">Юпитер во Льве</p>
+              <p className="mt-2 text-sm leading-tight text-white">Юпитер во Льве</p>
               <p className="mt-2 text-[10px] leading-relaxed text-white/55">
                 Фокус на смелом самовыражении, творчестве и праве занимать больше места.
               </p>
             </div>
             <div className="rounded-[1.25rem] border border-[#F6E7A1]/35 bg-[#F6E7A1]/08 p-3.5">
               <p className="text-[9px] uppercase tracking-[0.14em] text-[#F6E7A1]">Паттерн</p>
-              <p className="mt-2 font-display text-sm leading-tight text-white">Сначала уверенность, потом шаг</p>
+              <p className="mt-2 text-sm leading-tight text-white">Сначала уверенность, потом шаг</p>
               <p className="mt-2 text-[10px] leading-relaxed text-white/55">
                 Перед важным выбором ты долго ищешь подтверждение, что всё получится.
               </p>
@@ -172,12 +172,12 @@ function PerspectivePreview() {
   return (
     <div className="flex h-full min-h-[20rem] flex-col bg-[#050d4a] p-4 sm:p-6">
       <div className="flex items-center justify-between">
-        <span className="font-display text-lg text-white">Кто я?</span>
+        <span className="text-lg text-white">Кто я?</span>
         <span className="text-xs text-white/40">02 августа</span>
       </div>
       <div className="mt-5 rounded-[1.5rem] border border-[#F6E7A1]/30 bg-white/[0.04] p-5">
         <p className="text-xs leading-relaxed text-white/50">Тема, которая возвращается</p>
-        <p className="mt-2 font-display text-xl leading-snug text-white">
+        <p className="mt-2 text-xl leading-snug text-white">
           Ты ищешь определённость до того, как разрешаешь себе двигаться.
         </p>
       </div>
@@ -230,12 +230,12 @@ function AccessPreview() {
       <div className="flex min-w-0 flex-1 flex-col p-2 pl-4 sm:p-3 sm:pl-5">
         <div>
           <p className="text-xs text-white/40">Сегодня</p>
-          <p className="mt-1 font-display text-xl text-white">Что происходит сейчас?</p>
+          <p className="mt-1 text-xl text-white">Что происходит сейчас?</p>
         </div>
         <div className="mt-4 grid flex-1 grid-cols-2 gap-3">
           <div className="col-span-2 rounded-[1.35rem] border border-[#F6E7A1]/35 bg-[#F6E7A1]/08 p-4">
             <p className="text-[10px] uppercase tracking-[0.15em] text-[#F6E7A1]">Текущий цикл</p>
-            <p className="mt-2 font-display text-lg text-white">Время пересобрать привычный ритм</p>
+            <p className="mt-2 text-lg text-white">Время пересобрать привычный ритм</p>
             <div className="mt-5 h-1.5 overflow-hidden rounded-full bg-white/10">
               <div className="h-full w-2/3 rounded-full bg-[#F6E7A1]" />
             </div>
@@ -271,7 +271,7 @@ export function WhatYouGet() {
 
   return (
     <section id="get" className="mt-28 scroll-mt-24">
-      <h2 className="text-center font-display text-3xl leading-tight tracking-tight text-white md:text-5xl lg:text-6xl">
+      <h2 className="text-center text-3xl font-normal leading-tight tracking-tight text-white md:text-5xl lg:text-6xl">
         Что ты <span className="font-display italic text-[#F6E7A1]">получишь</span>
       </h2>
 
@@ -300,7 +300,7 @@ export function WhatYouGet() {
                     +
                   </span>
                   <span
-                    className={`font-display text-xl leading-tight transition-colors md:text-2xl ${
+                    className={`text-xl font-normal leading-tight transition-colors md:text-2xl ${
                       isActive ? "text-white" : "text-white/55 hover:text-white"
                     }`}
                   >
@@ -314,7 +314,7 @@ export function WhatYouGet() {
                   }`}
                 >
                   <div className="overflow-hidden">
-                    <p className="pb-6 pl-12 text-sm leading-relaxed text-white/65 md:text-base">
+                    <p className="pb-6 pl-12 text-sm font-normal leading-relaxed text-white/80 md:text-base">
                       {item.text}
                     </p>
                   </div>

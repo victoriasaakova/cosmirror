@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Playfair_Display, Roboto } from "next/font/google";
+import { Onest, Playfair_Display } from "next/font/google";
 import { YandexMetrika } from "@/components/YandexMetrika";
 import "./globals.css";
 
@@ -10,17 +10,17 @@ const display = Playfair_Display({
   style: ["normal", "italic"],
 });
 
-const body = Roboto({
-  variable: "--font-body",
+const grotesk = Onest({
+  variable: "--font-grotesk",
   subsets: ["latin", "cyrillic"],
-  weight: ["300", "400", "500", "700"],
+  weight: ["300", "400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://cosmirror.ru"),
-  title: "Cosmirror — Живая карта себя",
+  title: "Натальная карта с расшифровкой онлайн — Cosmirror",
   description:
-    "Cosmirror превращает натальную карту в Живую карту — историю, которая развивается вместе с тобой. Не чтобы предсказывать будущее, а чтобы лучше понимать себя.",
+    "Cosmirror — приложение для самопознания через астрологию. Натальная карта, текущие астрологические циклы и личные наблюдения помогают лучше понимать себя и замечать закономерности своей жизни.",
   icons: {
     icon: [
       { url: "/icons/favicon-32.png", sizes: "32x32", type: "image/png" },
@@ -33,9 +33,9 @@ export const metadata: Metadata = {
     locale: "ru_RU",
     url: "https://cosmirror.ru",
     siteName: "Cosmirror",
-    title: "Cosmirror — Живая карта себя",
+    title: "Натальная карта с расшифровкой онлайн — Cosmirror",
     description:
-      "Cosmirror превращает натальную карту в Живую карту — историю, которая развивается вместе с тобой. Не чтобы предсказывать будущее, а чтобы лучше понимать себя.",
+      "Cosmirror — приложение для самопознания через астрологию. Натальная карта, текущие астрологические циклы и личные наблюдения помогают лучше понимать себя и замечать закономерности своей жизни.",
     images: [
       {
         url: "/images/og-cover.jpg",
@@ -47,9 +47,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Cosmirror — Живая карта себя",
+    title: "Натальная карта с расшифровкой онлайн — Cosmirror",
     description:
-      "Cosmirror превращает натальную карту в Живую карту — историю, которая развивается вместе с тобой.",
+      "Cosmirror — приложение для самопознания через астрологию. Натальная карта, текущие астрологические циклы и личные наблюдения помогают лучше понимать себя и замечать закономерности своей жизни.",
     images: ["/images/og-cover.jpg"],
   },
 };
@@ -62,10 +62,10 @@ export default function RootLayout({
   return (
     <html
       lang="ru"
-      className={`${display.variable} ${body.variable} h-full antialiased`}
+      className={`${display.variable} ${grotesk.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <body className="flex min-h-full flex-col" suppressHydrationWarning>
+      <body className="flex min-h-full flex-col font-grotesk" suppressHydrationWarning>
         <YandexMetrika />
         {children}
       </body>

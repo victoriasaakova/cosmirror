@@ -219,7 +219,7 @@ export function InsightFunnel({
     return (
       <div className="reveal mx-auto flex w-full max-w-lg min-h-0 flex-1 flex-col pt-8 pb-4 md:pt-10">
         <p className="text-xs uppercase tracking-[0.18em] text-white/40">Разбор</p>
-        <h1 className="mt-3 font-display text-3xl leading-tight tracking-tight text-white sm:text-4xl">
+        <h1 className="mt-3 text-3xl font-normal leading-tight tracking-tight text-white sm:text-4xl">
           {name ? (
             <>
               {name},{" "}
@@ -235,7 +235,7 @@ export function InsightFunnel({
             </>
           )}
         </h1>
-        <p className="mt-8 text-[16px] font-light leading-[1.65] text-white/75 sm:text-[17px]">
+        <p className="mt-8 text-[16px] font-normal leading-[1.65] text-white/80 sm:text-[17px]">
           {body}
         </p>
       </div>
@@ -246,10 +246,10 @@ export function InsightFunnel({
     return (
       <div className="reveal mx-auto flex w-full max-w-lg min-h-0 flex-1 flex-col pt-8 pb-4 md:pt-10">
         <p className="text-xs uppercase tracking-[0.18em] text-white/40">Cosmirror</p>
-        <h1 className="mt-4 font-display text-3xl leading-tight tracking-tight text-white sm:text-[2rem]">
+        <h1 className="mt-4 text-3xl font-normal leading-tight tracking-tight text-white sm:text-[2rem]">
           {productPitch.title}
         </h1>
-        <p className="mt-6 text-[18px] font-light leading-[1.7] text-white/78">{productPitch.text}</p>
+        <p className="mt-6 text-[18px] font-normal leading-[1.7] text-white/80">{productPitch.text}</p>
       </div>
     );
   }
@@ -259,7 +259,7 @@ export function InsightFunnel({
     return (
       <div className="reveal mx-auto flex w-full max-w-lg min-h-0 flex-1 flex-col pt-8 pb-4 md:pt-10">
         <p className="text-xs uppercase tracking-[0.18em] text-white/40">Динамика</p>
-        <h1 className="mt-3 font-display text-3xl leading-tight tracking-tight text-white sm:text-4xl">
+        <h1 className="mt-3 text-3xl font-normal leading-tight tracking-tight text-white sm:text-4xl">
           {outcomes.title}
         </h1>
         <div className="mt-8 grid grid-cols-2 gap-3">
@@ -267,7 +267,7 @@ export function InsightFunnel({
             <OutcomeMetricCard key={card.key} card={card} />
           ))}
         </div>
-        <p className="mt-6 text-center text-xs font-light text-white/40">
+        <p className="mt-6 text-center text-xs font-normal text-white/50">
           ориентир по первой неделе с Cosmirror
         </p>
       </div>
@@ -276,17 +276,17 @@ export function InsightFunnel({
 
   return (
     <div className="reveal mx-auto flex w-full max-w-lg min-h-0 flex-1 flex-col pt-8 pb-4 md:pt-10">
-      <h1 className="font-display text-3xl leading-tight tracking-tight text-white sm:text-4xl">
+      <h1 className="text-3xl font-normal leading-tight tracking-tight text-white sm:text-4xl">
         {offer.title}
       </h1>
       <div className="mt-6 space-y-3">
         {offerLines.map((line) => (
-          <p key={line} className="text-[16px] font-light leading-relaxed text-white/70">
+          <p key={line} className="text-[16px] font-normal leading-relaxed text-white/80">
             {line}
           </p>
         ))}
       </div>
-      <p className="mt-10 text-sm font-light text-white/40">разовый доступ · без подписки</p>
+      <p className="mt-10 text-sm font-normal text-white/50">разовый доступ · без подписки</p>
     </div>
   );
 }
@@ -301,14 +301,14 @@ function OutcomeMetricCard({ card }: { card: OutcomeCard }) {
       <div className="mt-3 flex items-end justify-between gap-2">
         <div>
           <p className="text-[11px] text-white/35">сейчас</p>
-          <p className="font-display text-xl text-white/55">{card.before}</p>
+          <p className="text-xl font-normal text-white/55">{card.before}</p>
         </div>
         <span className="text-white/25" aria-hidden>
           →
         </span>
         <div className="text-right">
           <p className="text-[11px] text-[#F6E7A1]/70">через неделю</p>
-          <p className="font-display text-xl text-[#F6E7A1]">{card.after}</p>
+          <p className="text-xl font-normal text-[#F6E7A1]">{card.after}</p>
         </div>
       </div>
       <div className="mt-3 space-y-1.5">
@@ -326,7 +326,7 @@ function OutcomeMetricCard({ card }: { card: OutcomeCard }) {
         </div>
       </div>
       {card.hint ? (
-        <p className="mt-3 text-[12px] font-light leading-snug text-white/50">{card.hint}</p>
+        <p className="mt-3 text-[12px] font-normal leading-snug text-white/50">{card.hint}</p>
       ) : null}
     </article>
   );

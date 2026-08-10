@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { CosmirrorMark } from "@/components/CosmirrorMark";
 import {
   fetchOnboardingInsight,
   fetchOnboardingSession,
@@ -113,15 +114,15 @@ function isValidEmail(value: string) {
 }
 
 function choiceClass(active: boolean) {
-  return `w-full rounded-[1.35rem] border px-5 py-4 text-left font-display text-lg leading-snug transition-all sm:text-xl ${
+  return `w-full rounded-2xl border px-5 py-4 text-left text-lg font-medium leading-snug transition-colors sm:text-xl ${
     active
-      ? "border-[#F6E7A1]/70 bg-[#F6E7A1]/15 text-white shadow-[0_0_28px_rgba(246,231,161,0.18)]"
-      : "border-white/15 bg-white/[0.03] text-white/75 hover:border-white/30 hover:text-white"
+      ? "border-[#F6E7A1] bg-white/[0.03] text-[#F6E7A1]"
+      : "border-white/15 bg-white/[0.03] text-white/75 hover:border-[#F6E7A1] hover:text-[#F6E7A1]"
   }`;
 }
 
 function fieldClass() {
-  return "mt-3 w-full border-b border-white/20 bg-transparent pb-3 font-display text-xl text-white outline-none placeholder:text-white/30 focus:border-[#F6E7A1] sm:text-2xl [color-scheme:dark]";
+  return "mt-3 w-full border-b border-white/20 bg-transparent pb-3 text-xl text-white outline-none placeholder:text-white/30 focus:border-[#F6E7A1] sm:text-2xl [color-scheme:dark]";
 }
 
 function labelFor(options: { value: string; label: string }[], value: string) {
@@ -656,7 +657,7 @@ export function OnboardingFlow({ slug }: { slug: string }) {
           <p className="text-white/70">{loadError}</p>
           <button
             type="button"
-            className="mt-6 rounded-full bg-[#F6E7A1] px-8 py-2.5 font-display text-[#0a1a3a] hover:bg-[#f0dc82]"
+            className="mt-6 rounded-full bg-[#F6E7A1] px-8 py-2.5 font-grotesk font-medium text-[#0a1a3a] hover:bg-[#f0dc82]"
             onClick={() => void warm()}
           >
             Повторить
@@ -717,15 +718,15 @@ export function OnboardingFlow({ slug }: { slug: string }) {
           )}
 
           {insightLoading ? (
-            <span className="font-display text-xl font-medium tracking-tight text-white">
-              Cosmirror
+            <span className="text-xl font-medium">
+              <CosmirrorMark />
             </span>
           ) : (
             <Link
               href="/"
-              className="font-display text-xl font-medium tracking-tight text-white transition hover:opacity-90"
+              className="text-xl font-medium transition hover:opacity-90"
             >
-              Cosmirror
+              <CosmirrorMark />
             </Link>
           )}
 
@@ -768,7 +769,7 @@ export function OnboardingFlow({ slug }: { slug: string }) {
               {screenIndex >= INSIGHT_SCREEN_COUNT - 1 ? (
                 <Link
                   href="/"
-                  className="inline-flex w-full items-center justify-center rounded-full bg-[#F6E7A1] px-10 py-2.5 font-display text-lg font-semibold text-[#0a1a3a] transition-all hover:scale-[1.02] hover:bg-[#f0dc82] active:scale-[0.98] md:text-xl"
+                  className="inline-flex w-full items-center justify-center rounded-full bg-[#F6E7A1] px-10 py-2.5 font-grotesk text-lg font-medium text-[#0a1a3a] transition-all hover:scale-[1.02] hover:bg-[#f0dc82] active:scale-[0.98] md:text-xl"
                 >
                   {insightCtaLabel(screenIndex, insight)}
                 </Link>
@@ -776,7 +777,7 @@ export function OnboardingFlow({ slug }: { slug: string }) {
                 <button
                   type="button"
                   onClick={() => setScreen(screenIndex + 1)}
-                  className="inline-flex w-full items-center justify-center rounded-full bg-[#F6E7A1] px-10 py-2.5 font-display text-lg font-semibold text-[#0a1a3a] transition-all hover:scale-[1.02] hover:bg-[#f0dc82] active:scale-[0.98] md:text-xl"
+                  className="inline-flex w-full items-center justify-center rounded-full bg-[#F6E7A1] px-10 py-2.5 font-grotesk text-lg font-medium text-[#0a1a3a] transition-all hover:scale-[1.02] hover:bg-[#f0dc82] active:scale-[0.98] md:text-xl"
                 >
                   {insightCtaLabel(screenIndex, insight)}
                 </button>
@@ -814,7 +815,7 @@ export function OnboardingFlow({ slug }: { slug: string }) {
               <button
                 type="submit"
                 disabled={!ready}
-                className="inline-flex w-full items-center justify-center rounded-full bg-[#F6E7A1] px-10 py-2.5 font-display text-lg font-semibold text-[#0a1a3a] transition-all hover:scale-[1.02] hover:bg-[#f0dc82] active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-white/12 disabled:text-white/35 disabled:hover:scale-100 disabled:hover:bg-white/12 md:text-xl"
+                className="inline-flex w-full items-center justify-center rounded-full bg-[#F6E7A1] px-10 py-2.5 font-grotesk text-lg font-medium text-[#0a1a3a] transition-all hover:scale-[1.02] hover:bg-[#f0dc82] active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-white/12 disabled:text-white/35 disabled:hover:scale-100 disabled:hover:bg-white/12 md:text-xl"
               >
                 {ctaLabel(currentStep, submitting)}
               </button>
@@ -889,11 +890,11 @@ function StepBody({
 
   return (
     <div className="flex flex-col">
-      <h1 className="font-display text-3xl leading-tight tracking-tight text-white sm:text-4xl md:text-[2.6rem]">
+      <h1 className="text-3xl font-normal leading-tight tracking-tight text-white sm:text-4xl md:text-[2.6rem]">
         {step.title}
       </h1>
       {step.subtitle ? (
-        <p className="mt-3 text-sm font-light leading-relaxed text-white/50">{step.subtitle}</p>
+        <p className="mt-3 text-sm font-normal leading-relaxed text-white/80">{step.subtitle}</p>
       ) : null}
     </div>
   );
@@ -912,7 +913,7 @@ function ContentScreenView({
     const value = typeof payload[screen.field] === "string" ? (payload[screen.field] as string) : "";
     return (
       <div className="flex flex-col">
-        <h1 className="font-display text-3xl leading-tight tracking-tight text-white sm:text-4xl md:text-5xl">
+        <h1 className="text-3xl font-normal leading-tight tracking-tight text-white sm:text-4xl md:text-5xl">
           {renderTitle(screen.title)}
         </h1>
         <label htmlFor={`onboarding-${screen.field}`} className="sr-only">
@@ -927,7 +928,7 @@ function ContentScreenView({
           placeholder={screen.placeholder}
           value={value}
           onChange={(event) => onPayload({ [screen.field]: event.target.value })}
-          className="mt-10 w-full border-b border-white/20 bg-transparent pb-3 font-display text-2xl text-white outline-none placeholder:text-white/30 focus:border-[#F6E7A1] sm:text-3xl"
+          className="mt-10 w-full border-b border-white/20 bg-transparent pb-3 text-2xl text-white outline-none placeholder:text-white/30 focus:border-[#F6E7A1] sm:text-3xl"
         />
       </div>
     );
@@ -937,7 +938,7 @@ function ContentScreenView({
     const value = typeof payload[screen.field] === "string" ? (payload[screen.field] as string) : "";
     return (
       <div className="flex flex-col">
-        <h1 className="font-display text-3xl leading-tight tracking-tight text-white sm:text-4xl md:text-[2.6rem]">
+        <h1 className="text-3xl font-normal leading-tight tracking-tight text-white sm:text-4xl md:text-[2.6rem]">
           {renderTitle(screen.title)}
         </h1>
         <div
@@ -963,11 +964,11 @@ function ContentScreenView({
     : [];
   return (
     <div className="flex flex-col">
-      <h1 className="font-display text-3xl leading-tight tracking-tight text-white sm:text-4xl md:text-[2.6rem]">
+      <h1 className="text-3xl font-normal leading-tight tracking-tight text-white sm:text-4xl md:text-[2.6rem]">
         {renderTitle(screen.title)}
       </h1>
       {screen.hint ? (
-        <p className="mt-3 text-sm font-light text-white/50">{screen.hint}</p>
+        <p className="mt-3 text-sm font-normal text-white/80">{screen.hint}</p>
       ) : null}
       <div className="mt-8 flex flex-col gap-3">
         {screen.options.map((option) => {
@@ -1055,10 +1056,10 @@ function BirthStep({
 
   return (
     <div className="flex flex-col">
-      <h1 className="font-display text-3xl leading-tight tracking-tight text-white sm:text-4xl md:text-[2.6rem]">
+      <h1 className="text-3xl font-normal leading-tight tracking-tight text-white sm:text-4xl md:text-[2.6rem]">
         Твоя <span className="font-display italic text-[#F6E7A1]">натальная карта</span>
       </h1>
-      <p className="mt-3 text-sm font-light leading-relaxed text-white/50">
+      <p className="mt-3 text-sm font-normal leading-relaxed text-white/80">
         Введи данные рождения — посчитаем карту и покажем, что может влиять на фоне текущих циклов.
       </p>
 
@@ -1118,7 +1119,7 @@ function BirthStep({
             className={`${fieldClass()} ${placeInvalid ? "!border-[#F6E7A1]" : ""}`}
           />
           {suggestLoading ? (
-            <p className="mt-2 text-xs font-light text-white/35">Ищем города…</p>
+            <p className="mt-2 text-xs font-normal text-white/50">Ищем города…</p>
           ) : null}
           {suggestOpen && suggestions.length > 0 ? (
             <ul
@@ -1174,7 +1175,7 @@ function BirthStep({
             <span>Не знаю точное время рождения</span>
           </label>
           {value.unknown_time ? (
-            <p className="mt-2 text-xs font-light text-white/40">
+            <p className="mt-2 text-xs font-normal text-white/50">
               Будут Солнце и Луна. Асцендент и дома появятся, когда укажешь время.
             </p>
           ) : null}
@@ -1195,13 +1196,13 @@ function ContactsStep({
 }) {
   return (
     <div className="flex flex-col">
-      <h1 className="font-display text-3xl leading-tight tracking-tight text-white sm:text-4xl md:text-[2.6rem]">
+      <h1 className="text-3xl font-normal leading-tight tracking-tight text-white sm:text-4xl md:text-[2.6rem]">
         Твоя карта <span className="font-display italic text-[#F6E7A1]">готова</span>
       </h1>
-      <p className="mt-4 font-display text-xl leading-snug text-white/85 sm:text-2xl">
+      <p className="mt-4 text-xl font-normal leading-snug text-white/85 sm:text-2xl">
         Оставь контакты, чтобы открыть разбор
       </p>
-      <p className="mt-3 text-sm font-light leading-relaxed text-white/50">
+      <p className="mt-3 text-sm font-normal leading-relaxed text-white/80">
         Мы используем твои контакты только для доступа к Cosmirror, уведомлений о запуске и обновлений
         по продукту. Спамить не будем.
       </p>
