@@ -643,8 +643,11 @@ export function OnboardingFlow({ slug }: { slug: string }) {
     return true;
   })();
 
-  const showProgress = Boolean(currentStep) || (isReservedSlug(slug) && Boolean(insight));
   const insightLoading = isReservedSlug(slug) && !insight;
+  const mapLoading =
+    insightLoading || (submitting && currentStep?.step_type === "birth_data");
+  const showProgress =
+    !mapLoading && (Boolean(currentStep) || (isReservedSlug(slug) && Boolean(insight)));
   const isFirstScreen =
     Boolean(currentStep) &&
     !prevStepHref(steps ?? [], slug) &&
@@ -755,7 +758,9 @@ export function OnboardingFlow({ slug }: { slug: string }) {
           </div>
         ) : null}
 
-        {isReservedSlug(slug) && insight ? (
+        {mapLoading ? (
+          <MapLoadingPreloader />
+        ) : isReservedSlug(slug) && insight ? (
           <div className="mx-auto flex w-full max-w-lg min-h-0 flex-1 flex-col pt-2 md:pt-4">
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-4 [-webkit-overflow-scrolling:touch]">
               <InsightFunnel
@@ -806,7 +811,12 @@ export function OnboardingFlow({ slug }: { slug: string }) {
             </div>
 
             {error ? (
-              <p className="mb-2 shrink-0 text-sm text-red-300" role="alert">
+              <p
+                className={`mb-2 shrink-0 text-sm ${
+                  error.toLowerCase().includes("соглас") ? "text-[#F6E7A1]" : "text-red-300"
+                }`}
+                role="alert"
+              >
                 {error}
               </p>
             ) : null}
@@ -823,11 +833,7 @@ export function OnboardingFlow({ slug }: { slug: string }) {
           </form>
         ) : (
           <div className="mx-auto flex w-full max-w-lg flex-1 items-center justify-center text-center">
-            <p className="text-white/50">
-              {isReservedSlug(slug)
-                ? "Готовим персональный разбор… это может занять до минуты"
-                : "Загружаем…"}
-            </p>
+            <p className="text-white/50">Загружаем…</p>
           </div>
         )}
       </div>
@@ -1289,7 +1295,7 @@ function PdConsentCheckbox({
           href="/privacy"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-[#ffb099] underline-offset-2 hover:underline"
+          className="text-[#F6E7A1] underline-offset-2 hover:underline"
           onClick={(event) => event.stopPropagation()}
         >
           обработку персональных данных
@@ -1302,7 +1308,7 @@ function PdConsentCheckbox({
               href="/terms"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[#ffb099] underline-offset-2 hover:underline"
+              className="text-[#F6E7A1] underline-offset-2 hover:underline"
               onClick={(event) => event.stopPropagation()}
             >
               Пользовательское соглашение
@@ -1311,6 +1317,33 @@ function PdConsentCheckbox({
         ) : null}
       </span>
     </label>
+  );
+}
+
+function MapLoadingPreloader() {
+  return (
+    <div
+      className="mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center px-4 text-center"
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
+    >
+      <Image
+        src="/images/eye-silver.webp"
+        alt=""
+        width={512}
+        height={512}
+        className="animate-eye-spin h-auto w-[min(46vw,11rem)] sm:w-[12rem]"
+        sizes="(max-width: 640px) 46vw, 12rem"
+        priority
+      />
+      <h2 className="mt-8 font-display text-3xl font-normal italic leading-snug tracking-normal text-[#F6E7A1] sm:text-4xl md:text-[2.6rem]">
+        сверяемся со&nbsp;звёздами
+      </h2>
+      <p className="mt-3 font-grotesk text-base font-normal text-white/70 sm:text-lg">
+        скоро закончим
+      </p>
+    </div>
   );
 }
 

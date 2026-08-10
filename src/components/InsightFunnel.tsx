@@ -218,8 +218,7 @@ export function InsightFunnel({
   if (screenIndex === 0) {
     return (
       <div className="reveal mx-auto flex w-full max-w-lg min-h-0 flex-1 flex-col pt-8 pb-4 md:pt-10">
-        <p className="text-xs uppercase tracking-[0.18em] text-white/40">Разбор</p>
-        <h1 className="mt-3 text-3xl font-normal leading-tight tracking-tight text-white sm:text-4xl">
+        <h1 className="text-3xl font-normal leading-tight tracking-tight text-white sm:text-4xl">
           {name ? (
             <>
               {name},{" "}
@@ -245,8 +244,7 @@ export function InsightFunnel({
   if (screenIndex === 1) {
     return (
       <div className="reveal mx-auto flex w-full max-w-lg min-h-0 flex-1 flex-col pt-8 pb-4 md:pt-10">
-        <p className="text-xs uppercase tracking-[0.18em] text-white/40">Cosmirror</p>
-        <h1 className="mt-4 text-3xl font-normal leading-tight tracking-tight text-white sm:text-[2rem]">
+        <h1 className="text-3xl font-normal leading-tight tracking-tight text-white sm:text-[2rem]">
           {productPitch.title}
         </h1>
         <p className="mt-6 text-[18px] font-normal leading-[1.7] text-white/80">{productPitch.text}</p>
@@ -258,8 +256,7 @@ export function InsightFunnel({
     const cards = outcomes.cards ?? fallbackOutcomeCards();
     return (
       <div className="reveal mx-auto flex w-full max-w-lg min-h-0 flex-1 flex-col pt-8 pb-4 md:pt-10">
-        <p className="text-xs uppercase tracking-[0.18em] text-white/40">Динамика</p>
-        <h1 className="mt-3 text-3xl font-normal leading-tight tracking-tight text-white sm:text-4xl">
+        <h1 className="text-3xl font-normal leading-tight tracking-tight text-white sm:text-4xl">
           {outcomes.title}
         </h1>
         <div className="mt-8 grid grid-cols-2 gap-3">
