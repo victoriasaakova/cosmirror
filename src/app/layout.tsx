@@ -5,13 +5,14 @@ import "./globals.css";
 
 // Keep font files minimal: each weight/style is a separate mobile download.
 // Display is italic accents; body uses 400/500 only.
+// Preload only the body font so CSS/images are not starved on slow LTE.
 const display = Playfair_Display({
   variable: "--font-display",
   subsets: ["latin", "cyrillic"],
   weight: ["400"],
   style: ["normal", "italic"],
   display: "swap",
-  preload: true,
+  preload: false,
 });
 
 const grotesk = Onest({
