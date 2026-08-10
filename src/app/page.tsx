@@ -5,17 +5,17 @@ import { WhatYouGet } from "@/components/WhatYouGet";
 
 const FAMILIAR_CARDS = [
   {
-    icon: "/images/spiral.png",
+    icon: "/images/spiral.webp",
     title: "Замкнутый круг",
     text: "Попадаешь в похожие сюжеты в разных сферах жизни и не видишь закономерность, которая за ними стоит.",
   },
   {
-    icon: "/images/battery.png",
+    icon: "/images/battery.webp",
     title: "Ощущение тупика",
     text: "Продуктивность есть, но в важных делах появляется сопротивление и чувство, что силы уходят не туда, куда хотелось.",
   },
   {
-    icon: "/images/puzzles.png",
+    icon: "/images/puzzles.webp",
     title: "Фоновый шум",
     text: "Постоянный поиск ответов снаружи вместо того, чтобы научиться слышать собственные сигналы и доверять себе.",
   },
@@ -25,22 +25,22 @@ const HOW_CARDS = [
   {
     title: "Поймёшь свои циклы",
     text: "Узнаешь, какие циклы ты проживаешь сейчас, поймёшь, как они могут проявляться именно в твоей жизни, и сможешь ими управлять.",
-    image: "/images/planet.png",
+    image: "/images/planet.webp",
   },
   {
     title: "Раскроешь свою силу",
     text: "Узнаешь, какие у тебя сильные стороны, и научишься опираться на них в жизни, чтобы раскрыть свой потенциал.",
-    image: "/images/flower.png",
+    image: "/images/flower.webp",
   },
   {
     title: "Заметишь свои паттерны",
     text: "Сможешь отслеживать свои состояния, повторяющиеся сценарии и уровень энергии, чтобы легче ими управлять.",
-    image: "/images/pattern.png",
+    image: "/images/pattern.webp",
   },
   {
     title: "Соберёшь живую карту себя",
     text: "Увидишь взаимосвязи между своей историей и влиянием планет, сможешь делать более осознанные выборы с помощью AI-компаньона.",
-    image: "/images/moon.png",
+    image: "/images/moon.webp",
   },
 ];
 
@@ -217,7 +217,7 @@ export default function Home() {
         className="relative overflow-hidden bg-[#050d4a] pt-[7.5rem] pb-[min(58vw,22rem)] sm:pt-36 sm:pb-[min(52vw,24rem)] md:pt-40 md:pb-[min(42vw,26rem)] lg:pt-44"
       >
         <Image
-          src="/images/hero-coastal-moon-trail_4.png"
+          src="/images/hero-coastal-moon-trail_4.webp"
           alt=""
           fill
           priority
@@ -263,10 +263,10 @@ export default function Home() {
       {/* ── Eye bridge — tight under hero ── */}
       <div className="relative z-10 -mt-2 flex justify-center bg-[#050d4a] px-5 pb-3 pt-2 sm:-mt-3 sm:pb-4 sm:pt-3 md:pb-5">
         <Image
-          src="/images/eye-silver.png"
+          src="/images/eye-silver.webp"
           alt=""
-          width={1254}
-          height={1254}
+          width={512}
+          height={512}
           className="animate-eye-spin h-auto w-[min(42vw,11rem)] sm:w-[min(36vw,13rem)] md:w-[14rem]"
           sizes="(max-width: 768px) 42vw, 14rem"
           priority
@@ -321,7 +321,7 @@ export default function Home() {
           className="relative mt-8 min-h-[36rem] scroll-mt-24 overflow-hidden pb-8 pt-10 sm:mt-10 sm:min-h-[42rem] sm:pb-10 sm:pt-12 md:min-h-[52rem] md:pb-44 md:pt-14"
         >
           <Image
-            src="/images/landscape_stars.png"
+            src="/images/landscape_stars.webp"
             alt=""
             fill
             className="object-cover object-[center_58%]"
@@ -411,7 +411,7 @@ export default function Home() {
       <section className="relative overflow-hidden bg-[#050d4a] pb-24 pt-16 md:pb-32 md:pt-20">
         <div className="road-panorama pointer-events-none absolute inset-x-0 bottom-0 z-0 h-64 sm:h-72 md:h-80">
           <Image
-            src="/images/landscape_natal_map_2.png"
+            src="/images/landscape_natal_map_2.webp"
             alt=""
             fill
             sizes="100vw"
@@ -483,7 +483,7 @@ export default function Home() {
         <div className="mx-auto flex w-full max-w-6xl flex-col items-start justify-between gap-6 px-5 md:flex-row md:items-center md:px-8">
           <p className="font-display text-xl text-white">Cosmirror</p>
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-white/50">
-            <a href="mailto:hello@cosmirror.app" className="transition hover:text-white">
+            <a href="mailto:hello@cosmirror.ru" className="transition hover:text-white">
               Контакты
             </a>
             <a href="/privacy" className="transition hover:text-white">

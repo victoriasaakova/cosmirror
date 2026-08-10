@@ -13,10 +13,10 @@ export default function PrivacyPage() {
       <p>
         Настоящая Политика определяет порядок обработки и защиты персональных данных пользователей
         сервиса Cosmirror (далее — «Сервис»), доступного по адресу{" "}
-        <a href="https://cosmirror.app" className="text-[#ffb099] underline-offset-2 hover:underline">
-          cosmirror.app
-        </a>{" "}
-        и связанных доменах.
+        <a href="https://cosmirror.ru" className="text-[#ffb099] underline-offset-2 hover:underline">
+          cosmirror.ru
+        </a>
+        .
       </p>
       <p>
         Политика составлена с учётом требований Федерального закона № 152-ФЗ «О персональных данных»
@@ -32,10 +32,10 @@ export default function PrivacyPage() {
         <p>
           Контакт для обращений по вопросам персональных данных:{" "}
           <a
-            href="mailto:hello@cosmirror.app"
+            href="mailto:hello@cosmirror.ru"
             className="text-[#ffb099] underline-offset-2 hover:underline"
           >
-            hello@cosmirror.app
+            hello@cosmirror.ru
           </a>
           .
         </p>
@@ -160,10 +160,10 @@ export default function PrivacyPage() {
           <li>требовать уточнения, блокирования или уничтожения данных при наличии оснований;</li>
           <li>отозвать согласие на обработку, направив обращение на{" "}
             <a
-              href="mailto:hello@cosmirror.app"
+              href="mailto:hello@cosmirror.ru"
               className="text-[#ffb099] underline-offset-2 hover:underline"
             >
-              hello@cosmirror.app
+              hello@cosmirror.ru
             </a>
             ;</li>
           <li>обжаловать действия Оператора в уполномоченный орган по защите прав субъектов
@@ -181,10 +181,10 @@ export default function PrivacyPage() {
           Сервис не предназначен для лиц младше 18 лет. Если вам стало известно, что данные ребёнка
           были переданы без согласия законного представителя, сообщите на{" "}
           <a
-            href="mailto:hello@cosmirror.app"
+            href="mailto:hello@cosmirror.ru"
             className="text-[#ffb099] underline-offset-2 hover:underline"
           >
-            hello@cosmirror.app
+            hello@cosmirror.ru
           </a>
           — мы примем меры к удалению таких данных.
         </p>

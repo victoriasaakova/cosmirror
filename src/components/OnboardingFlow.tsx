@@ -677,7 +677,7 @@ export function OnboardingFlow({ slug }: { slug: string }) {
   return (
     <main className="relative flex h-[100dvh] flex-1 flex-col overflow-hidden">
       <Image
-        src="/images/hero-coastal-moon-trail_4.png"
+        src="/images/hero-coastal-moon-trail_4.webp"
         alt=""
         fill
         priority

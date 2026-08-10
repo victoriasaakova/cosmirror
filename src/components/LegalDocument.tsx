@@ -37,8 +37,8 @@ export function LegalDocument({ title, updatedAt, children }: LegalDocumentProps
           <a href="/terms" className="transition hover:text-white">
             Пользовательское соглашение
           </a>
-          <a href="mailto:hello@cosmirror.app" className="transition hover:text-white">
-            hello@cosmirror.app
+          <a href="mailto:hello@cosmirror.ru" className="transition hover:text-white">
+            hello@cosmirror.ru
           </a>
         </nav>
       </div>

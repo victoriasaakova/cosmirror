@@ -51,3 +51,6 @@ __pycache__/
 *.sqlite3
 /api/db.sqlite3
 *.egg-info/
+
+# Original image masters (local only; web serves optimized public/images)
+/assets/image-sources/

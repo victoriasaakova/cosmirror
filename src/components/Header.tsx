@@ -25,7 +25,7 @@ export function Header() {
 
   return (
     <header className="fixed inset-x-0 top-3 z-50 mx-auto flex justify-center px-4">
-      <div className="relative flex w-full max-w-4xl items-center justify-between rounded-full border border-white/20 bg-[#050d4a]/55 px-4 py-1.5 shadow-[0_12px_40px_rgba(5,13,74,0.5)] backdrop-blur-2xl md:px-6 md:py-2">
+      <div className="relative flex w-full max-w-4xl items-center justify-between gap-4 rounded-full border border-white/20 bg-[#050d4a]/55 py-2.5 pl-5 pr-2.5 shadow-[0_12px_40px_rgba(5,13,74,0.5)] backdrop-blur-2xl md:py-3 md:pl-7 md:pr-3">
         <a
           href="#top"
           className="font-display text-lg font-medium tracking-tight text-white transition hover:opacity-90"

@@ -38,9 +38,9 @@ export const metadata: Metadata = {
       "Cosmirror превращает натальную карту в Живую карту — историю, которая развивается вместе с тобой. Не чтобы предсказывать будущее, а чтобы лучше понимать себя.",
     images: [
       {
-        url: "/images/hero-coastal-moon-trail_4.png",
-        width: 1254,
-        height: 1254,
+        url: "/images/og-cover.jpg",
+        width: 1200,
+        height: 630,
         alt: "Cosmirror",
       },
     ],
@@ -50,7 +50,7 @@ export const metadata: Metadata = {
     title: "Cosmirror — Живая карта себя",
     description:
       "Cosmirror превращает натальную карту в Живую карту — историю, которая развивается вместе с тобой.",
-    images: ["/images/hero-coastal-moon-trail_4.png"],
+    images: ["/images/og-cover.jpg"],
   },
 };
 

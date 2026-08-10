@@ -13,10 +13,10 @@ export default function TermsPage() {
         Настоящее Пользовательское соглашение (далее — «Соглашение») регулирует отношения между
         администрацией сервиса Cosmirror (далее — «Администрация», «мы») и любым лицом, использующим
         сервис Cosmirror (далее — «Пользователь», «вы»), доступный по адресу{" "}
-        <a href="https://cosmirror.app" className="text-[#ffb099] underline-offset-2 hover:underline">
-          cosmirror.app
+        <a href="https://cosmirror.ru" className="text-[#ffb099] underline-offset-2 hover:underline">
+          cosmirror.ru
         </a>{" "}
-        и связанным доменам (далее — «Сервис»).
+        (далее — «Сервис»).
       </p>
       <p>
         Начиная использование Сервиса (включая просмотр сайта, прохождение онбординга, отправку форм
@@ -144,10 +144,10 @@ export default function TermsPage() {
           Пользователь может прекратить использование Сервиса в любой момент. Для удаления
           персональных данных направьте запрос на{" "}
           <a
-            href="mailto:hello@cosmirror.app"
+            href="mailto:hello@cosmirror.ru"
             className="text-[#ffb099] underline-offset-2 hover:underline"
           >
-            hello@cosmirror.app
+            hello@cosmirror.ru
           </a>
           .
         </p>
@@ -165,10 +165,10 @@ export default function TermsPage() {
         <p>
           По вопросам Соглашения и Сервиса:{" "}
           <a
-            href="mailto:hello@cosmirror.app"
+            href="mailto:hello@cosmirror.ru"
             className="text-[#ffb099] underline-offset-2 hover:underline"
           >
-            hello@cosmirror.app
+            hello@cosmirror.ru
           </a>
           .
         </p>
