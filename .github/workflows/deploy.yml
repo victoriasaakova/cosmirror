@@ -7,7 +7,8 @@ on:
 
 concurrency:
   group: deploy-web
-  cancel-in-progress: true
+  # Queue instead of killing an in-flight SSH deploy (exit 143 / half-built site).
+  cancel-in-progress: false
 
 jobs:
   deploy:
@@ -27,9 +28,12 @@ jobs:
           printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
           chmod 600 ~/.ssh/id_deploy
           ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          # Pull the new deploy.sh first, then run it (avoids chicken-and-egg
+          # where the first post-fix deploy still executes the old script).
           ssh -i ~/.ssh/id_deploy \
             -o IdentitiesOnly=yes \
             -o StrictHostKeyChecking=accept-new \
             -o ConnectTimeout=30 \
+            -o ServerAliveInterval=30 \
             "${SSH_USER}@${SSH_HOST}" \
-            '/opt/cosmirror/web/deploy/deploy.sh'
+            'cd /opt/cosmirror/web && git fetch origin main && git reset --hard origin/main && bash ./deploy/deploy.sh'

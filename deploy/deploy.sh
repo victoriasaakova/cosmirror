@@ -1,8 +1,31 @@
 #!/usr/bin/env bash
+# Deploy cosmirror-web on the production VPS.
+# Safe for a ~1GB box: exclusive lock, clean install, restore service on failure.
 set -euo pipefail
 
 APP_DIR="${APP_DIR:-/opt/cosmirror/web}"
+SERVICE="${SERVICE:-cosmirror-web}"
+LOCK_FILE="${LOCK_FILE:-/var/lock/cosmirror-web-deploy.lock}"
+
 cd "$APP_DIR"
+
+# Only one deploy at a time (Actions + manual must not race).
+exec 9>"$LOCK_FILE"
+if ! flock -n 9; then
+  echo "ERROR: another cosmirror-web deploy is already running"
+  exit 1
+fi
+
+# If we stop the site to free RAM and then fail, bring it back.
+ensure_service() {
+  systemctl start "$SERVICE" || true
+  if systemctl is-active --quiet "$SERVICE"; then
+    echo "==> $SERVICE is active"
+  else
+    echo "==> WARNING: $SERVICE is not active"
+  fi
+}
+trap ensure_service EXIT
 
 echo "==> Pulling latest web"
 git fetch origin main
@@ -14,22 +37,42 @@ if [[ ! -f .env.production ]]; then
 fi
 cp -f .env.production .env.local
 
-echo "==> Installing dependencies"
-# Free RAM on small VPS before build
-systemctl stop cosmirror-web || true
-export NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=768}"
+echo "==> Stopping $SERVICE to free RAM for build"
+systemctl stop "$SERVICE" || true
+# Leave headroom for npm + Next on a 1GB VPS (768 often OOMs).
+export NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=512}"
 
+echo "==> Installing dependencies"
+# Partial/corrupt node_modules from OOM kills cause ENOTEMPTY / TAR_ENTRY_ERROR.
+rm -rf node_modules
 if [[ -f package-lock.json ]]; then
-  npm ci
+  npm ci --no-audit --no-fund
 else
-  npm install
+  npm install --no-audit --no-fund
+fi
+
+if [[ ! -x node_modules/.bin/next ]]; then
+  echo "ERROR: next binary missing after install; retrying once"
+  rm -rf node_modules
+  npm cache clean --force || true
+  if [[ -f package-lock.json ]]; then
+    npm ci --no-audit --no-fund
+  else
+    npm install --no-audit --no-fund
+  fi
+fi
+
+if [[ ! -x node_modules/.bin/next ]]; then
+  echo "ERROR: next binary still missing after retry"
+  exit 1
 fi
 
 echo "==> Building Next.js"
 npm run build
 
-echo "==> Restarting web"
-systemctl start cosmirror-web
-systemctl is-active cosmirror-web
+echo "==> Starting $SERVICE"
+trap - EXIT
+systemctl start "$SERVICE"
+systemctl is-active "$SERVICE"
 
 echo "==> Web deploy done"
