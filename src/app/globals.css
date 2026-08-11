@@ -272,6 +272,77 @@ body {
   animation: pulse-dot 2.4s ease-out infinite;
 }
 
+/* Outcomes: growth without charts */
+.growth-stem {
+  position: relative;
+  width: 2px;
+  height: 7.5rem;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.growth-stem-core {
+  width: 2px;
+  height: 0;
+  border-radius: 9999px;
+  background: linear-gradient(to top, rgba(246, 231, 161, 0.15), #f6e7a1);
+  animation: growth-rise 1.4s cubic-bezier(0.22, 1, 0.36, 1) 0.15s forwards;
+}
+
+.growth-stem-bloom {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 14px;
+  height: 14px;
+  margin-left: -7px;
+  border-radius: 9999px;
+  background: radial-gradient(circle, #f6e7a1 0%, rgba(246, 231, 161, 0.2) 55%, transparent 70%);
+  opacity: 0;
+  transform: scale(0.35);
+  animation: growth-bloom 0.9s cubic-bezier(0.22, 1, 0.36, 1) 1.1s forwards;
+}
+
+.growth-item {
+  opacity: 0;
+  transform: translateY(18px) scale(0.96);
+  animation: growth-item-in 0.75s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes growth-rise {
+  from {
+    height: 0;
+    opacity: 0.4;
+  }
+  to {
+    height: 100%;
+    opacity: 1;
+  }
+}
+
+@keyframes growth-bloom {
+  from {
+    opacity: 0;
+    transform: scale(0.35);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes growth-item-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
@@ -285,8 +356,22 @@ body {
   .reveal,
   .reveal-delay-1,
   .reveal-delay-2,
-  .reveal-delay-3 {
+  .reveal-delay-3,
+  .growth-stem-core,
+  .growth-stem-bloom,
+  .growth-item {
     animation: none !important;
+  }
+
+  .growth-stem-core {
+    height: 100%;
+    opacity: 1;
+  }
+
+  .growth-stem-bloom,
+  .growth-item {
+    opacity: 1;
+    transform: none;
   }
 
   /* Keep the message readable and stars still when motion is reduced. */

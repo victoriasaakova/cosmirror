@@ -3,12 +3,9 @@
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { fetchOnboardingSteps } from "@/lib/api";
-import { firstStepHref, resumeHref } from "@/lib/onboarding/screens";
-import {
-  loadOrCreateSession,
-  startFreshOnboardingSession,
-} from "@/lib/onboarding/session";
-import { resetOnboardingFlowCache } from "@/components/OnboardingFlow";
+import { freshOnboardingHref } from "@/lib/onboarding/paths";
+import { resumeHref } from "@/lib/onboarding/screens";
+import { loadOrCreateSession } from "@/lib/onboarding/session";
 
 function LoadingScreen({ message = "Загружаем…" }: { message?: string }) {
   return (
@@ -18,9 +15,7 @@ function LoadingScreen({ message = "Загружаем…" }: { message?: string
   );
 }
 
-/** `/onboarding` → first / next step from API session.
- *  `?new=1` — всегда новый проход с первого шага (кнопки с лендинга).
- */
+/** `/onboarding` → resume. `?new=1` сразу уводит на первый шаг. */
 function OnboardingIndexInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -28,19 +23,19 @@ function OnboardingIndexInner() {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    if (forceNew) {
+      router.replace(freshOnboardingHref());
+      return;
+    }
+
     let cancelled = false;
     (async () => {
       try {
-        const steps = await fetchOnboardingSteps();
-        const session = forceNew
-          ? await startFreshOnboardingSession()
-          : await loadOrCreateSession();
+        const [steps, session] = await Promise.all([
+          fetchOnboardingSteps(),
+          loadOrCreateSession(),
+        ]);
         if (cancelled) return;
-        if (forceNew) {
-          resetOnboardingFlowCache();
-          router.replace(firstStepHref(steps));
-          return;
-        }
         router.replace(resumeHref(steps, session.next_step, session.status));
       } catch (err) {
         if (!cancelled) {
@@ -66,12 +61,17 @@ function OnboardingIndexInner() {
     );
   }
 
-  return <LoadingScreen message={forceNew ? "Начинаем сначала…" : "Загружаем…"} />;
+  // new=1: пустой экран на мгновение replace — без «Начинаем сначала…»
+  if (forceNew) {
+    return <div className="h-[100dvh] bg-[#050d4a]" aria-hidden />;
+  }
+
+  return <LoadingScreen message="Загружаем…" />;
 }
 
 export default function OnboardingIndexPage() {
   return (
-    <Suspense fallback={<LoadingScreen />}>
+    <Suspense fallback={<div className="h-[100dvh] bg-[#050d4a]" aria-hidden />}>
       <OnboardingIndexInner />
     </Suspense>
   );

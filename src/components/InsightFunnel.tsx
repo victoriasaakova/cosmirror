@@ -3,10 +3,10 @@
 import type { OnboardingInsight, OnboardingStep } from "@/lib/api";
 import { mergeContentPayloads, screensForStep } from "@/lib/onboarding/screens";
 
-export const INSIGHT_SCREEN_COUNT = 4;
+export const INSIGHT_SCREEN_COUNT = 3;
 
 type InsightItem = { key: string; title: string; text: string };
-type OutcomeCard = {
+type OfferCard = {
   key: string;
   label: string;
   before: string;
@@ -50,13 +50,21 @@ function quizContext(
 }
 
 const OPENING_BRIDGES = [
-  "сейчас подсвечивается, что",
-  "сейчас видно, что",
-  "сейчас пространство показывает, что",
-  "сейчас тебе подсвечивается, что",
-  "сейчас особенно заметно, что",
-  "сейчас на фоне циклов видно, что",
-  "сейчас карта подсказывает, что",
+  "ты можешь замечать, что",
+  "ты можешь чувствовать, что",
+  "сейчас важно",
+];
+
+const PITCH_LINES = [
+  "Персональный разбор реакций, потребностей и повторяющихся сценариев.",
+  "Больше ясности в выборе, отношениях и ежедневном ритме.",
+];
+
+const TOPIC_BLOCKS = [
+  { key: "love", label: "отношения", hint: "где подстройка, а где живая близость" },
+  { key: "anchor", label: "опора", hint: "на что опираться в решениях и переменах" },
+  { key: "clarity", label: "ясность", hint: "что запускает напряжение и повтор сценария" },
+  { key: "energy", label: "энергия", hint: "где ресурс уходит и где восстанавливается" },
 ];
 
 function titleToInsightClause(title: string): string {
@@ -106,73 +114,71 @@ function fallbackBody(
   return `Сейчас особенно заметно, где привычная роль стала тесной в теме «${focus}». Чтобы ${intentLabel.toLowerCase() || "разобраться в себе"}, полезно честно увидеть, что больше не работает.`;
 }
 
-function fallbackProductPitch(
-  focusLabels: string[],
-  intentLabel: string,
-  _cycles: InsightItem[],
-  _insight: OnboardingInsight,
-) {
+function fallbackOfferCards(focusLabels: string[]): OfferCard[] {
   const focus = focusLabels[0] ?? "жизни";
-  return {
-    title: "Связываем карту, циклы и твои реакции",
-    text: `В теме «${focus}» покажем повторяющийся сценарий раньше — чтобы ${intentLabel.toLowerCase() || "разобраться в себе"}, а не снова действовать на автомате.`,
-  };
-}
-
-function parsePercent(value: string): number {
-  const match = value.match(/(\d+)/);
-  return match ? Math.min(100, Math.max(0, Number(match[1]))) : 35;
-}
-
-function fallbackOutcomeCards(): OutcomeCard[] {
   return [
     {
-      key: "clarity",
-      label: "Ясность",
+      key: "natal",
+      label: "Натальная карта",
       before: "32%",
       after: "81%",
-      hint: "видишь, что даёт энергию",
+      hint: "как устроены твои планеты и как они влияют на тебя",
     },
     {
-      key: "patterns",
-      label: "Паттерны",
+      key: "cycles",
+      label: "Текущие и ближайшие периоды",
       before: "24%",
       after: "76%",
-      hint: "замечаешь повторения раньше",
+      hint: "что происходит сейчас и что подсветится дальше",
     },
     {
-      key: "strengths",
-      label: "Сильные стороны",
+      key: "crossings",
+      label: "Пересечения с картой",
       before: "38%",
       after: "84%",
-      hint: "понимаешь, что масштабировать",
+      hint: "где текущий фон цепляет твои личные темы",
     },
     {
-      key: "rhythm",
-      label: "Свой ритм",
+      key: "focus",
+      label: "Разбор под запрос",
       before: "29%",
       after: "79%",
-      hint: "легче выбирать решения",
+      hint: `сильные стороны и паттерны в теме «${focus}»`,
     },
   ];
 }
 
-function fallbackOutcomes(name: string) {
+function fallbackOffer() {
   return {
-    title: name ? `${name}, что меняется уже через неделю` : "Что меняется уже через неделю",
-    cards: fallbackOutcomeCards(),
+    title: "Стань ближе к своему истинному я через подробный разбор",
+    text: "",
+    cta: "Получить за 777 ₽",
+    price: "777 ₽",
   };
 }
 
-function legacyProductPitch(insight: OnboardingInsight) {
-  const pitch = insight.insight.cycle_pitches?.[0];
-  if (!pitch) return null;
-  return { title: pitch.title, text: pitch.text };
+/** Italicize a known accent phrase inside a title. */
+function renderAccentTitle(title: string, accents: string[]) {
+  const lower = title.toLowerCase();
+  for (const accent of accents) {
+    const idx = lower.indexOf(accent.toLowerCase());
+    if (idx === -1) continue;
+    return (
+      <>
+        {title.slice(0, idx)}
+        <span className="font-display italic text-[#F6E7A1]">
+          {title.slice(idx, idx + accent.length)}
+        </span>
+        {title.slice(idx + accent.length)}
+      </>
+    );
+  }
+  return title;
 }
 
 export function insightCtaLabel(screenIndex: number, insight: OnboardingInsight): string {
   if (screenIndex === 0) return "Узнать больше";
-  if (screenIndex === 1 || screenIndex === 2) return "Продолжить";
+  if (screenIndex === 1) return "Продолжить";
   if (screenIndex >= INSIGHT_SCREEN_COUNT - 1) {
     const cta = insight.insight.offer?.cta || "Получить за 777 ₽";
     return /₽|руб/i.test(cta) ? cta : `${cta} ₽`;
@@ -193,21 +199,8 @@ export function InsightFunnel({
 }) {
   const { name, focusLabels, intentLabel, lifeStageLabel } = quizContext(steps, payloadByStep);
   const influences = insight.insight.influences ?? [];
-  const cycles = insight.insight.cycles ?? [];
-  const productPitch =
-    insight.insight.product_pitch ??
-    legacyProductPitch(insight) ??
-    fallbackProductPitch(focusLabels, intentLabel, cycles, insight);
-  const outcomes = insight.insight.outcomes?.cards?.length
-    ? insight.insight.outcomes
-    : fallbackOutcomes(name);
-  const offer = insight.insight.offer ?? {
-    title: "Стань ближе к своему истинному я через подробный разбор",
-    text: "Персональный разбор под твою карту и текущие циклы.\nОтслеживание энергии и паттернов без общих гороскопов.",
-    cta: "Получить за 777 ₽",
-    price: "777 ₽",
-  };
-  const offerLines = offer.text.split(/\n+/).filter(Boolean);
+  const offerCards = fallbackOfferCards(focusLabels);
+  const offer = insight.insight.offer ?? fallbackOffer();
 
   const opening =
     insight.insight.opening ?? fallbackOpening(influences, focusLabels, intentLabel);
@@ -217,7 +210,7 @@ export function InsightFunnel({
 
   if (screenIndex === 0) {
     return (
-      <div className="reveal mx-auto flex w-full max-w-lg min-h-0 flex-1 flex-col pt-8 pb-4 md:pt-10">
+      <div className="reveal mx-auto flex w-full max-w-lg min-h-0 flex-1 flex-col justify-center pt-6 pb-2 md:pt-8">
         <h1 className="text-3xl font-normal leading-tight tracking-tight text-white sm:text-4xl">
           {name ? (
             <>
@@ -234,7 +227,7 @@ export function InsightFunnel({
             </>
           )}
         </h1>
-        <p className="mt-8 text-[16px] font-normal leading-[1.65] text-white/80 sm:text-[17px]">
+        <p className="mt-6 text-[16px] font-normal leading-[1.55] text-white/80 sm:text-[17px]">
           {body}
         </p>
       </div>
@@ -243,88 +236,67 @@ export function InsightFunnel({
 
   if (screenIndex === 1) {
     return (
-      <div className="reveal mx-auto flex w-full max-w-lg min-h-0 flex-1 flex-col pt-8 pb-4 md:pt-10">
+      <div className="reveal mx-auto flex w-full max-w-lg min-h-0 flex-1 flex-col justify-center pt-6 pb-2 md:pt-8">
         <h1 className="text-3xl font-normal leading-tight tracking-tight text-white sm:text-[2rem]">
-          {productPitch.title}
+          Что ты получишь в{" "}
+          <span className="font-display italic text-[#F6E7A1]">подробном разборе</span>
         </h1>
-        <p className="mt-6 text-[18px] font-normal leading-[1.7] text-white/80">{productPitch.text}</p>
-      </div>
-    );
-  }
-
-  if (screenIndex === 2) {
-    const cards = outcomes.cards ?? fallbackOutcomeCards();
-    return (
-      <div className="reveal mx-auto flex w-full max-w-lg min-h-0 flex-1 flex-col pt-8 pb-4 md:pt-10">
-        <h1 className="text-3xl font-normal leading-tight tracking-tight text-white sm:text-4xl">
-          {outcomes.title}
-        </h1>
-        <div className="mt-8 grid grid-cols-2 gap-3">
-          {cards.map((card) => (
-            <OutcomeMetricCard key={card.key} card={card} />
+        <div className="mt-5 space-y-2">
+          {PITCH_LINES.map((line) => (
+            <p key={line} className="text-[16px] font-normal leading-[1.55] text-white/80">
+              {line}
+            </p>
           ))}
         </div>
-        <p className="mt-6 text-center text-xs font-normal text-white/50">
-          ориентир по первой неделе с Cosmirror
-        </p>
+        <div className="mt-7 grid grid-cols-2 gap-3">
+          {TOPIC_BLOCKS.map((topic) => (
+            <div
+              key={topic.key}
+              className="rounded-2xl border border-[#F6E7A1]/22 bg-[#F6E7A1]/[0.06] px-3.5 py-3.5"
+            >
+              <p className="text-[15px] font-normal text-[#F6E7A1]">{topic.label}</p>
+              <p className="mt-1.5 text-[13px] font-normal leading-snug text-white/55">
+                {topic.hint}
+              </p>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="reveal mx-auto flex w-full max-w-lg min-h-0 flex-1 flex-col pt-8 pb-4 md:pt-10">
-      <h1 className="text-3xl font-normal leading-tight tracking-tight text-white sm:text-4xl">
-        {offer.title}
+    <div className="reveal mx-auto flex w-full max-w-lg min-h-0 flex-1 flex-col justify-center pt-6 pb-2 md:pt-8">
+      <h1 className="text-3xl font-normal leading-tight tracking-tight text-white sm:text-[2rem]">
+        {renderAccentTitle(offer.title, ["истинному я"])}
       </h1>
-      <div className="mt-6 space-y-3">
-        {offerLines.map((line) => (
-          <p key={line} className="text-[16px] font-normal leading-relaxed text-white/80">
-            {line}
-          </p>
+
+      <ol className="mt-7 flex flex-col">
+        {offerCards.map((card, index) => (
+          <li
+            key={card.key}
+            className="growth-item border-t border-white/10 py-3.5 first:border-t-0 first:pt-0"
+            style={{ animationDelay: `${0.08 + index * 0.08}s` }}
+          >
+            <div className="flex gap-3.5">
+              <span
+                className="shrink-0 font-display text-xl italic leading-none text-[#F6E7A1]/90"
+                aria-hidden
+              >
+                {String(index + 1).padStart(2, "0")}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[17px] font-normal leading-snug text-white">{card.label}</p>
+                {card.hint ? (
+                  <p className="mt-1 text-[13px] font-normal leading-snug text-white/55">
+                    {card.hint}
+                  </p>
+                ) : null}
+              </div>
+            </div>
+          </li>
         ))}
-      </div>
-      <p className="mt-10 text-sm font-normal text-white/50">разовый доступ · без подписки</p>
+      </ol>
     </div>
-  );
-}
-
-function OutcomeMetricCard({ card }: { card: OutcomeCard }) {
-  const beforePct = parsePercent(card.before);
-  const afterPct = parsePercent(card.after);
-
-  return (
-    <article className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-      <p className="text-xs uppercase tracking-[0.14em] text-white/45">{card.label}</p>
-      <div className="mt-3 flex items-end justify-between gap-2">
-        <div>
-          <p className="text-[11px] text-white/35">сейчас</p>
-          <p className="text-xl font-normal text-white/55">{card.before}</p>
-        </div>
-        <span className="text-white/25" aria-hidden>
-          →
-        </span>
-        <div className="text-right">
-          <p className="text-[11px] text-[#F6E7A1]/70">через неделю</p>
-          <p className="text-xl font-normal text-[#F6E7A1]">{card.after}</p>
-        </div>
-      </div>
-      <div className="mt-3 space-y-1.5">
-        <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
-          <div
-            className="h-full rounded-full bg-white/30 transition-all duration-700"
-            style={{ width: `${beforePct}%` }}
-          />
-        </div>
-        <div className="h-1.5 overflow-hidden rounded-full bg-[#F6E7A1]/15">
-          <div
-            className="h-full rounded-full bg-[#F6E7A1] transition-all duration-700"
-            style={{ width: `${afterPct}%` }}
-          />
-        </div>
-      </div>
-      {card.hint ? (
-        <p className="mt-3 text-[12px] font-normal leading-snug text-white/50">{card.hint}</p>
-      ) : null}
-    </article>
   );
 }

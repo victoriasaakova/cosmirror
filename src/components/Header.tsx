@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { CosmirrorMark } from "@/components/CosmirrorMark";
+import { freshOnboardingHref } from "@/lib/onboarding/paths";
 
 const NAV = [
   { href: "#for", label: "Для кого" },
@@ -12,6 +13,7 @@ const NAV = [
 
 export function Header() {
   const [isOpen, setIsOpen] = useState(false);
+  const startHref = freshOnboardingHref();
 
   useEffect(() => {
     if (!isOpen) return;
@@ -51,7 +53,7 @@ export function Header() {
 
         {/* Desktop CTA Button */}
         <a
-          href="/onboarding?new=1"
+          href={startHref}
           className="hidden md:inline-flex rounded-full bg-[#F6E7A1] px-4 py-1.5 font-grotesk text-sm font-medium text-[#0a1a3a] shadow-[0_8px_20px_rgba(246,231,161,0.22)] transition hover:scale-[1.02] hover:bg-[#f0dc82] active:scale-[0.98]"
         >
           Начать путешествие
@@ -103,7 +105,7 @@ export function Header() {
                 ))}
               </nav>
               <a
-                href="/onboarding?new=1"
+                href={startHref}
                 onClick={() => setIsOpen(false)}
                 className="mt-1 w-full rounded-full bg-[#F6E7A1] py-2.5 text-center font-grotesk text-base font-medium text-[#0a1a3a] shadow-[0_8px_20px_rgba(246,231,161,0.22)] transition hover:bg-[#f0dc82]"
               >

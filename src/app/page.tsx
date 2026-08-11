@@ -2,7 +2,9 @@ import Image from "next/image";
 import { CosmirrorMark } from "@/components/CosmirrorMark";
 import { Header } from "@/components/Header";
 import { FallingPills } from "@/components/FallingPills";
+import { PrefetchOnboarding } from "@/components/PrefetchOnboarding";
 import { WhatYouGet } from "@/components/WhatYouGet";
+import { freshOnboardingHref } from "@/lib/onboarding/paths";
 
 const FAMILIAR_CARDS = [
   {
@@ -205,6 +207,7 @@ function ConstellationPlot({
 export default function Home() {
   return (
     <main className="relative flex flex-1 flex-col overflow-x-hidden">
+      <PrefetchOnboarding />
       {/* ── Header Component with Mobile Burger ── */}
       <Header />
 
@@ -256,7 +259,7 @@ export default function Home() {
 
           <div className="reveal reveal-delay-2 mt-8 flex justify-center sm:mt-9">
             <a
-              href="/onboarding?new=1"
+              href={freshOnboardingHref()}
               className="inline-flex items-center justify-center rounded-full bg-[#F6E7A1] hover:bg-[#f0dc82] text-[#0a1a3a] font-grotesk font-medium text-lg md:text-xl px-10 py-2.5 shadow-[0_10px_28px_rgba(246,231,161,0.28)] transition-all transform hover:scale-[1.03] active:scale-[0.98] cursor-pointer"
             >
               Начать путешествие
@@ -407,7 +410,7 @@ export default function Home() {
 
           <div className="mt-12 flex justify-center sm:mt-14">
             <a
-              href="/onboarding?new=1"
+              href={freshOnboardingHref()}
               className="inline-flex items-center justify-center rounded-full bg-[#F6E7A1] px-10 py-2.5 font-grotesk text-lg font-medium text-[#0a1a3a] shadow-[0_10px_28px_rgba(246,231,161,0.28)] transition-all hover:scale-[1.03] hover:bg-[#f0dc82] active:scale-[0.98] md:text-xl"
             >
               Попробовать
@@ -489,21 +492,30 @@ export default function Home() {
 
       {/* ── Footer ── */}
       <footer className="relative border-t border-white/10 bg-[#050d4a] py-10">
-        <div className="mx-auto flex w-full max-w-6xl flex-col items-start justify-between gap-6 px-5 md:flex-row md:items-center md:px-8">
+        <div className="mx-auto flex w-full max-w-6xl flex-col items-start gap-6 px-5 md:px-8">
           <p className="text-xl font-medium">
             <CosmirrorMark />
           </p>
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-white/50">
-            <a href="mailto:hello@cosmirror.ru" className="transition hover:text-white">
-              Контакты
-            </a>
+          <nav className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-white/80">
             <a href="/privacy" className="transition hover:text-white">
               Политика конфиденциальности
+            </a>
+            <a href="/cookies" className="transition hover:text-white">
+              Политика cookie
             </a>
             <a href="/terms" className="transition hover:text-white">
               Пользовательское соглашение
             </a>
-          </div>
+            <a href="/offer" className="transition hover:text-white">
+              Публичная оферта
+            </a>
+            <a href="/contacts" className="transition hover:text-white">
+              Контакты
+            </a>
+          </nav>
+          <p className="text-xs leading-relaxed text-white/40">
+            Саакова Виктория · ИНН 773180561611
+          </p>
         </div>
       </footer>
     </main>

@@ -37,9 +37,11 @@ import {
   insightCtaLabel,
 } from "@/components/InsightFunnel";
 import {
+  clearOnboardingClientState,
   ensureSessionToken,
   patchDraft,
   readDraft,
+  startFreshOnboardingSession,
 } from "@/lib/onboarding/session";
 
 type BirthAnswers = {
@@ -112,6 +114,21 @@ function toIsoDate(value: string): string | null {
 function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 }
+
+/** Telegram username: @name или name, 5–32 символа, латиница/цифры/_ */
+function normalizeTelegram(value: string) {
+  let raw = value.trim();
+  raw = raw.replace(/^https?:\/\/(t\.me|telegram\.me)\//i, "");
+  raw = raw.replace(/^@/, "");
+  return raw;
+}
+
+function isValidTelegram(value: string) {
+  return /^[a-zA-Z][a-zA-Z0-9_]{4,31}$/.test(normalizeTelegram(value));
+}
+
+const CONTACTS_SUPPORT =
+  "Введи реальные данные — нужно верифицировать Telegram и email";
 
 function choiceClass(active: boolean) {
   return `w-full rounded-2xl border px-5 py-4 text-left text-lg font-medium leading-snug transition-colors sm:text-xl ${
@@ -198,24 +215,40 @@ const flowCache: {
 };
 
 export function resetOnboardingFlowCache() {
-  flowCache.steps = null;
+  // Каталог шагов общий — не сбрасываем, чтобы новый проход не мигал «Загружаем…».
   flowCache.token = null;
   flowCache.payloadByStep = {};
   flowCache.insight = null;
 }
 
-export function OnboardingFlow({ slug }: { slug: string }) {
+/** Прогрев списка шагов с лендинга — первый экран онбординга открывается без ожидания API. */
+export function primeOnboardingSteps(apiSteps: OnboardingStep[]) {
+  if (!apiSteps.length) return;
+  flowCache.steps = apiSteps;
+}
+
+export function OnboardingFlow({
+  slug,
+  forceNew = false,
+}: {
+  slug: string;
+  forceNew?: boolean;
+}) {
   const router = useRouter();
   const [steps, setSteps] = useState<OnboardingStep[] | null>(() => flowCache.steps);
   const [loadError, setLoadError] = useState("");
-  const [sessionToken, setSessionToken] = useState<string | null>(() => flowCache.token);
+  const [sessionToken, setSessionToken] = useState<string | null>(() =>
+    forceNew ? null : flowCache.token,
+  );
   const [payloadByStep, setPayloadByStep] = useState<Record<string, Record<string, unknown>>>(
-    () => flowCache.payloadByStep,
+    () => (forceNew ? {} : flowCache.payloadByStep),
   );
   const [screenIndex, setScreenIndex] = useState(0);
-  const [insight, setInsight] = useState<OnboardingInsight | null>(() => flowCache.insight);
+  const [insight, setInsight] = useState<OnboardingInsight | null>(() =>
+    forceNew ? null : flowCache.insight,
+  );
   const [insightStatus, setInsightStatus] = useState<"idle" | "loading" | "ready" | "missing">(
-    () => (flowCache.insight ? "ready" : "idle"),
+    () => (!forceNew && flowCache.insight ? "ready" : "idle"),
   );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -308,8 +341,11 @@ export function OnboardingFlow({ slug }: { slug: string }) {
           : typeof draft.screenIndexByStep[slug] === "number"
             ? draft.screenIndexByStep[slug]
             : 0;
-      setScreenIndex(resumeScreen);
-      patchDraft({ stepSlug: slug, screenIndex: resumeScreen });
+      const clampedResume = isReservedSlug(slug)
+        ? Math.min(Math.max(0, resumeScreen), INSIGHT_SCREEN_COUNT - 1)
+        : resumeScreen;
+      setScreenIndex(clampedResume);
+      patchDraft({ stepSlug: slug, screenIndex: clampedResume });
 
       if (isReservedSlug(slug)) {
         if (flowCache.insight) {
@@ -360,21 +396,81 @@ export function OnboardingFlow({ slug }: { slug: string }) {
   }, [applyInsight, applyPayload, applySteps, applyToken, router, slug]);
 
   useEffect(() => {
-    void warm();
-  }, [warm]);
+    let cancelled = false;
+    (async () => {
+      if (forceNew) {
+        resetOnboardingFlowCache();
+        clearOnboardingClientState();
+        applyPayload({});
+        applyInsight(null);
+        setInsightStatus("idle");
+        setError("");
+        // Показать первый шаг сразу, если каталог уже в кэше (прогрев с лендинга).
+        if (flowCache.steps) {
+          setSteps(flowCache.steps);
+        }
+        try {
+          const [session, fetchedSteps] = await Promise.all([
+            startFreshOnboardingSession(),
+            flowCache.steps ? Promise.resolve(flowCache.steps) : fetchOnboardingSteps(),
+          ]);
+          if (cancelled) return;
+          applySteps(fetchedSteps);
+          applyToken(session.token);
+          router.replace(stepHref(slug));
+        } catch (err) {
+          if (!cancelled) {
+            setLoadError(err instanceof Error ? err.message : "Не удалось начать онбординг");
+          }
+          return;
+        }
+      }
+      if (!cancelled) {
+        await warm();
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    applyInsight,
+    applyPayload,
+    applySteps,
+    applyToken,
+    forceNew,
+    router,
+    slug,
+    warm,
+  ]);
 
   useEffect(() => {
     const draft = readDraft();
     const saved = draft.screenIndexByStep[slug];
-    setScreenIndex(typeof saved === "number" ? saved : 0);
+    const raw = typeof saved === "number" ? saved : 0;
+    const max = isReservedSlug(slug) ? INSIGHT_SCREEN_COUNT - 1 : Number.POSITIVE_INFINITY;
+    setScreenIndex(Math.min(Math.max(0, raw), max));
     setError("");
   }, [slug]);
 
   useEffect(() => {
     if (!isReservedSlug(slug) || !steps || insightStatus !== "missing") return;
+    const birth = steps.find((step) => step.step_type === "birth_data");
     const waitlist = [...steps].reverse().find((step) => step.step_type === "waitlist");
-    router.replace(waitlist ? stepHref(waitlist.slug) : stepHref(steps[0]?.slug ?? "welcome"));
-  }, [slug, steps, insightStatus, router]);
+    const birthPayload = birth ? payloadByStep[birth.slug] : undefined;
+    const hasBirth =
+      Boolean(birthPayload && typeof birthPayload.birth_date === "string" && birthPayload.birth_date) ||
+      Boolean(birthPayload && typeof birthPayload.birth_place === "string" && birthPayload.birth_place);
+    // Без карты нет разбора — возвращаем на birth, не крутим contacts ↔ insight.
+    router.replace(
+      hasBirth
+        ? waitlist
+          ? stepHref(waitlist.slug)
+          : stepHref(steps[0]?.slug ?? "welcome")
+        : birth
+          ? stepHref(birth.slug)
+          : stepHref(steps[0]?.slug ?? "welcome"),
+    );
+  }, [slug, steps, insightStatus, router, payloadByStep]);
 
   function updateStepPayload(stepSlug: string, patch: Record<string, unknown>) {
     setPayloadByStep((prev) => {
@@ -468,15 +564,21 @@ export function OnboardingFlow({ slug }: { slug: string }) {
       if (currentStep.step_type === "waitlist") {
         // Не ждём LLM на кнопке «Открываем…» — разбор догрузится на /insight.
         patchDraft({ insightReady: true });
-        if (!insight) {
-          void fetchOnboardingInsight(token)
-            .then((data) => {
-              flowCache.insight = data;
-              setInsight(data);
-            })
-            .catch(() => {
-              /* warm() на insight-странице повторит запрос */
-            });
+        try {
+          const data = await fetchOnboardingInsight(token);
+          flowCache.insight = data;
+          setInsight(data);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : "";
+          if (/birth|дат|город/i.test(message)) {
+            const birth = steps.find((step) => step.step_type === "birth_data");
+            if (birth) {
+              setError("Сначала сохрани дату и город рождения — без карты разбор не открыть.");
+              await goTo(stepHref(birth.slug));
+              return;
+            }
+          }
+          /* warm() на insight-странице повторит запрос */
         }
         await goTo(stepHref(INSIGHT_SLUG));
         return;
@@ -562,12 +664,10 @@ export function OnboardingFlow({ slug }: { slug: string }) {
 
     if (currentStep.step_type === "waitlist") {
       const contacts = contactsFromPayload(payloadByStep[currentStep.slug]);
-      if (!contacts.telegram.trim()) {
-        setError("Укажи Telegram");
-        return;
-      }
-      if (!isValidEmail(contacts.email)) {
-        setError("Укажи корректный email");
+      const telegramOk = isValidTelegram(contacts.telegram);
+      const emailOk = isValidEmail(contacts.email);
+      if (!telegramOk || !emailOk) {
+        setError(CONTACTS_SUPPORT);
         return;
       }
       if (!contacts.pd_consent) {
@@ -619,11 +719,10 @@ export function OnboardingFlow({ slug }: { slug: string }) {
 
   const payload = currentStep ? (payloadByStep[currentStep.slug] ?? {}) : {};
   const ready = (() => {
-    if (!currentStep || submitting) return !submitting && Boolean(currentStep);
+    if (!currentStep || submitting || !sessionToken) return false;
     if (currentStep.step_type === "birth_data") {
       const birth = birthFromPayload(payload);
       return (
-        !submitting &&
         Boolean(toIsoDate(birth.birth_date)) &&
         birth.birth_place.trim().length >= 2
       );
@@ -631,9 +730,8 @@ export function OnboardingFlow({ slug }: { slug: string }) {
     if (currentStep.step_type === "waitlist") {
       const contacts = contactsFromPayload(payload);
       return (
-        !submitting &&
         Boolean(contacts.telegram.trim()) &&
-        isValidEmail(contacts.email) &&
+        Boolean(contacts.email.trim()) &&
         contacts.pd_consent
       );
     }
@@ -644,8 +742,8 @@ export function OnboardingFlow({ slug }: { slug: string }) {
   })();
 
   const insightLoading = isReservedSlug(slug) && !insight;
-  const mapLoading =
-    insightLoading || (submitting && currentStep?.step_type === "birth_data");
+  // Прелоадер «сверяемся со звёздами» — только на экране разбора, не на шаге birth.
+  const mapLoading = insightLoading;
   const showProgress =
     !mapLoading && (Boolean(currentStep) || (isReservedSlug(slug) && Boolean(insight)));
   const isFirstScreen =
@@ -810,7 +908,14 @@ export function OnboardingFlow({ slug }: { slug: string }) {
               />
             </div>
 
-            {error ? (
+            {error &&
+            !(
+              currentStep?.step_type === "waitlist" &&
+              (error === CONTACTS_SUPPORT ||
+                error.toLowerCase().includes("реальн") ||
+                error.toLowerCase().includes("telegram") ||
+                error.toLowerCase().includes("email"))
+            ) ? (
               <p
                 className={`mb-2 shrink-0 text-sm ${
                   error.toLowerCase().includes("соглас") ? "text-[#F6E7A1]" : "text-red-300"
@@ -879,6 +984,7 @@ function StepBody({
       <ContactsStep
         value={contactsFromPayload(payload)}
         onChange={(next) => onPayload({ ...next })}
+        error={error}
         submitting={submitting}
       />
     );
@@ -1194,23 +1300,34 @@ function BirthStep({
 function ContactsStep({
   value,
   onChange,
+  error,
   submitting,
 }: {
   value: ContactsAnswers;
   onChange: (value: ContactsAnswers) => void;
+  error: string;
   submitting: boolean;
 }) {
+  const telegramInvalid =
+    Boolean(value.telegram.trim()) && !isValidTelegram(value.telegram);
+  const emailInvalid = Boolean(value.email.trim()) && !isValidEmail(value.email);
+  const showSupport =
+    telegramInvalid ||
+    emailInvalid ||
+    (Boolean(error) &&
+      (error === CONTACTS_SUPPORT ||
+        error.toLowerCase().includes("telegram") ||
+        error.toLowerCase().includes("email") ||
+        error.toLowerCase().includes("реальн")));
+
   return (
     <div className="flex flex-col">
       <h1 className="text-3xl font-normal leading-tight tracking-tight text-white sm:text-4xl md:text-[2.6rem]">
         Твоя карта <span className="font-display italic text-[#F6E7A1]">готова</span>
       </h1>
-      <p className="mt-4 text-xl font-normal leading-snug text-white/85 sm:text-2xl">
-        Оставь контакты, чтобы открыть разбор
-      </p>
-      <p className="mt-3 text-sm font-normal leading-relaxed text-white/80">
-        Мы используем твои контакты только для доступа к Cosmirror, уведомлений о запуске и обновлений
-        по продукту. Спамить не будем.
+      <p className="mt-5 text-base font-normal leading-relaxed text-white/75 sm:text-lg">
+        Оставь контакты, чтобы открыть разбор. Используем только для доступа и обновлений — без
+        спама.
       </p>
 
       <div className="mt-10 flex flex-col gap-8">
@@ -1230,7 +1347,8 @@ function ContactsStep({
             placeholder="@username"
             value={value.telegram}
             onChange={(event) => onChange({ ...value, telegram: event.target.value })}
-            className={fieldClass()}
+            aria-invalid={telegramInvalid || undefined}
+            className={`${fieldClass()} ${telegramInvalid ? "!border-[#F6E7A1]" : ""}`}
           />
         </div>
 
@@ -1248,9 +1366,16 @@ function ContactsStep({
             placeholder="you@example.com"
             value={value.email}
             onChange={(event) => onChange({ ...value, email: event.target.value })}
-            className={fieldClass()}
+            aria-invalid={emailInvalid || undefined}
+            className={`${fieldClass()} ${emailInvalid ? "!border-[#F6E7A1]" : ""}`}
           />
         </div>
+
+        {showSupport ? (
+          <p className="-mt-4 text-sm font-normal text-[#F6E7A1]/90" role="status">
+            {CONTACTS_SUPPORT}
+          </p>
+        ) : null}
 
         <PdConsentCheckbox
           id="contact-pd-consent"
