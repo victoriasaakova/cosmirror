@@ -6,10 +6,24 @@ async function parseJson(res: Response): Promise<unknown> {
 
 function networkErrorMessage(err: unknown, fallback: string): string {
   if (err instanceof TypeError) {
-    return "Не удалось связаться с API. Запусти cosmirror-api на http://127.0.0.1:8000";
+    return "Не получилось сохранить. Попробуй ещё раз.";
   }
   if (err instanceof Error && err.message) return err.message;
   return fallback;
+}
+
+async function fetchWithRetry(input: string, init?: RequestInit, retries = 3): Promise<Response> {
+  let lastErr: unknown;
+  for (let attempt = 0; attempt < retries; attempt += 1) {
+    try {
+      return await fetch(input, init);
+    } catch (err) {
+      lastErr = err;
+      if (!(err instanceof TypeError) || attempt === retries - 1) throw err;
+      await new Promise((resolve) => setTimeout(resolve, 400 * 2 ** attempt));
+    }
+  }
+  throw lastErr;
 }
 
 function errorMessage(data: unknown, fallback: string): string {
@@ -105,13 +119,13 @@ export type GlobalPlanetaryCycle = {
 };
 
 export async function apiHealth(): Promise<{ status: string; service: string }> {
-  const res = await fetch(`${API_URL}/api/health/`, { cache: "no-store" });
+  const res = await fetchWithRetry(`${API_URL}/api/health/`, { cache: "no-store" });
   if (!res.ok) throw new Error(`API health failed: ${res.status}`);
   return res.json();
 }
 
 export async function joinWaitlist(payload: WaitlistPayload): Promise<WaitlistResponse> {
-  const res = await fetch(`${API_URL}/api/waitlist/`, {
+  const res = await fetchWithRetry(`${API_URL}/api/waitlist/`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -130,7 +144,12 @@ export async function joinWaitlist(payload: WaitlistPayload): Promise<WaitlistRe
 }
 
 export async function fetchOnboardingSteps(): Promise<OnboardingStep[]> {
-  const res = await fetch(`${API_URL}/api/onboarding/steps/`, { cache: "no-store" });
+  let res: Response;
+  try {
+    res = await fetchWithRetry(`${API_URL}/api/onboarding/steps/`, { cache: "no-store" });
+  } catch (err) {
+    throw new Error(networkErrorMessage(err, "Не удалось загрузить шаги онбординга"));
+  }
   const data = await parseJson(res);
   if (!res.ok) throw new Error(errorMessage(data, "Не удалось загрузить шаги онбординга"));
   return data as OnboardingStep[];
@@ -139,7 +158,7 @@ export async function fetchOnboardingSteps(): Promise<OnboardingStep[]> {
 export async function createOnboardingSession(): Promise<OnboardingSession> {
   let res: Response;
   try {
-    res = await fetch(`${API_URL}/api/onboarding/sessions/`, {
+    res = await fetchWithRetry(`${API_URL}/api/onboarding/sessions/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: "{}",
@@ -153,7 +172,12 @@ export async function createOnboardingSession(): Promise<OnboardingSession> {
 }
 
 export async function fetchOnboardingSession(token: string): Promise<OnboardingSession> {
-  const res = await fetch(`${API_URL}/api/onboarding/sessions/${token}/`, { cache: "no-store" });
+  let res: Response;
+  try {
+    res = await fetchWithRetry(`${API_URL}/api/onboarding/sessions/${token}/`, { cache: "no-store" });
+  } catch (err) {
+    throw new Error(networkErrorMessage(err, "Не удалось загрузить сессию"));
+  }
   const data = await parseJson(res);
   if (!res.ok) throw new Error(errorMessage(data, "Не удалось загрузить сессию"));
   return data as OnboardingSession;
@@ -167,7 +191,7 @@ export async function submitOnboardingStep(
 ): Promise<OnboardingSession> {
   let res: Response;
   try {
-    res = await fetch(`${API_URL}/api/onboarding/sessions/${token}/steps/${slug}/`, {
+    res = await fetchWithRetry(`${API_URL}/api/onboarding/sessions/${token}/steps/${slug}/`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ payload, completed }),
@@ -248,18 +272,74 @@ export type OnboardingInsight = {
   };
 };
 
+const insightInflight = new Map<string, Promise<OnboardingInsight>>();
+
 export async function fetchOnboardingInsight(token: string): Promise<OnboardingInsight> {
+  const existing = insightInflight.get(token);
+  if (existing) return existing;
+
+  const request = (async () => {
+    let res: Response;
+    try {
+      res = await fetchWithRetry(`${API_URL}/api/onboarding/sessions/${token}/insight/`, {
+        cache: "no-store",
+      });
+    } catch (err) {
+      throw new Error(networkErrorMessage(err, "Не удалось получить инсайт"));
+    }
+    const data = await parseJson(res);
+    if (!res.ok) throw new Error(errorMessage(data, "Не удалось получить инсайт"));
+    return data as OnboardingInsight;
+  })().finally(() => {
+    insightInflight.delete(token);
+  });
+
+  insightInflight.set(token, request);
+  return request;
+}
+
+export type Order = {
+  id: string;
+  status: "pending" | "awaiting_payment" | "paid" | "canceled" | "denied" | "failed" | string;
+  product_sku: string;
+  product_name: string;
+  amount: string;
+  currency: string;
+  payment_url: string;
+  paid_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export async function createOrder(sessionToken: string, idempotencyKey: string): Promise<Order> {
   let res: Response;
   try {
-    res = await fetch(`${API_URL}/api/onboarding/sessions/${token}/insight/`, {
-      cache: "no-store",
+    res = await fetchWithRetry(`${API_URL}/api/orders/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Idempotency-Key": idempotencyKey,
+      },
+      body: JSON.stringify({ session_token: sessionToken }),
     });
   } catch (err) {
-    throw new Error(networkErrorMessage(err, "Не удалось получить инсайт"));
+    throw new Error(networkErrorMessage(err, "Не удалось создать заказ"));
   }
   const data = await parseJson(res);
-  if (!res.ok) throw new Error(errorMessage(data, "Не удалось получить инсайт"));
-  return data as OnboardingInsight;
+  if (!res.ok) throw new Error(errorMessage(data, "Не удалось создать заказ"));
+  return data as Order;
+}
+
+export async function fetchOrder(orderId: string): Promise<Order> {
+  let res: Response;
+  try {
+    res = await fetchWithRetry(`${API_URL}/api/orders/${orderId}/`, { cache: "no-store" });
+  } catch (err) {
+    throw new Error(networkErrorMessage(err, "Не удалось загрузить заказ"));
+  }
+  const data = await parseJson(res);
+  if (!res.ok) throw new Error(errorMessage(data, "Не удалось загрузить заказ"));
+  return data as Order;
 }
 
 export { API_URL };

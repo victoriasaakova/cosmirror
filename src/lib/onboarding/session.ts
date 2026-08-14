@@ -6,6 +6,7 @@ import {
 
 export const SESSION_KEY = "cosmirror.onboarding.token";
 export const DRAFT_KEY = "cosmirror.onboarding.draft";
+const ORDER_IDEM_PREFIX = "cosmirror.order.idempotency.";
 
 export type OnboardingDraft = {
   /** Answers keyed by API step slug */
@@ -88,6 +89,13 @@ export function clearOnboardingClientState() {
   if (typeof window === "undefined") return;
   localStorage.removeItem(SESSION_KEY);
   sessionStorage.removeItem(DRAFT_KEY);
+  const prefix = ORDER_IDEM_PREFIX;
+  const toRemove: string[] = [];
+  for (let i = 0; i < sessionStorage.length; i += 1) {
+    const key = sessionStorage.key(i);
+    if (key && key.startsWith(prefix)) toRemove.push(key);
+  }
+  toRemove.forEach((key) => sessionStorage.removeItem(key));
 }
 
 /** Новая серверная сессия с чистым клиентским стейтом. */
@@ -103,4 +111,24 @@ export async function startFreshOnboardingSession(): Promise<OnboardingSession> 
 export async function loadOrCreateSession(): Promise<OnboardingSession> {
   const token = await ensureSessionToken();
   return fetchOnboardingSession(token);
+}
+
+export function getOrderIdempotencyKey(sessionToken: string): string {
+  const storageKey = ORDER_IDEM_PREFIX + sessionToken;
+  if (typeof window === "undefined") return crypto.randomUUID();
+  let key = sessionStorage.getItem(storageKey);
+  if (!key) {
+    key = crypto.randomUUID();
+    sessionStorage.setItem(storageKey, key);
+  }
+  return key;
+}
+
+export function rotateOrderIdempotencyKey(sessionToken: string): string {
+  const storageKey = ORDER_IDEM_PREFIX + sessionToken;
+  const key = crypto.randomUUID();
+  if (typeof window !== "undefined") {
+    sessionStorage.setItem(storageKey, key);
+  }
+  return key;
 }

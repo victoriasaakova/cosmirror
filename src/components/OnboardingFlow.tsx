@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { CosmirrorMark } from "@/components/CosmirrorMark";
 import {
+  createOrder,
   fetchOnboardingInsight,
   fetchOnboardingSession,
   fetchOnboardingSteps,
@@ -39,8 +40,10 @@ import {
 import {
   clearOnboardingClientState,
   ensureSessionToken,
+  getOrderIdempotencyKey,
   patchDraft,
   readDraft,
+  rotateOrderIdempotencyKey,
   startFreshOnboardingSession,
 } from "@/lib/onboarding/session";
 
@@ -562,24 +565,16 @@ export function OnboardingFlow({
       }
 
       if (currentStep.step_type === "waitlist") {
-        // Не ждём LLM на кнопке «Открываем…» — разбор догрузится на /insight.
-        patchDraft({ insightReady: true });
-        try {
-          const data = await fetchOnboardingInsight(token);
-          flowCache.insight = data;
-          setInsight(data);
-        } catch (err) {
-          const message = err instanceof Error ? err.message : "";
-          if (/birth|дат|город/i.test(message)) {
-            const birth = steps.find((step) => step.step_type === "birth_data");
-            if (birth) {
-              setError("Сначала сохрани дату и город рождения — без карты разбор не открыть.");
-              await goTo(stepHref(birth.slug));
-              return;
-            }
-          }
-          /* warm() на insight-странице повторит запрос */
-        }
+        // Не ждём LLM на кнопке «Открываем…» — сразу на /insight, там глаз-прелоадер.
+        void fetchOnboardingInsight(token)
+          .then((data) => {
+            flowCache.insight = data;
+            setInsight(data);
+            patchDraft({ insightReady: true });
+          })
+          .catch(() => {
+            /* warm() на insight-странице повторит запрос */
+          });
         await goTo(stepHref(INSIGHT_SLUG));
         return;
       }
@@ -714,6 +709,44 @@ export function OnboardingFlow({
           .filter(Boolean)
           .join(" · "),
       });
+    }
+  }
+
+  async function startCheckout() {
+    if (submitting) return;
+    // Вкладку надо открыть сразу по клику: после await браузер блокирует window.open,
+    // а noopener даёт null — старый fallback уводил Cosmirror на payform.ru.
+    const payWindow = window.open("about:blank", "cosmirror-prodamus");
+    const token = sessionToken ?? (await ensureSessionToken());
+    setSessionToken(token);
+    setSubmitting(true);
+    setError("");
+    try {
+      let key = getOrderIdempotencyKey(token);
+      let order = await createOrder(token, key);
+      if (order.status === "paid") {
+        if (payWindow && !payWindow.closed) payWindow.close();
+        window.location.assign(`/pay/success/?order=${order.id}`);
+        return;
+      }
+      if (order.status === "canceled" || order.status === "denied") {
+        key = rotateOrderIdempotencyKey(token);
+        order = await createOrder(token, key);
+      }
+      if (order.payment_url) {
+        if (payWindow && !payWindow.closed) {
+          payWindow.location.replace(order.payment_url);
+        }
+        window.location.assign(`/pay/success/?order=${order.id}`);
+        return;
+      }
+      if (payWindow && !payWindow.closed) payWindow.close();
+      setError("Не удалось получить ссылку на оплату. Попробуй ещё раз.");
+    } catch (err) {
+      if (payWindow && !payWindow.closed) payWindow.close();
+      setError(err instanceof Error ? err.message : "Не удалось создать заказ");
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -869,13 +902,20 @@ export function OnboardingFlow({
               />
             </div>
             <div className="shrink-0 pt-3">
+              {error ? (
+                <p className="mb-2 text-sm text-red-300" role="alert">
+                  {error}
+                </p>
+              ) : null}
               {screenIndex >= INSIGHT_SCREEN_COUNT - 1 ? (
-                <Link
-                  href="/"
-                  className="inline-flex w-full items-center justify-center rounded-full bg-[#F6E7A1] px-10 py-2.5 font-grotesk text-lg font-medium text-[#0a1a3a] transition-all hover:scale-[1.02] hover:bg-[#f0dc82] active:scale-[0.98] md:text-xl"
+                <button
+                  type="button"
+                  onClick={() => void startCheckout()}
+                  disabled={submitting || !sessionToken}
+                  className="inline-flex w-full items-center justify-center rounded-full bg-[#F6E7A1] px-10 py-2.5 font-grotesk text-lg font-medium text-[#0a1a3a] transition-all hover:scale-[1.02] hover:bg-[#f0dc82] active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-white/12 disabled:text-white/35 disabled:hover:scale-100 disabled:hover:bg-white/12 md:text-xl"
                 >
-                  {insightCtaLabel(screenIndex, insight)}
-                </Link>
+                  {submitting ? "Открываем оплату…" : insightCtaLabel(screenIndex, insight)}
+                </button>
               ) : (
                 <button
                   type="button"

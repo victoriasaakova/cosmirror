@@ -34,16 +34,19 @@ export function LegalDocument({ title, updatedAt, children }: LegalDocumentProps
         </div>
 
         <nav className="mt-14 flex flex-wrap gap-x-6 gap-y-3 border-t border-white/10 pt-8 text-sm text-white/80">
-          <a href="/privacy" className="transition hover:text-white">
+          <a href="/blog/" className="transition hover:text-white">
+            Блог
+          </a>
+          <a href="/privacy/" className="transition hover:text-white">
             Политика конфиденциальности
           </a>
-          <a href="/cookies" className="transition hover:text-white">
+          <a href="/cookies/" className="transition hover:text-white">
             Политика cookie
           </a>
-          <a href="/terms" className="transition hover:text-white">
+          <a href="/terms/" className="transition hover:text-white">
             Пользовательское соглашение
           </a>
-          <a href="/offer" className="transition hover:text-white">
+          <a href="/offer/" className="transition hover:text-white">
             Публичная оферта
           </a>
           <a href="mailto:hello@cosmirror.ru" className="transition hover:text-white">
