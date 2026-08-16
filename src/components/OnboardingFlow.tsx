@@ -254,7 +254,6 @@ export function OnboardingFlow({
     () => (!forceNew && flowCache.insight ? "ready" : "idle"),
   );
   const [submitting, setSubmitting] = useState(false);
-  const [promoCode, setPromoCode] = useState("");
   const [error, setError] = useState("");
 
   const currentStep = useMemo(
@@ -723,10 +722,8 @@ export function OnboardingFlow({
     setSubmitting(true);
     setError("");
     try {
-      let key = promoCode.trim()
-        ? rotateOrderIdempotencyKey(token)
-        : getOrderIdempotencyKey(token);
-      let order = await createOrder(token, key, promoCode);
+      let key = getOrderIdempotencyKey(token);
+      let order = await createOrder(token, key);
       if (order.status === "paid") {
         if (payWindow && !payWindow.closed) payWindow.close();
         window.location.assign(`/pay/success/?order=${order.id}`);
@@ -734,7 +731,7 @@ export function OnboardingFlow({
       }
       if (order.status === "canceled" || order.status === "denied") {
         key = rotateOrderIdempotencyKey(token);
-        order = await createOrder(token, key, promoCode);
+        order = await createOrder(token, key);
       }
       if (order.payment_url) {
         if (payWindow && !payWindow.closed) {
@@ -911,22 +908,7 @@ export function OnboardingFlow({
                 </p>
               ) : null}
               {screenIndex >= INSIGHT_SCREEN_COUNT - 1 ? (
-                <>
-                  <label className="mb-3 block">
-                    <span className="sr-only">Промокод</span>
-                    <input
-                      type="text"
-                      name="promo_code"
-                      autoComplete="off"
-                      spellCheck={false}
-                      placeholder="промокод"
-                      value={promoCode}
-                      onChange={(event) => setPromoCode(event.target.value)}
-                      disabled={submitting}
-                      className="w-full rounded-full border border-white/15 bg-white/5 px-5 py-2.5 font-grotesk text-base text-white placeholder:text-white/35 outline-none transition focus:border-[#F6E7A1]/60"
-                    />
-                  </label>
-                  <button
+                <button
                     type="button"
                     onClick={() => void startCheckout()}
                     disabled={submitting || !sessionToken}
@@ -934,7 +916,6 @@ export function OnboardingFlow({
                   >
                     {submitting ? "Открываем оплату…" : insightCtaLabel(screenIndex, insight)}
                   </button>
-                </>
               ) : (
                 <button
                   type="button"

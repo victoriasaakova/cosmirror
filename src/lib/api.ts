@@ -314,7 +314,6 @@ export type Order = {
 export async function createOrder(
   sessionToken: string,
   idempotencyKey: string,
-  promoCode = "",
 ): Promise<Order> {
   let res: Response;
   try {
@@ -326,7 +325,6 @@ export async function createOrder(
       },
       body: JSON.stringify({
         session_token: sessionToken,
-        ...(promoCode.trim() ? { promo_code: promoCode.trim() } : {}),
       }),
     });
   } catch (err) {
