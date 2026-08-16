@@ -726,7 +726,7 @@ export function OnboardingFlow({
       let order = await createOrder(token, key);
       if (order.status === "paid") {
         if (payWindow && !payWindow.closed) payWindow.close();
-        window.location.assign(`/pay/success/?order=${order.id}`);
+        window.location.assign(`/report/?order=${order.id}`);
         return;
       }
       if (order.status === "canceled" || order.status === "denied") {
@@ -737,7 +737,7 @@ export function OnboardingFlow({
         if (payWindow && !payWindow.closed) {
           payWindow.location.replace(order.payment_url);
         }
-        window.location.assign(`/pay/success/?order=${order.id}`);
+        window.location.assign(`/report/?order=${order.id}`);
         return;
       }
       if (payWindow && !payWindow.closed) payWindow.close();

@@ -298,6 +298,30 @@ export async function fetchOnboardingInsight(token: string): Promise<OnboardingI
   return request;
 }
 
+export type ReportBlock = {
+  title: string;
+  text: string;
+};
+
+export type ReportSection = {
+  id: string;
+  title: string;
+  blocks: ReportBlock[];
+};
+
+export type PaidReport = {
+  title: string;
+  subtitle?: string;
+  person?: {
+    name?: string;
+    birth_date?: string;
+    birth_time?: string;
+    birth_place?: string;
+  };
+  sections: ReportSection[];
+  disclaimer?: string;
+};
+
 export type Order = {
   id: string;
   status: "pending" | "awaiting_payment" | "paid" | "canceled" | "denied" | "failed" | string;
@@ -307,6 +331,11 @@ export type Order = {
   currency: string;
   payment_url: string;
   paid_at: string | null;
+  customer_email?: string;
+  fulfilled_at?: string | null;
+  fulfillment_error?: string;
+  report?: PaidReport | null;
+  report_pdf_url?: string;
   created_at: string;
   updated_at: string;
 };
@@ -344,6 +373,22 @@ export async function fetchOrder(orderId: string): Promise<Order> {
   }
   const data = await parseJson(res);
   if (!res.ok) throw new Error(errorMessage(data, "Не удалось загрузить заказ"));
+  return data as Order;
+}
+
+export async function resendOrderReport(orderId: string, email: string): Promise<Order> {
+  let res: Response;
+  try {
+    res = await fetchWithRetry(`${API_URL}/api/orders/${orderId}/email/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+  } catch (err) {
+    throw new Error(networkErrorMessage(err, "Не удалось отправить отчёт"));
+  }
+  const data = await parseJson(res);
+  if (!res.ok) throw new Error(errorMessage(data, "Не удалось отправить отчёт"));
   return data as Order;
 }
 

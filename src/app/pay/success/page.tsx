@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { PaySuccess } from "@/components/PaySuccess";
+import { ReportPage } from "@/components/ReportPage";
 
 export const metadata: Metadata = {
   title: "Оплата — Cosmirror",
@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function PaySuccessPage() {
-  return <PaySuccess />;
+  return <ReportPage />;
 }
