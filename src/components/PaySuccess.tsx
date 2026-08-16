@@ -49,6 +49,7 @@ function PaySuccessInner() {
   const failed = order?.status === "canceled" || order?.status === "denied";
   const confirmed = order?.status === "paid";
   const waiting = Boolean(order) && !failed && !confirmed;
+  const loading = Boolean(orderId) && !order && !error;
 
   return (
     <main className="relative flex min-h-[100dvh] flex-col overflow-hidden bg-[#050d4a] text-white">
@@ -57,38 +58,44 @@ function PaySuccessInner() {
           <CosmirrorMark />
         </Link>
 
-        <div className="mt-16 flex flex-1 flex-col justify-center">
-          <h1 className="text-3xl font-normal leading-tight tracking-tight sm:text-4xl">
-            {failed ? (
-              <>
+        <div
+          className="mt-16 flex flex-1 flex-col justify-center"
+          role="status"
+          aria-live="polite"
+        >
+          {loading ? (
+            <WaitCopy title="секунду" subtitle="скоро закончим" />
+          ) : failed ? (
+            <>
+              <h1 className="text-3xl font-normal leading-tight tracking-tight sm:text-4xl">
                 Оплата не прошла.{" "}
                 <span className="font-display italic text-[#F6E7A1]">можно попробовать ещё раз</span>
-              </>
-            ) : confirmed ? (
-              <>
+              </h1>
+              <p className="mt-6 text-[16px] font-normal leading-[1.55] text-white/75 sm:text-[17px]">
+                Платёж отменили или банк его отклонил. Вернись к разбору и нажми оплату ещё раз.
+              </p>
+            </>
+          ) : confirmed ? (
+            <>
+              <h1 className="text-3xl font-normal leading-tight tracking-tight sm:text-4xl">
                 Оплата прошла.{" "}
                 <span className="font-display italic text-[#F6E7A1]">разбор уже в работе</span>
-              </>
-            ) : (
-              <>
-                Оплата открыта.{" "}
-                <span className="font-display italic text-[#F6E7A1]">заверши её во вкладке Prodamus</span>
-              </>
-            )}
-          </h1>
-          <p className="mt-6 text-[16px] font-normal leading-[1.55] text-white/75 sm:text-[17px]">
-            {failed
-              ? "Платёж отменили или банк его отклонил. Вернись к разбору и нажми оплату ещё раз."
-              : confirmed
-                ? "Подтверждение пришло от платёжного сервиса. Персональный астрологический отчёт отправим на email, который ты указала в онбординге."
-                : error ||
-                  "Эта вкладка Cosmirror остаётся открытой. Оплата — во второй вкладке Prodamus. Отчёт отправим на почту, которую ты указала, с адреса hello@cosmirror.ru."}
-          </p>
-          {order ? (
-            <p className="mt-4 text-sm text-white/40">
-              Заказ {order.id.slice(0, 8)} · {order.amount} ₽ · {statusLabel(order.status)}
-            </p>
-          ) : null}
+              </h1>
+              <p className="mt-6 text-[16px] font-normal leading-[1.55] text-white/75 sm:text-[17px]">
+                Персональный отчёт отправим на почту с hello@cosmirror.ru.
+              </p>
+            </>
+          ) : (
+            <>
+              <WaitCopy
+                title="оплата рядом"
+                subtitle={
+                  error ||
+                  "закончи её в соседней вкладке. это окно можно не закрывать"
+                }
+              />
+            </>
+          )}
         </div>
 
         {waiting && order?.payment_url ? (
@@ -98,7 +105,7 @@ function PaySuccessInner() {
             rel="noopener noreferrer"
             className="mt-10 inline-flex w-full items-center justify-center rounded-full bg-[#F6E7A1] px-10 py-2.5 font-grotesk text-lg font-medium text-[#0a1a3a] transition-all hover:scale-[1.02] hover:bg-[#f0dc82] active:scale-[0.98] md:text-xl"
           >
-            Открыть оплату
+            К оплате
           </a>
         ) : (
           <Link
@@ -113,21 +120,25 @@ function PaySuccessInner() {
   );
 }
 
-function statusLabel(status: string): string {
-  if (status === "paid") return "оплачен";
-  if (status === "awaiting_payment") return "ожидает подтверждение";
-  if (status === "canceled") return "отменён";
-  if (status === "denied") return "отклонён";
-  if (status === "failed") return "ошибка";
-  return status;
+function WaitCopy({ title, subtitle }: { title: string; subtitle: string }) {
+  return (
+    <div className="text-center">
+      <h1 className="font-display text-3xl font-normal italic leading-snug tracking-normal text-[#F6E7A1] sm:text-4xl md:text-[2.6rem]">
+        {title}
+      </h1>
+      <p className="mt-3 font-grotesk text-base font-normal text-white/70 sm:text-lg">
+        {subtitle}
+      </p>
+    </div>
+  );
 }
 
 export function PaySuccess() {
   return (
     <Suspense
       fallback={
-        <main className="flex min-h-[100dvh] items-center justify-center bg-[#050d4a] text-white/50">
-          Открываем страницу успеха…
+        <main className="flex min-h-[100dvh] flex-col items-center justify-center bg-[#050d4a] px-5 text-center">
+          <WaitCopy title="секунду" subtitle="скоро закончим" />
         </main>
       }
     >
