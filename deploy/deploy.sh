@@ -6,13 +6,16 @@ set -euo pipefail
 APP_DIR="${APP_DIR:-/opt/cosmirror/web}"
 SERVICE="${SERVICE:-cosmirror-web}"
 LOCK_FILE="${LOCK_FILE:-/var/lock/cosmirror-web-deploy.lock}"
+STAMP_FILE="${STAMP_FILE:-$APP_DIR/.deployed-sha}"
 
 cd "$APP_DIR"
 
 # Only one deploy at a time (Actions + manual must not race).
+# Wait instead of failing: a second GitHub run used to show a red X
+# while the first deploy actually succeeded.
 exec 9>"$LOCK_FILE"
-if ! flock -n 9; then
-  echo "ERROR: another cosmirror-web deploy is already running"
+if ! flock -w 900 9; then
+  echo "ERROR: timed out waiting for another cosmirror-web deploy"
   exit 1
 fi
 
@@ -29,6 +32,17 @@ trap ensure_service EXIT
 
 echo "==> Pulling latest web"
 git fetch origin main
+WANT="$(git rev-parse origin/main)"
+
+if [[ -f "$STAMP_FILE" && "$(tr -d '[:space:]' < "$STAMP_FILE")" == "$WANT" ]] \
+  && systemctl is-active --quiet "$SERVICE" \
+  && [[ -s .next/BUILD_ID ]]; then
+  echo "==> Already deployed $WANT — skip rebuild"
+  trap - EXIT
+  echo "==> Web deploy done"
+  exit 0
+fi
+
 git reset --hard origin/main
 
 # Preserve production API URL across deploys
@@ -74,5 +88,6 @@ echo "==> Starting $SERVICE"
 trap - EXIT
 systemctl start "$SERVICE"
 systemctl is-active "$SERVICE"
+printf '%s\n' "$WANT" > "$STAMP_FILE"
 
 echo "==> Web deploy done"

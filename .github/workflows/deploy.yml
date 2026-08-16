@@ -36,4 +36,4 @@ jobs:
             -o ConnectTimeout=30 \
             -o ServerAliveInterval=30 \
             "${SSH_USER}@${SSH_HOST}" \
-            'cd /opt/cosmirror/web && git fetch origin main && git reset --hard origin/main && bash ./deploy/deploy.sh'
+            'bash /opt/cosmirror/web/deploy/deploy.sh'
