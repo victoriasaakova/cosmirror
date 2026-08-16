@@ -311,7 +311,11 @@ export type Order = {
   updated_at: string;
 };
 
-export async function createOrder(sessionToken: string, idempotencyKey: string): Promise<Order> {
+export async function createOrder(
+  sessionToken: string,
+  idempotencyKey: string,
+  promoCode = "",
+): Promise<Order> {
   let res: Response;
   try {
     res = await fetchWithRetry(`${API_URL}/api/orders/`, {
@@ -320,7 +324,10 @@ export async function createOrder(sessionToken: string, idempotencyKey: string):
         "Content-Type": "application/json",
         "Idempotency-Key": idempotencyKey,
       },
-      body: JSON.stringify({ session_token: sessionToken }),
+      body: JSON.stringify({
+        session_token: sessionToken,
+        ...(promoCode.trim() ? { promo_code: promoCode.trim() } : {}),
+      }),
     });
   } catch (err) {
     throw new Error(networkErrorMessage(err, "Не удалось создать заказ"));
