@@ -1,6 +1,8 @@
 # Cosmirror
 
-Monorepo: Next.js frontend + Django API.
+Next.js frontend for Cosmirror.
+
+**License:** [GNU Affero General Public License v3.0](LICENSE). Corresponding source: this repository and [cosmirror-api](https://github.com/victoriasaakova/cosmirror-api). Website offer: [cosmirror.ru/source/](https://cosmirror.ru/source/).
 
 ```
 .
