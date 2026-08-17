@@ -35,6 +35,18 @@ export default function OfferPage() {
             (самозанятый); ОГРНИП / ОГРН не применяются;
           </li>
           <li>
+            <span className="text-white/85">Адрес места нахождения:</span> город Барановичи, ул.
+            Комсомольская, д. 9, кв. 12;
+          </li>
+          <li>
+            <span className="text-white/85">Адрес для корреспонденции:</span> 143006, Московская обл.,
+            г. Одинцово, ул. Рябиновая, д. 7, к. 1, кв. 222;
+          </li>
+          <li>
+            <span className="text-white/85">Банк:</span> АО «ТБанк», БИК 044525974, к/с
+            30101810145250000974, р/с 40820810300001007648;
+          </li>
+          <li>
             <span className="text-white/85">Контакт:</span>{" "}
             <a
               href="mailto:hello@cosmirror.ru"

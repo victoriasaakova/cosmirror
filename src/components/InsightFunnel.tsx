@@ -1,7 +1,7 @@
 "use client";
 
 import type { OnboardingInsight, OnboardingStep } from "@/lib/api";
-import { mergeContentPayloads, screensForStep } from "@/lib/onboarding/screens";
+import { CONTENT_UIS, mergeContentPayloads, screensForStep } from "@/lib/onboarding/screens";
 
 export const INSIGHT_OFFER_INDEX = 2;
 export const INSIGHT_CONFIRM_INDEX = 3;
@@ -23,22 +23,29 @@ function labelFor(
   return options.find((o) => o.value === value)?.label ?? value;
 }
 
+function asStringList(value: unknown): string[] {
+  if (Array.isArray(value)) return value.map((item) => String(item).trim()).filter(Boolean);
+  if (typeof value === "string" && value.trim()) return [value.trim()];
+  return [];
+}
+
 function quizContext(
   steps: OnboardingStep[],
   payloadByStep: Record<string, Record<string, unknown>>,
 ) {
   const contentPayload = mergeContentPayloads(steps, payloadByStep);
-  const allScreens = steps.flatMap((step) => screensForStep(step));
-  const focusScreen = allScreens.find((s) => s.field === "focus");
-  const intentScreen = allScreens.find((s) => s.field === "intent");
-  const lifeScreen = allScreens.find((s) => s.field === "life_stage");
+  const allScreens = [
+    ...steps.flatMap((step) => screensForStep(step)),
+    ...CONTENT_UIS.profile_quiz,
+  ];
+  const focusScreen = allScreens.find((s) => s.field === "focus" && s.kind !== "text");
+  const intentScreen = allScreens.find((s) => s.field === "intent" && s.kind !== "text");
+  const lifeScreen = allScreens.find((s) => s.field === "life_stage" && s.kind !== "text");
 
   const name = typeof contentPayload.name === "string" ? contentPayload.name.trim() : "";
-  const focus = Array.isArray(contentPayload.focus) ? (contentPayload.focus as string[]) : [];
-  const focusLabels =
-    focusScreen && focusScreen.kind === "multi"
-      ? focus.map((f) => labelFor(focusScreen.options, f)).filter(Boolean)
-      : [];
+  const focusLabels = asStringList(contentPayload.focus).map((value) =>
+    focusScreen && focusScreen.kind !== "text" ? labelFor(focusScreen.options, value) : value,
+  );
   const intentLabel =
     typeof contentPayload.intent === "string" && intentScreen && intentScreen.kind !== "text"
       ? labelFor(intentScreen.options, contentPayload.intent)
@@ -57,16 +64,22 @@ const OPENING_BRIDGES = [
   "сейчас важно",
 ];
 
-const PITCH_LINES = [
-  "Персональный разбор реакций, потребностей и повторяющихся сценариев.",
-  "Больше ясности в выборе, отношениях и ежедневном ритме.",
-];
+const METHOD_TITLE = "Стань ближе к своему истинному я через подробный разбор";
+
+const METHOD_BODY =
+  "Разберём твой космопортрет: влияние планет, сильные конфигурации, напряжённые аспекты и слепые зоны. Соединим с активными циклами, расскажем об их значениях и как с ними работать.";
+
+const METHOD_NOTE =
+  "Расчёт производится на системе астрономических вычислений Swiss Ephemeris, с которой работают профессиональные астрологи.";
+
+const DISCLAIMER_NOTE =
+  "Материал носит информационный характер и не является заменой терапии или профессиональной помощи.";
 
 const TOPIC_BLOCKS = [
-  { key: "love", label: "отношения", hint: "где подстройка, а где живая близость" },
-  { key: "anchor", label: "опора", hint: "на что опираться в решениях и переменах" },
-  { key: "clarity", label: "ясность", hint: "что запускает напряжение и повтор сценария" },
-  { key: "energy", label: "энергия", hint: "где ресурс уходит и где восстанавливается" },
+  { key: "love", label: "отношения", hint: "как ты проявляешься в близости" },
+  { key: "strength", label: "сильные стороны", hint: "твоя опора в периоды штормов" },
+  { key: "clarity", label: "ясность", hint: "твои паттерны и что их запускает" },
+  { key: "path", label: "реализация", hint: "возможности по карте" },
 ];
 
 function titleToInsightClause(title: string): string {
@@ -116,47 +129,49 @@ function fallbackBody(
   return `Сейчас особенно заметно, где привычная роль стала тесной в теме «${focus}». Чтобы ${intentLabel.toLowerCase() || "разобраться в себе"}, полезно честно увидеть, что больше не работает.`;
 }
 
-function fallbackOfferCards(focusLabels: string[]): OfferCard[] {
-  const focus = focusLabels[0] ?? "жизни";
+function requestHint(focusLabels: string[], intentLabel: string): string {
+  const topics = focusLabels.length ? focusLabels : intentLabel ? [intentLabel] : [];
+  if (topics.length === 0) {
+    return "Связь с твоим запросом: рекомендации и вопросы для самостоятельной работы.";
+  }
+  if (topics.length === 1) {
+    return `Связь с твоим запросом «${topics[0]}»: рекомендации и вопросы для самостоятельной работы.`;
+  }
+  const quoted = topics.map((topic) => `«${topic}»`).join(", ");
+  return `Связь с твоим запросом ${quoted}: рекомендации и вопросы для самостоятельной работы.`;
+}
+
+function fallbackOfferCards(focusLabels: string[], intentLabel: string): OfferCard[] {
   return [
     {
       key: "natal",
-      label: "Натальная карта",
+      label: "Твоя натальная карта",
       before: "32%",
       after: "81%",
-      hint: "как устроены твои планеты и как они влияют на тебя",
+      hint: "Сильные стороны, потребности, противоречия, повторяющиеся сценарии и как это связано с положениями планет.",
     },
     {
       key: "cycles",
-      label: "Текущие и ближайшие периоды",
+      label: "Твои текущие периоды",
       before: "24%",
       after: "76%",
-      hint: "что происходит сейчас и что подсветится дальше",
+      hint: "Значение и длительность транзитов, которые выходят на первый план, и как с ними работать.",
     },
     {
-      key: "crossings",
-      label: "Пересечения с картой",
+      key: "tension",
+      label: "Напряжение и ресурс",
       before: "38%",
       after: "84%",
-      hint: "где текущий фон цепляет твои личные темы",
+      hint: "Поймёшь, как компенсировать напряжённые аспекты положительными, увидишь открытые окна возможностей по циклам.",
     },
     {
       key: "focus",
-      label: "Разбор под запрос",
+      label: "Разбор твоего запроса",
       before: "29%",
       after: "79%",
-      hint: `сильные стороны и паттерны в теме «${focus}»`,
+      hint: requestHint(focusLabels, intentLabel),
     },
   ];
-}
-
-function fallbackOffer() {
-  return {
-    title: "Стань ближе к своему истинному я через подробный разбор",
-    text: "",
-    cta: "Получить за 777 ₽",
-    price: "777 ₽",
-  };
 }
 
 /** Italicize a known accent phrase inside a title. */
@@ -202,8 +217,7 @@ export function InsightFunnel({
 }) {
   const { name, focusLabels, intentLabel, lifeStageLabel } = quizContext(steps, payloadByStep);
   const influences = insight.insight.influences ?? [];
-  const offerCards = fallbackOfferCards(focusLabels);
-  const offer = insight.insight.offer ?? fallbackOffer();
+  const offerCards = fallbackOfferCards(focusLabels, intentLabel);
 
   const opening =
     insight.insight.opening ?? fallbackOpening(influences, focusLabels, intentLabel);
@@ -239,31 +253,29 @@ export function InsightFunnel({
 
   if (screenIndex === 1) {
     return (
-      <div className="reveal mx-auto flex w-full max-w-lg min-h-0 flex-1 flex-col justify-center pt-6 pb-2 md:pt-8">
-        <h1 className="text-3xl font-normal leading-tight tracking-tight text-white sm:text-[2rem]">
-          Что ты получишь в{" "}
-          <span className="font-display italic text-[#F6E7A1]">подробном разборе</span>
+      <div className="reveal mx-auto flex w-full max-w-lg min-h-0 flex-1 flex-col justify-start pt-6 pb-2 md:justify-center md:pt-8">
+        <h1 className="text-balance text-3xl font-normal leading-[1.15] tracking-tight text-white sm:text-[2rem]">
+          {renderAccentTitle(METHOD_TITLE, ["истинному я"])}
         </h1>
-        <div className="mt-5 space-y-2">
-          {PITCH_LINES.map((line) => (
-            <p key={line} className="text-[16px] font-normal leading-[1.55] text-white/80">
-              {line}
-            </p>
-          ))}
-        </div>
-        <div className="mt-7 grid grid-cols-2 gap-3">
+        <p className="mt-5 text-pretty text-[16px] font-normal leading-[1.55] text-white/80 sm:text-[17px]">
+          {METHOD_BODY}
+        </p>
+        <div className="mt-6 grid grid-cols-2 gap-3">
           {TOPIC_BLOCKS.map((topic) => (
             <div
               key={topic.key}
               className="rounded-2xl border border-[#F6E7A1]/22 bg-[#F6E7A1]/[0.06] px-3.5 py-3.5"
             >
               <p className="text-[15px] font-normal text-[#F6E7A1]">{topic.label}</p>
-              <p className="mt-1.5 text-[13px] font-normal leading-snug text-white/55">
+              <p className="mt-1.5 text-[13px] font-normal leading-snug text-white/80">
                 {topic.hint}
               </p>
             </div>
           ))}
         </div>
+        <p className="mt-6 text-[12px] font-normal leading-[1.5] text-white/70 sm:text-[13px]">
+          {METHOD_NOTE}
+        </p>
       </div>
     );
   }
@@ -272,8 +284,9 @@ export function InsightFunnel({
 
   return (
     <div className="reveal mx-auto flex w-full max-w-lg min-h-0 flex-1 flex-col justify-center pt-6 pb-2 md:pt-8">
-      <h1 className="text-3xl font-normal leading-tight tracking-tight text-white sm:text-[2rem]">
-        {renderAccentTitle(offer.title, ["истинному я"])}
+      <h1 className="text-balance text-3xl font-normal leading-[1.15] tracking-tight text-white sm:text-[2rem]">
+        Что ты поймёшь{" "}
+        <span className="font-display italic text-[#F6E7A1]">после разбора</span>
       </h1>
 
       <ol className="mt-7 flex flex-col">
@@ -293,7 +306,7 @@ export function InsightFunnel({
               <div className="min-w-0 flex-1">
                 <p className="text-[17px] font-normal leading-snug text-white">{card.label}</p>
                 {card.hint ? (
-                  <p className="mt-1 text-[13px] font-normal leading-snug text-white/55">
+                  <p className="mt-1 text-[13px] font-normal leading-snug text-white/80">
                     {card.hint}
                   </p>
                 ) : null}
@@ -302,6 +315,9 @@ export function InsightFunnel({
           </li>
         ))}
       </ol>
+      <p className="mt-6 text-[12px] font-normal leading-[1.5] text-white/70 sm:text-[13px]">
+        {DISCLAIMER_NOTE}
+      </p>
     </div>
   );
 }

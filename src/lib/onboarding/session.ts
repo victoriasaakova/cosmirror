@@ -6,6 +6,7 @@ import {
 
 export const SESSION_KEY = "cosmirror.onboarding.token";
 export const DRAFT_KEY = "cosmirror.onboarding.draft";
+export const LAST_ORDER_KEY = "cosmirror.lastOrderId";
 const ORDER_IDEM_PREFIX = "cosmirror.order.idempotency.";
 
 export type OnboardingDraft = {
@@ -88,6 +89,7 @@ export async function ensureSessionToken(): Promise<string> {
 export function clearOnboardingClientState() {
   if (typeof window === "undefined") return;
   localStorage.removeItem(SESSION_KEY);
+  localStorage.removeItem(LAST_ORDER_KEY);
   sessionStorage.removeItem(DRAFT_KEY);
   const prefix = ORDER_IDEM_PREFIX;
   const toRemove: string[] = [];
@@ -131,4 +133,14 @@ export function rotateOrderIdempotencyKey(sessionToken: string): string {
     sessionStorage.setItem(storageKey, key);
   }
   return key;
+}
+
+export function readLastOrderId(): string {
+  if (typeof window === "undefined") return "";
+  return localStorage.getItem(LAST_ORDER_KEY) || "";
+}
+
+export function writeLastOrderId(orderId: string) {
+  if (typeof window === "undefined" || !orderId) return;
+  localStorage.setItem(LAST_ORDER_KEY, orderId);
 }

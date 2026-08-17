@@ -270,9 +270,15 @@ export type OnboardingInsight = {
     offer?: { title: string; text: string; cta: string; price?: string };
     source?: "polza" | "groq" | "templates" | string;
   };
+  insight_ready?: boolean;
 };
 
 const insightInflight = new Map<string, Promise<OnboardingInsight>>();
+
+function insightIsReady(data: OnboardingInsight): boolean {
+  if (typeof data.insight_ready === "boolean") return data.insight_ready;
+  return true;
+}
 
 export async function fetchOnboardingInsight(token: string): Promise<OnboardingInsight> {
   const existing = insightInflight.get(token);
@@ -298,6 +304,21 @@ export async function fetchOnboardingInsight(token: string): Promise<OnboardingI
   return request;
 }
 
+export async function fetchOnboardingInsightReady(
+  token: string,
+  opts?: { timeoutMs?: number; intervalMs?: number },
+): Promise<OnboardingInsight> {
+  const timeoutMs = opts?.timeoutMs ?? 28000;
+  const intervalMs = opts?.intervalMs ?? 1200;
+  const started = Date.now();
+  let last = await fetchOnboardingInsight(token);
+  while (!insightIsReady(last) && Date.now() - started < timeoutMs) {
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+    last = await fetchOnboardingInsight(token);
+  }
+  return last;
+}
+
 export type ReportBlock = {
   title: string;
   text: string;
@@ -309,15 +330,120 @@ export type ReportSection = {
   blocks: ReportBlock[];
 };
 
+export type ReportPolarity = "pressure" | "resource" | "mixed";
+
+export type ReportTransitHit = {
+  id: string;
+  transit?: string;
+  transit_name?: string;
+  natal?: string;
+  natal_name?: string;
+  aspect_ru?: string;
+  polarity?: ReportPolarity;
+  polarity_ru?: string;
+  orb?: number;
+  motion?: string;
+  natal_house?: number | null;
+  fact?: string;
+  work_with?: string;
+  score?: number;
+  focus_match?: string[];
+  window?: {
+    span_note?: string;
+    peak_estimate?: string | null;
+    motion?: string;
+  };
+};
+
+export type ReportDocument = {
+  schema_version?: number;
+  quiz?: {
+    name?: string;
+    focus?: string[];
+    focus_labels?: string[];
+    intent_label?: string;
+    life_stage_label?: string;
+    chart_knowledge_label?: string;
+    knowledge_depth?: string;
+    astrology_trigger_label?: string;
+  };
+  accents?: {
+    primary?: ReportTransitHit[];
+    supporting?: ReportTransitHit[];
+    pressure?: ReportTransitHit[];
+    resource?: ReportTransitHit[];
+    through_line?: {
+      transit_name?: string;
+      natal_points?: string[];
+      summary_fact?: string;
+      hits?: ReportTransitHit[];
+    } | null;
+  };
+  factual?: {
+    natal?: {
+      points?: Array<{
+        key: string;
+        name: string;
+        sign_ru: string;
+        degree?: number;
+        house?: number | null;
+        fact: string;
+        retrograde?: boolean;
+      }>;
+      houses?: Array<{
+        house: number;
+        sign_ru: string;
+        theme: string;
+        occupants?: string[];
+      }>;
+      aspects?: Array<{
+        a_name: string;
+        b_name: string;
+        aspect_ru: string;
+        orb: number;
+        theme: string;
+      }>;
+    };
+    sky?: {
+      collective?: Array<{
+        name: string;
+        sign_ru: string;
+        theme: string;
+        scope: string;
+      }>;
+    };
+    method?: {
+      engine_label?: string;
+      what_calculated?: string[];
+      what_it_means?: string;
+      notes?: string[];
+    };
+  };
+  presentation?: {
+    web?: {
+      tabs?: Array<{ id: string; label: string; hint: string }>;
+      default_tab?: string;
+    };
+  };
+  interpretive?: { status?: string };
+  generation?: { status?: string; system_prompt_id?: string };
+  sections?: Record<
+    string,
+    { id: string; title: string; blocks: ReportBlock[]; questions?: string[] }
+  >;
+};
+
 export type PaidReport = {
   title: string;
   subtitle?: string;
+  schema_version?: number;
   person?: {
     name?: string;
     birth_date?: string;
     birth_time?: string;
     birth_place?: string;
   };
+  document?: ReportDocument;
   sections: ReportSection[];
   disclaimer?: string;
 };
@@ -372,7 +498,30 @@ export async function fetchOrder(orderId: string): Promise<Order> {
     throw new Error(networkErrorMessage(err, "Не удалось загрузить заказ"));
   }
   const data = await parseJson(res);
-  if (!res.ok) throw new Error(errorMessage(data, "Не удалось загрузить заказ"));
+  if (!res.ok) {
+    if (res.status === 404) {
+      throw new Error(
+        "Не нашли этот заказ. Открой ссылку из письма целиком или напиши на hello@cosmirror.ru.",
+      );
+    }
+    throw new Error(errorMessage(data, "Не удалось загрузить заказ"));
+  }
+  return data as Order;
+}
+
+export async function completeDemoOrder(orderId: string): Promise<Order> {
+  let res: Response;
+  try {
+    res = await fetchWithRetry(`${API_URL}/api/orders/${orderId}/demo-complete/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+    });
+  } catch (err) {
+    throw new Error(networkErrorMessage(err, "Не удалось открыть демо-отчёт"));
+  }
+  const data = await parseJson(res);
+  if (!res.ok) throw new Error(errorMessage(data, "Не удалось открыть демо-отчёт"));
   return data as Order;
 }
 

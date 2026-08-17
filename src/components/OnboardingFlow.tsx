@@ -8,6 +8,7 @@ import { CosmirrorMark } from "@/components/CosmirrorMark";
 import {
   createOrder,
   fetchOnboardingInsight,
+  fetchOnboardingInsightReady,
   fetchOnboardingSession,
   fetchOnboardingSteps,
   submitOnboardingStep,
@@ -46,6 +47,7 @@ import {
   readDraft,
   rotateOrderIdempotencyKey,
   startFreshOnboardingSession,
+  writeLastOrderId,
 } from "@/lib/onboarding/session";
 
 type BirthAnswers = {
@@ -62,6 +64,7 @@ type ContactsAnswers = {
   email: string;
   telegram: string;
   pd_consent: boolean;
+  offer_consent: boolean;
 };
 
 const EMPTY_BIRTH: BirthAnswers = {
@@ -78,6 +81,7 @@ const EMPTY_CONTACTS: ContactsAnswers = {
   email: "",
   telegram: "",
   pd_consent: false,
+  offer_consent: false,
 };
 
 function formatBirthDateInput(raw: string): string {
@@ -191,11 +195,38 @@ function contactsFromPayload(payload: Record<string, unknown> | undefined): Cont
     email: typeof payload.email === "string" ? payload.email : "",
     telegram: typeof payload.telegram === "string" ? payload.telegram : "",
     pd_consent: Boolean(payload.pd_consent),
+    offer_consent: Boolean(payload.offer_consent),
   };
 }
 
 function waitlistStepOf(steps: OnboardingStep[] | null | undefined): OnboardingStep | undefined {
   return steps?.find((step) => step.step_type === "waitlist");
+}
+
+function birthStepOf(steps: OnboardingStep[] | null | undefined): OnboardingStep | undefined {
+  return steps?.find((step) => step.step_type === "birth_data");
+}
+
+function persistableBirthPayload(
+  payloadByStep: Record<string, Record<string, unknown>>,
+  birthSlug: string,
+): Record<string, unknown> | null {
+  const birth = birthFromPayload(payloadByStep[birthSlug]);
+  const isoDate = toIsoDate(birth.birth_date);
+  if (!isoDate || birth.birth_place.trim().length < 2) return null;
+  const payload: Record<string, unknown> = {
+    birth_date: isoDate,
+    birth_date_display: birth.birth_date,
+    birth_place: birth.birth_place.trim(),
+    unknown_time: birth.unknown_time,
+  };
+  if (!birth.unknown_time && birth.birth_time) payload.birth_time = birth.birth_time;
+  if (birth.birth_lat != null && birth.birth_lng != null) {
+    payload.birth_lat = birth.birth_lat;
+    payload.birth_lng = birth.birth_lng;
+  }
+  if (birth.timezone) payload.timezone = birth.timezone;
+  return payload;
 }
 
 function contactsAreValid(contacts: ContactsAnswers) {
@@ -232,6 +263,12 @@ function buildWaitlistPayload(
       typeof existing.pd_consent_at === "string" && existing.pd_consent_at
         ? existing.pd_consent_at
         : new Date().toISOString(),
+    offer_consent: Boolean(contacts.offer_consent),
+    offer_consent_at: contacts.offer_consent
+      ? typeof existing.offer_consent_at === "string" && existing.offer_consent_at
+        ? existing.offer_consent_at
+        : new Date().toISOString()
+      : existing.offer_consent_at ?? "",
     message: [
       focus.length && focusScreens && focusScreens.kind === "multi"
         ? `Фокус: ${focus.map((f) => labelFor(focusScreens.options, f)).join(", ")}`
@@ -408,14 +445,14 @@ export function OnboardingFlow({
       patchDraft({ stepSlug: slug, screenIndex: clampedResume });
 
       if (isReservedSlug(slug)) {
-        if (flowCache.insight) {
+        if (flowCache.insight && flowCache.insight.insight_ready !== false) {
           applyInsight(flowCache.insight);
           setInsightStatus("ready");
           return;
         }
         setInsightStatus("loading");
         try {
-          const data = await fetchOnboardingInsight(token!);
+          const data = await fetchOnboardingInsightReady(token!);
           applyInsight(data);
           setInsightStatus("ready");
           patchDraft({ insightReady: true });
@@ -514,23 +551,12 @@ export function OnboardingFlow({
 
   useEffect(() => {
     if (!isReservedSlug(slug) || !steps || insightStatus !== "missing") return;
-    const birth = steps.find((step) => step.step_type === "birth_data");
-    const waitlist = [...steps].reverse().find((step) => step.step_type === "waitlist");
-    const birthPayload = birth ? payloadByStep[birth.slug] : undefined;
-    const hasBirth =
-      Boolean(birthPayload && typeof birthPayload.birth_date === "string" && birthPayload.birth_date) ||
-      Boolean(birthPayload && typeof birthPayload.birth_place === "string" && birthPayload.birth_place);
-    // Без карты нет разбора — возвращаем на birth, не крутим contacts ↔ insight.
-    router.replace(
-      hasBirth
-        ? waitlist
-          ? stepHref(waitlist.slug)
-          : stepHref(steps[0]?.slug ?? "welcome")
-        : birth
-          ? stepHref(birth.slug)
-          : stepHref(steps[0]?.slug ?? "welcome"),
-    );
-  }, [slug, steps, insightStatus, router, payloadByStep]);
+    const birth = birthStepOf(steps);
+    setInsightStatus("idle");
+    // Без карты на сессии разбор не собрать. Не возвращаем на contacts —
+    // иначе «Показать результат» крутит contacts ↔ insight.
+    router.replace(birth ? stepHref(birth.slug) : stepHref(steps[0]?.slug ?? "welcome"));
+  }, [slug, steps, insightStatus, router]);
 
   function updateStepPayload(stepSlug: string, patch: Record<string, unknown>) {
     setPayloadByStep((prev) => {
@@ -609,9 +635,10 @@ export function OnboardingFlow({
       const token = await persistStep(currentStep.slug, payload, true);
 
       if (currentStep.step_type === "birth_data") {
-        // Карта уже посчитана на PUT birth. LLM-разбор тяжёлый — не блокируем переход.
+        // Натал уже в PUT birth. LLM стартует на сервере — не кэшируем черновик шаблонов.
         void fetchOnboardingInsight(token)
           .then((data) => {
+            if (data.insight_ready === false) return;
             flowCache.insight = data;
             setInsight(data);
             patchDraft({ insightReady: true });
@@ -622,9 +649,20 @@ export function OnboardingFlow({
       }
 
       if (currentStep.step_type === "waitlist") {
+        const birth = birthStepOf(steps);
+        const natalPayload = birth ? persistableBirthPayload(payloadByStep, birth.slug) : null;
+        if (!natalPayload || !birth) {
+          setError("Сначала укажи дату и город рождения");
+          if (birth) await goTo(stepHref(birth.slug));
+          return;
+        }
+        // Сессия могла сброситься (рестарт API / новый token) — дописываем карту из черновика.
+        await persistStep(birth.slug, natalPayload, true);
+
         // Не ждём LLM на кнопке «Открываем…» — сразу на /insight, там глаз-прелоадер.
         void fetchOnboardingInsight(token)
           .then((data) => {
+            if (data.insight_ready === false) return;
             flowCache.insight = data;
             setInsight(data);
             patchDraft({ insightReady: true });
@@ -740,6 +778,14 @@ export function OnboardingFlow({
       setError(CONTACTS_SUPPORT);
       return;
     }
+    if (!contacts.offer_consent) {
+      setError("Нужно принять публичную оферту");
+      return;
+    }
+    if (!contacts.pd_consent) {
+      setError("Нужно согласие на обработку персональных данных");
+      return;
+    }
 
     // Вкладку надо открыть сразу по клику: после await браузер блокирует window.open,
     // а noopener даёт null — старый fallback уводил Cosmirror на payform.ru.
@@ -754,20 +800,22 @@ export function OnboardingFlow({
       setSessionToken(token);
       let key = getOrderIdempotencyKey(token);
       let order = await createOrder(token, key);
+      writeLastOrderId(order.id);
       if (order.status === "paid") {
         if (payWindow && !payWindow.closed) payWindow.close();
-        window.location.assign(`/report/?order=${order.id}`);
+        window.location.assign(`/report/${order.id}/`);
         return;
       }
       if (order.status === "canceled" || order.status === "denied") {
         key = rotateOrderIdempotencyKey(token);
         order = await createOrder(token, key);
+        writeLastOrderId(order.id);
       }
       if (order.payment_url) {
         if (payWindow && !payWindow.closed) {
           payWindow.location.replace(order.payment_url);
         }
-        window.location.assign(`/report/?order=${order.id}`);
+        window.location.assign(`/report/${order.id}/`);
         return;
       }
       if (payWindow && !payWindow.closed) payWindow.close();
@@ -812,7 +860,10 @@ export function OnboardingFlow({
     waitlistStep ? payloadByStep[waitlistStep.slug] : undefined,
   );
   const isInsightConfirm = isReservedSlug(slug) && screenIndex >= INSIGHT_CONFIRM_INDEX;
-  const confirmReady = contactsAreValid(waitlistContacts);
+  const confirmReady =
+    contactsAreValid(waitlistContacts) &&
+    waitlistContacts.pd_consent &&
+    waitlistContacts.offer_consent;
   const showProgress =
     !mapLoading && (Boolean(currentStep) || (isReservedSlug(slug) && Boolean(insight)));
   const isFirstScreen =
@@ -971,7 +1022,14 @@ export function OnboardingFlow({
                   error.toLowerCase().includes("email") ||
                   error.toLowerCase().includes("реальн"))
               ) ? (
-                <p className="mb-2 text-sm text-red-300" role="alert">
+                <p
+                  className={`mb-2 text-sm ${
+                    error.toLowerCase().includes("оферт") || error.toLowerCase().includes("соглас")
+                      ? "text-[#F6E7A1]"
+                      : "text-red-300"
+                  }`}
+                  role="alert"
+                >
                   {error}
                 </p>
               ) : null}
@@ -1519,16 +1577,16 @@ function ConfirmContactsStep({
         error.toLowerCase().includes("реальн")));
 
   return (
-    <div className="reveal flex flex-col pt-6 md:pt-8">
+    <div className="reveal flex flex-col pt-2 md:pt-4">
       <h1 className="text-3xl font-normal leading-tight tracking-tight text-white sm:text-4xl md:text-[2.6rem]">
         Проверь <span className="font-display italic text-[#F6E7A1]">почту</span>
       </h1>
-      <p className="mt-5 text-base font-normal leading-relaxed text-white/75 sm:text-lg">
+      <p className="mt-4 text-base font-normal leading-relaxed text-white/75 sm:text-lg">
         Сюда придёт PDF-разбор. Если опечатка — поправь сейчас, после оплаты письмо уйдёт на этот
         адрес.
       </p>
 
-      <div className="mt-10 flex flex-col gap-8">
+      <div className="mt-7 flex flex-col gap-6">
         <div>
           <label htmlFor="confirm-email" className="text-xs uppercase tracking-[0.16em] text-white/40">
             Email
@@ -1571,12 +1629,60 @@ function ConfirmContactsStep({
         </div>
 
         {showSupport ? (
-          <p className="-mt-4 text-sm font-normal text-[#F6E7A1]/90" role="status">
+          <p className="-mt-2 text-sm font-normal text-[#F6E7A1]/90" role="status">
             {CONTACTS_SUPPORT}
           </p>
         ) : null}
+
+        <div className="flex flex-col gap-3">
+          <OfferConsentCheckbox
+            id="confirm-offer-consent"
+            checked={value.offer_consent}
+            disabled={submitting}
+            onChange={(checked) => onChange({ ...value, offer_consent: checked })}
+          />
+        </div>
       </div>
     </div>
+  );
+}
+
+function OfferConsentCheckbox({
+  id,
+  checked,
+  disabled,
+  onChange,
+}: {
+  id: string;
+  checked: boolean;
+  disabled?: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <label htmlFor={id} className="flex cursor-pointer items-start gap-3 text-sm leading-snug text-white/65">
+      <input
+        id={id}
+        type="checkbox"
+        name="offer_consent"
+        required
+        checked={checked}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.checked)}
+        className="mt-0.5 h-4 w-4 shrink-0 accent-[#F6E7A1]"
+      />
+      <span>
+        Принимаю{" "}
+        <a
+          href="/offer"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[#F6E7A1] underline-offset-2 hover:underline"
+          onClick={(event) => event.stopPropagation()}
+        >
+          публичную оферту
+        </a>
+      </span>
+    </label>
   );
 }
 
