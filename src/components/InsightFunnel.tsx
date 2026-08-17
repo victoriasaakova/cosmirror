@@ -3,7 +3,9 @@
 import type { OnboardingInsight, OnboardingStep } from "@/lib/api";
 import { mergeContentPayloads, screensForStep } from "@/lib/onboarding/screens";
 
-export const INSIGHT_SCREEN_COUNT = 3;
+export const INSIGHT_OFFER_INDEX = 2;
+export const INSIGHT_CONFIRM_INDEX = 3;
+export const INSIGHT_SCREEN_COUNT = 4;
 
 type InsightItem = { key: string; title: string; text: string };
 type OfferCard = {
@@ -176,13 +178,14 @@ function renderAccentTitle(title: string, accents: string[]) {
   return title;
 }
 
-export function insightCtaLabel(screenIndex: number, insight: OnboardingInsight): string {
+export function insightCtaLabel(screenIndex: number, insight?: OnboardingInsight | null): string {
   if (screenIndex === 0) return "Узнать больше";
   if (screenIndex === 1) return "Продолжить";
-  if (screenIndex >= INSIGHT_SCREEN_COUNT - 1) {
-    const cta = insight.insight.offer?.cta || "Получить за 777 ₽";
+  if (screenIndex === INSIGHT_OFFER_INDEX) {
+    const cta = insight?.insight.offer?.cta || "Получить за 777 ₽";
     return /₽|руб/i.test(cta) ? cta : `${cta} ₽`;
   }
+  if (screenIndex >= INSIGHT_CONFIRM_INDEX) return "Всё верно — оплатить";
   return "Продолжить";
 }
 
@@ -264,6 +267,8 @@ export function InsightFunnel({
       </div>
     );
   }
+
+  if (screenIndex !== INSIGHT_OFFER_INDEX) return null;
 
   return (
     <div className="reveal mx-auto flex w-full max-w-lg min-h-0 flex-1 flex-col justify-center pt-6 pb-2 md:pt-8">

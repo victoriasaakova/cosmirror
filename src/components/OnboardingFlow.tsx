@@ -33,6 +33,7 @@ import {
   type TitlePart,
 } from "@/lib/onboarding/screens";
 import {
+  INSIGHT_CONFIRM_INDEX,
   INSIGHT_SCREEN_COUNT,
   InsightFunnel,
   insightCtaLabel,
@@ -190,6 +191,62 @@ function contactsFromPayload(payload: Record<string, unknown> | undefined): Cont
     email: typeof payload.email === "string" ? payload.email : "",
     telegram: typeof payload.telegram === "string" ? payload.telegram : "",
     pd_consent: Boolean(payload.pd_consent),
+  };
+}
+
+function waitlistStepOf(steps: OnboardingStep[] | null | undefined): OnboardingStep | undefined {
+  return steps?.find((step) => step.step_type === "waitlist");
+}
+
+function contactsAreValid(contacts: ContactsAnswers) {
+  return isValidTelegram(contacts.telegram) && isValidEmail(contacts.email);
+}
+
+function buildWaitlistPayload(
+  steps: OnboardingStep[],
+  payloadByStep: Record<string, Record<string, unknown>>,
+  contacts: ContactsAnswers,
+): Record<string, unknown> {
+  const waitlist = waitlistStepOf(steps);
+  const existing = waitlist ? (payloadByStep[waitlist.slug] ?? {}) : {};
+  const contentPayload = mergeContentPayloads(steps, payloadByStep);
+  const focus = Array.isArray(contentPayload.focus) ? (contentPayload.focus as string[]) : [];
+  const allScreens = steps.flatMap((step) => screensForStep(step));
+  const focusScreens = allScreens.find((screen) => screen.field === "focus");
+  const intentScreen = allScreens.find((screen) => screen.field === "intent");
+  const lifeScreen = allScreens.find((screen) => screen.field === "life_stage");
+
+  return {
+    ...existing,
+    email: contacts.email.trim(),
+    telegram: contacts.telegram.trim(),
+    name:
+      typeof contentPayload.name === "string"
+        ? contentPayload.name.trim()
+        : typeof existing.name === "string"
+          ? existing.name
+          : "",
+    source: typeof existing.source === "string" && existing.source ? existing.source : "onboarding",
+    pd_consent: true,
+    pd_consent_at:
+      typeof existing.pd_consent_at === "string" && existing.pd_consent_at
+        ? existing.pd_consent_at
+        : new Date().toISOString(),
+    message: [
+      focus.length && focusScreens && focusScreens.kind === "multi"
+        ? `Фокус: ${focus.map((f) => labelFor(focusScreens.options, f)).join(", ")}`
+        : "",
+      typeof contentPayload.intent === "string" && intentScreen && intentScreen.kind !== "text"
+        ? `Цель: ${labelFor(intentScreen.options, contentPayload.intent)}`
+        : "",
+      typeof contentPayload.life_stage === "string" &&
+      lifeScreen &&
+      lifeScreen.kind !== "text"
+        ? `Период: ${labelFor(lifeScreen.options, contentPayload.life_stage)}`
+        : "",
+    ]
+      .filter(Boolean)
+      .join(" · "),
   };
 }
 
@@ -659,9 +716,7 @@ export function OnboardingFlow({
 
     if (currentStep.step_type === "waitlist") {
       const contacts = contactsFromPayload(payloadByStep[currentStep.slug]);
-      const telegramOk = isValidTelegram(contacts.telegram);
-      const emailOk = isValidEmail(contacts.email);
-      if (!telegramOk || !emailOk) {
+      if (!contactsAreValid(contacts)) {
         setError(CONTACTS_SUPPORT);
         return;
       }
@@ -670,58 +725,33 @@ export function OnboardingFlow({
         return;
       }
 
-      // Prefer name / quiz summary from any earlier content step.
-      const contentPayload = mergeContentPayloads(steps ?? [], payloadByStep);
-
-      const focus = Array.isArray(contentPayload.focus)
-        ? (contentPayload.focus as string[])
-        : [];
-      const focusScreens = steps
-        ?.flatMap((step) => screensForStep(step))
-        .find((screen) => screen.field === "focus");
-      const intentScreen = steps
-        ?.flatMap((step) => screensForStep(step))
-        .find((screen) => screen.field === "intent");
-      const lifeScreen = steps
-        ?.flatMap((step) => screensForStep(step))
-        .find((screen) => screen.field === "life_stage");
-
-      await completeCurrentStep({
-        email: contacts.email.trim(),
-        telegram: contacts.telegram.trim(),
-        name: typeof contentPayload.name === "string" ? contentPayload.name.trim() : "",
-        source: "onboarding",
-        pd_consent: true,
-        pd_consent_at: new Date().toISOString(),
-        message: [
-          focus.length && focusScreens && focusScreens.kind === "multi"
-            ? `Фокус: ${focus.map((f) => labelFor(focusScreens.options, f)).join(", ")}`
-            : "",
-          typeof contentPayload.intent === "string" && intentScreen && intentScreen.kind !== "text"
-            ? `Цель: ${labelFor(intentScreen.options, contentPayload.intent)}`
-            : "",
-          typeof contentPayload.life_stage === "string" &&
-          lifeScreen &&
-          lifeScreen.kind !== "text"
-            ? `Период: ${labelFor(lifeScreen.options, contentPayload.life_stage)}`
-            : "",
-        ]
-          .filter(Boolean)
-          .join(" · "),
-      });
+      await completeCurrentStep(buildWaitlistPayload(steps ?? [], payloadByStep, contacts));
     }
   }
 
   async function startCheckout() {
     if (submitting) return;
+
+    const waitlist = waitlistStepOf(steps);
+    const contacts = contactsFromPayload(
+      waitlist ? payloadByStep[waitlist.slug] : undefined,
+    );
+    if (!contactsAreValid(contacts)) {
+      setError(CONTACTS_SUPPORT);
+      return;
+    }
+
     // Вкладку надо открыть сразу по клику: после await браузер блокирует window.open,
     // а noopener даёт null — старый fallback уводил Cosmirror на payform.ru.
     const payWindow = window.open("about:blank", "cosmirror-prodamus");
-    const token = sessionToken ?? (await ensureSessionToken());
-    setSessionToken(token);
     setSubmitting(true);
     setError("");
     try {
+      if (waitlist && steps) {
+        await persistStep(waitlist.slug, buildWaitlistPayload(steps, payloadByStep, contacts), true);
+      }
+      const token = sessionToken ?? (await ensureSessionToken());
+      setSessionToken(token);
       let key = getOrderIdempotencyKey(token);
       let order = await createOrder(token, key);
       if (order.status === "paid") {
@@ -777,6 +807,12 @@ export function OnboardingFlow({
   const insightLoading = isReservedSlug(slug) && !insight;
   // Прелоадер «сверяемся со звёздами» — только на экране разбора, не на шаге birth.
   const mapLoading = insightLoading;
+  const waitlistStep = waitlistStepOf(steps);
+  const waitlistContacts = contactsFromPayload(
+    waitlistStep ? payloadByStep[waitlistStep.slug] : undefined,
+  );
+  const isInsightConfirm = isReservedSlug(slug) && screenIndex >= INSIGHT_CONFIRM_INDEX;
+  const confirmReady = contactsAreValid(waitlistContacts);
   const showProgress =
     !mapLoading && (Boolean(currentStep) || (isReservedSlug(slug) && Boolean(insight)));
   const isFirstScreen =
@@ -892,41 +928,71 @@ export function OnboardingFlow({
         {mapLoading ? (
           <MapLoadingPreloader />
         ) : isReservedSlug(slug) && insight ? (
-          <div className="mx-auto flex w-full max-w-lg min-h-0 flex-1 flex-col pt-2 md:pt-4">
+          <form
+            noValidate
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (isInsightConfirm) {
+                if (!confirmReady || submitting) return;
+                void startCheckout();
+                return;
+              }
+              setScreen(screenIndex + 1);
+            }}
+            className="mx-auto flex w-full max-w-lg min-h-0 flex-1 flex-col pt-2 md:pt-4"
+          >
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-4 [-webkit-overflow-scrolling:touch]">
-              <InsightFunnel
-                screenIndex={screenIndex}
-                insight={insight}
-                steps={steps}
-                payloadByStep={payloadByStep}
-              />
+              {isInsightConfirm ? (
+                <ConfirmContactsStep
+                  value={waitlistContacts}
+                  onChange={(next) => {
+                    if (!waitlistStep) return;
+                    setError("");
+                    updateStepPayload(waitlistStep.slug, next);
+                  }}
+                  error={error}
+                  submitting={submitting}
+                />
+              ) : insight ? (
+                <InsightFunnel
+                  screenIndex={screenIndex}
+                  insight={insight}
+                  steps={steps}
+                  payloadByStep={payloadByStep}
+                />
+              ) : null}
             </div>
             <div className="shrink-0 pt-3">
-              {error ? (
+              {error &&
+              !(
+                isInsightConfirm &&
+                (error === CONTACTS_SUPPORT ||
+                  error.toLowerCase().includes("telegram") ||
+                  error.toLowerCase().includes("email") ||
+                  error.toLowerCase().includes("реальн"))
+              ) ? (
                 <p className="mb-2 text-sm text-red-300" role="alert">
                   {error}
                 </p>
               ) : null}
               {screenIndex >= INSIGHT_SCREEN_COUNT - 1 ? (
                 <button
-                    type="button"
-                    onClick={() => void startCheckout()}
-                    disabled={submitting || !sessionToken}
-                    className="inline-flex w-full items-center justify-center rounded-full bg-[#F6E7A1] px-10 py-2.5 font-grotesk text-lg font-medium text-[#0a1a3a] transition-all hover:scale-[1.02] hover:bg-[#f0dc82] active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-white/12 disabled:text-white/35 disabled:hover:scale-100 disabled:hover:bg-white/12 md:text-xl"
-                  >
-                    {submitting ? "Открываем оплату…" : insightCtaLabel(screenIndex, insight)}
-                  </button>
+                  type="submit"
+                  disabled={submitting || !sessionToken || !confirmReady}
+                  className="inline-flex w-full items-center justify-center rounded-full bg-[#F6E7A1] px-10 py-2.5 font-grotesk text-lg font-medium text-[#0a1a3a] transition-all hover:scale-[1.02] hover:bg-[#f0dc82] active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-white/12 disabled:text-white/35 disabled:hover:scale-100 disabled:hover:bg-white/12 md:text-xl"
+                >
+                  {submitting ? "Открываем оплату…" : insightCtaLabel(screenIndex, insight)}
+                </button>
               ) : (
                 <button
-                  type="button"
-                  onClick={() => setScreen(screenIndex + 1)}
+                  type="submit"
                   className="inline-flex w-full items-center justify-center rounded-full bg-[#F6E7A1] px-10 py-2.5 font-grotesk text-lg font-medium text-[#0a1a3a] transition-all hover:scale-[1.02] hover:bg-[#f0dc82] active:scale-[0.98] md:text-xl"
                 >
                   {insightCtaLabel(screenIndex, insight)}
                 </button>
               )}
             </div>
-          </div>
+          </form>
         ) : currentStep ? (
           <form
             noValidate
@@ -1424,6 +1490,91 @@ function ContactsStep({
           onChange={(checked) => onChange({ ...value, pd_consent: checked })}
           includeTerms
         />
+      </div>
+    </div>
+  );
+}
+
+function ConfirmContactsStep({
+  value,
+  onChange,
+  error,
+  submitting,
+}: {
+  value: ContactsAnswers;
+  onChange: (value: ContactsAnswers) => void;
+  error: string;
+  submitting: boolean;
+}) {
+  const telegramInvalid =
+    Boolean(value.telegram.trim()) && !isValidTelegram(value.telegram);
+  const emailInvalid = Boolean(value.email.trim()) && !isValidEmail(value.email);
+  const showSupport =
+    telegramInvalid ||
+    emailInvalid ||
+    (Boolean(error) &&
+      (error === CONTACTS_SUPPORT ||
+        error.toLowerCase().includes("telegram") ||
+        error.toLowerCase().includes("email") ||
+        error.toLowerCase().includes("реальн")));
+
+  return (
+    <div className="reveal flex flex-col pt-6 md:pt-8">
+      <h1 className="text-3xl font-normal leading-tight tracking-tight text-white sm:text-4xl md:text-[2.6rem]">
+        Проверь <span className="font-display italic text-[#F6E7A1]">почту</span>
+      </h1>
+      <p className="mt-5 text-base font-normal leading-relaxed text-white/75 sm:text-lg">
+        Сюда придёт PDF-разбор. Если опечатка — поправь сейчас, после оплаты письмо уйдёт на этот
+        адрес.
+      </p>
+
+      <div className="mt-10 flex flex-col gap-8">
+        <div>
+          <label htmlFor="confirm-email" className="text-xs uppercase tracking-[0.16em] text-white/40">
+            Email
+          </label>
+          <input
+            id="confirm-email"
+            type="email"
+            name="email"
+            required
+            autoComplete="email"
+            autoFocus
+            disabled={submitting}
+            placeholder="you@example.com"
+            value={value.email}
+            onChange={(event) => onChange({ ...value, email: event.target.value })}
+            aria-invalid={emailInvalid || undefined}
+            className={`${fieldClass()} ${emailInvalid ? "!border-[#F6E7A1]" : ""}`}
+          />
+        </div>
+
+        <div>
+          <label
+            htmlFor="confirm-telegram"
+            className="text-xs uppercase tracking-[0.16em] text-white/40"
+          >
+            Telegram
+          </label>
+          <input
+            id="confirm-telegram"
+            type="text"
+            name="telegram"
+            required
+            disabled={submitting}
+            placeholder="@username"
+            value={value.telegram}
+            onChange={(event) => onChange({ ...value, telegram: event.target.value })}
+            aria-invalid={telegramInvalid || undefined}
+            className={`${fieldClass()} ${telegramInvalid ? "!border-[#F6E7A1]" : ""}`}
+          />
+        </div>
+
+        {showSupport ? (
+          <p className="-mt-4 text-sm font-normal text-[#F6E7A1]/90" role="status">
+            {CONTACTS_SUPPORT}
+          </p>
+        ) : null}
       </div>
     </div>
   );
