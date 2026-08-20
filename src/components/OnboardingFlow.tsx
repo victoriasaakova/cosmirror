@@ -6,17 +6,20 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { CosmirrorMark } from "@/components/CosmirrorMark";
 import {
+  completeYandexAuth,
   createOrder,
   fetchOnboardingInsight,
   fetchOnboardingInsightReady,
   fetchOnboardingSession,
   fetchOnboardingSteps,
+  startYandexAuth,
   submitOnboardingStep,
   suggestPlaces,
   type OnboardingInsight,
   type OnboardingStep,
   type PlaceSuggestion,
 } from "@/lib/api";
+import { writeAuthToken, readAuthToken } from "@/lib/auth";
 import {
   adjacentStep,
   buildProgressModel,
@@ -203,6 +206,21 @@ function waitlistStepOf(steps: OnboardingStep[] | null | undefined): OnboardingS
   return steps?.find((step) => step.step_type === "waitlist");
 }
 
+function withAuthedEmail(
+  steps: OnboardingStep[],
+  byStep: Record<string, Record<string, unknown>>,
+  email: string,
+): Record<string, Record<string, unknown>> {
+  const waitlist = waitlistStepOf(steps);
+  if (!waitlist || !email.trim()) return byStep;
+  const current = byStep[waitlist.slug] ?? {};
+  if (typeof current.email === "string" && current.email.trim()) return byStep;
+  return {
+    ...byStep,
+    [waitlist.slug]: { ...current, email: email.trim() },
+  };
+}
+
 function birthStepOf(steps: OnboardingStep[] | null | undefined): OnboardingStep | undefined {
   return steps?.find((step) => step.step_type === "birth_data");
 }
@@ -327,9 +345,15 @@ export function primeOnboardingSteps(apiSteps: OnboardingStep[]) {
 export function OnboardingFlow({
   slug,
   forceNew = false,
+  oauthCode = "",
+  oauthState = "",
+  oauthError = "",
 }: {
   slug: string;
   forceNew?: boolean;
+  oauthCode?: string;
+  oauthState?: string;
+  oauthError?: string;
 }) {
   const router = useRouter();
   const [steps, setSteps] = useState<OnboardingStep[] | null>(() => flowCache.steps);
@@ -349,6 +373,8 @@ export function OnboardingFlow({
   );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [authedEmail, setAuthedEmail] = useState("");
+  const [oauthBusy, setOauthBusy] = useState(Boolean(oauthCode));
 
   const currentStep = useMemo(
     () => (steps && !isReservedSlug(slug) ? steps.find((step) => step.slug === slug) : null),
@@ -425,6 +451,12 @@ export function OnboardingFlow({
         }
         applyPayload(byStep);
         patchDraft({ byStep });
+        if (session.user_email) {
+          setAuthedEmail(session.user_email);
+          const withEmail = withAuthedEmail(fetchedSteps, byStep, session.user_email);
+          applyPayload(withEmail);
+          patchDraft({ byStep: withEmail });
+        }
       }
 
       const draft = readDraft();
@@ -541,6 +573,62 @@ export function OnboardingFlow({
   ]);
 
   useEffect(() => {
+    if (oauthError) {
+      setError("Не получилось войти через Яндекс ID. Попробуй ещё раз.");
+      setOauthBusy(false);
+    }
+  }, [oauthError]);
+
+  useEffect(() => {
+    if (!oauthCode || !oauthState || !sessionToken || !steps) return;
+    const waitlist = waitlistStepOf(steps);
+    if (!waitlist || slug !== waitlist.slug) return;
+    let cancelled = false;
+    setOauthBusy(true);
+    setError("");
+    (async () => {
+      try {
+        const result = await completeYandexAuth(oauthCode, oauthState);
+        if (cancelled) return;
+        writeAuthToken(result.token);
+        const email = result.user.email || "";
+        setAuthedEmail(email);
+        applyToken(result.session_token);
+        const session = await fetchOnboardingSession(result.session_token);
+        const next = { ...flowCache.payloadByStep };
+        for (const answer of session.answers) {
+          const payload =
+            answer.payload && typeof answer.payload === "object"
+              ? (answer.payload as Record<string, unknown>)
+              : {};
+          next[answer.step_slug] = { ...(next[answer.step_slug] ?? {}), ...payload };
+        }
+        const withEmail = withAuthedEmail(steps, next, email);
+        applyPayload(withEmail);
+        patchDraft({ byStep: withEmail });
+        router.replace(stepHref(INSIGHT_SLUG));
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "Не удалось войти через Яндекс ID");
+          setOauthBusy(false);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    applyPayload,
+    applyToken,
+    oauthCode,
+    oauthState,
+    router,
+    sessionToken,
+    slug,
+    steps,
+  ]);
+
+  useEffect(() => {
     const draft = readDraft();
     const saved = draft.screenIndexByStep[slug];
     const raw = typeof saved === "number" ? saved : 0;
@@ -625,6 +713,33 @@ export function OnboardingFlow({
     await submitOnboardingStep(token, stepSlug, payload, completed);
     updateStepPayload(stepSlug, payload);
     return token;
+  }
+
+  async function startYandexLogin() {
+    if (!currentStep || currentStep.step_type !== "waitlist" || submitting) return;
+    const contacts = contactsFromPayload(payloadByStep[currentStep.slug]);
+    if (!contacts.pd_consent) {
+      setError("Нужно согласие на обработку персональных данных");
+      return;
+    }
+    setSubmitting(true);
+    setError("");
+    try {
+      const token = await persistStep(
+        currentStep.slug,
+        {
+          ...payloadByStep[currentStep.slug],
+          pd_consent: true,
+          pd_consent_at: new Date().toISOString(),
+        },
+        false,
+      );
+      const { url } = await startYandexAuth(token);
+      window.location.assign(url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Не удалось начать вход через Яндекс ID");
+      setSubmitting(false);
+    }
   }
 
   async function completeCurrentStep(payload: Record<string, unknown>) {
@@ -754,16 +869,23 @@ export function OnboardingFlow({
 
     if (currentStep.step_type === "waitlist") {
       const contacts = contactsFromPayload(payloadByStep[currentStep.slug]);
-      if (!contactsAreValid(contacts)) {
-        setError(CONTACTS_SUPPORT);
-        return;
-      }
+      const email = (contacts.email || authedEmail).trim();
+      const alreadyIn = Boolean(authedEmail || readAuthToken());
       if (!contacts.pd_consent) {
         setError("Нужно согласие на обработку персональных данных");
         return;
       }
-
-      await completeCurrentStep(buildWaitlistPayload(steps ?? [], payloadByStep, contacts));
+      if (alreadyIn) {
+        if (!isValidEmail(email)) {
+          setError(CONTACTS_SUPPORT);
+          return;
+        }
+        await completeCurrentStep(
+          buildWaitlistPayload(steps ?? [], payloadByStep, { ...contacts, email, pd_consent: true }),
+        );
+        return;
+      }
+      await startYandexLogin();
     }
   }
 
@@ -803,7 +925,7 @@ export function OnboardingFlow({
       writeLastOrderId(order.id);
       if (order.status === "paid") {
         if (payWindow && !payWindow.closed) payWindow.close();
-        window.location.assign(`/report/${order.id}/`);
+        window.location.assign("/account/");
         return;
       }
       if (order.status === "canceled" || order.status === "denied") {
@@ -815,7 +937,7 @@ export function OnboardingFlow({
         if (payWindow && !payWindow.closed) {
           payWindow.location.replace(order.payment_url);
         }
-        window.location.assign(`/report/${order.id}/`);
+        window.location.assign("/account/");
         return;
       }
       if (payWindow && !payWindow.closed) payWindow.close();
@@ -840,11 +962,12 @@ export function OnboardingFlow({
     }
     if (currentStep.step_type === "waitlist") {
       const contacts = contactsFromPayload(payload);
-      return (
-        Boolean(contacts.telegram.trim()) &&
-        Boolean(contacts.email.trim()) &&
-        contacts.pd_consent
-      );
+      const email = (contacts.email || authedEmail).trim();
+      const alreadyIn = Boolean(authedEmail || readAuthToken());
+      if (alreadyIn) {
+        return Boolean(email) && contacts.pd_consent;
+      }
+      return contacts.pd_consent;
     }
     if (contentScreens.length > 0) {
       return screenIsComplete(contentScreens[screenIndex], payload);
@@ -853,12 +976,17 @@ export function OnboardingFlow({
   })();
 
   const insightLoading = isReservedSlug(slug) && !insight;
+  const yandexLoading = Boolean(oauthBusy && currentStep?.step_type === "waitlist");
   // Прелоадер «сверяемся со звёздами» — только на экране разбора, не на шаге birth.
-  const mapLoading = insightLoading;
+  const mapLoading = insightLoading || yandexLoading;
   const waitlistStep = waitlistStepOf(steps);
-  const waitlistContacts = contactsFromPayload(
-    waitlistStep ? payloadByStep[waitlistStep.slug] : undefined,
-  );
+  const waitlistContacts = {
+    ...contactsFromPayload(waitlistStep ? payloadByStep[waitlistStep.slug] : undefined),
+  };
+  if (authedEmail && !waitlistContacts.email) {
+    waitlistContacts.email = authedEmail;
+  }
+  const signedIn = Boolean(authedEmail || readAuthToken());
   const isInsightConfirm = isReservedSlug(slug) && screenIndex >= INSIGHT_CONFIRM_INDEX;
   const confirmReady =
     contactsAreValid(waitlistContacts) &&
@@ -1003,6 +1131,7 @@ export function OnboardingFlow({
                   }}
                   error={error}
                   submitting={submitting}
+                  emailFromYandex={Boolean(authedEmail)}
                 />
               ) : insight ? (
                 <InsightFunnel
@@ -1065,6 +1194,10 @@ export function OnboardingFlow({
                 payload={payload}
                 error={error}
                 submitting={submitting}
+                signedIn={signedIn}
+                authedEmail={authedEmail}
+                yandexReady={ready}
+                onYandex={() => void startYandexLogin()}
                 onPayload={(patch) => {
                   setError("");
                   updateStepPayload(currentStep.slug, patch);
@@ -1091,13 +1224,15 @@ export function OnboardingFlow({
             ) : null}
 
             <div className="shrink-0 pt-3">
-              <button
-                type="submit"
-                disabled={!ready}
-                className="inline-flex w-full items-center justify-center rounded-full bg-[#F6E7A1] px-10 py-2.5 font-grotesk text-lg font-medium text-[#0a1a3a] transition-all hover:scale-[1.02] hover:bg-[#f0dc82] active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-white/12 disabled:text-white/35 disabled:hover:scale-100 disabled:hover:bg-white/12 md:text-xl"
-              >
-                {ctaLabel(currentStep, submitting)}
-              </button>
+              {currentStep.step_type === "waitlist" && !signedIn ? null : (
+                <button
+                  type="submit"
+                  disabled={!ready}
+                  className="inline-flex w-full items-center justify-center rounded-full bg-[#F6E7A1] px-10 py-2.5 font-grotesk text-lg font-medium text-[#0a1a3a] transition-all hover:scale-[1.02] hover:bg-[#f0dc82] active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-white/12 disabled:text-white/35 disabled:hover:scale-100 disabled:hover:bg-white/12 md:text-xl"
+                >
+                  {ctaLabel(currentStep, submitting)}
+                </button>
+              )}
             </div>
           </form>
         ) : (
@@ -1117,6 +1252,10 @@ function StepBody({
   payload,
   error,
   submitting,
+  signedIn,
+  authedEmail,
+  yandexReady,
+  onYandex,
   onPayload,
 }: {
   step: OnboardingStep;
@@ -1125,6 +1264,10 @@ function StepBody({
   payload: Record<string, unknown>;
   error: string;
   submitting: boolean;
+  signedIn: boolean;
+  authedEmail: string;
+  yandexReady: boolean;
+  onYandex: () => void;
   onPayload: (patch: Record<string, unknown>) => void;
 }) {
   if (step.step_type === "birth_data") {
@@ -1150,6 +1293,10 @@ function StepBody({
         onChange={(next) => onPayload({ ...next })}
         error={error}
         submitting={submitting}
+        signedIn={signedIn}
+        authedEmail={authedEmail}
+        yandexReady={yandexReady}
+        onYandex={onYandex}
       />
     );
   }
@@ -1466,23 +1613,24 @@ function ContactsStep({
   onChange,
   error,
   submitting,
+  signedIn,
+  authedEmail,
+  yandexReady,
+  onYandex,
 }: {
   value: ContactsAnswers;
   onChange: (value: ContactsAnswers) => void;
   error: string;
   submitting: boolean;
+  signedIn: boolean;
+  authedEmail: string;
+  yandexReady: boolean;
+  onYandex: () => void;
 }) {
-  const telegramInvalid =
-    Boolean(value.telegram.trim()) && !isValidTelegram(value.telegram);
-  const emailInvalid = Boolean(value.email.trim()) && !isValidEmail(value.email);
-  const showSupport =
-    telegramInvalid ||
-    emailInvalid ||
-    (Boolean(error) &&
-      (error === CONTACTS_SUPPORT ||
-        error.toLowerCase().includes("telegram") ||
-        error.toLowerCase().includes("email") ||
-        error.toLowerCase().includes("реальн")));
+  const email = value.email || authedEmail;
+  const showConsentError =
+    Boolean(error) &&
+    (error.toLowerCase().includes("соглас") || error.toLowerCase().includes("яндекс"));
 
   return (
     <div className="flex flex-col">
@@ -1490,57 +1638,12 @@ function ContactsStep({
         Твоя карта <span className="font-display italic text-[#F6E7A1]">готова</span>
       </h1>
       <p className="mt-5 text-base font-normal leading-relaxed text-white/75 sm:text-lg">
-        Оставь контакты, чтобы открыть разбор. Используем только для доступа и обновлений — без
-        спама.
+        {signedIn
+          ? `Вошли как ${email || "Яндекс ID"}. Откроем персональный разбор.`
+          : "Войди через Яндекс ID — откроем персональный разбор и сохраним его в твоём кабинете."}
       </p>
 
       <div className="mt-10 flex flex-col gap-8">
-        <div>
-          <label
-            htmlFor="contact-telegram"
-            className="text-xs uppercase tracking-[0.16em] text-white/40"
-          >
-            Telegram
-          </label>
-          <input
-            id="contact-telegram"
-            type="text"
-            name="telegram"
-            required
-            disabled={submitting}
-            placeholder="@username"
-            value={value.telegram}
-            onChange={(event) => onChange({ ...value, telegram: event.target.value })}
-            aria-invalid={telegramInvalid || undefined}
-            className={`${fieldClass()} ${telegramInvalid ? "!border-[#F6E7A1]" : ""}`}
-          />
-        </div>
-
-        <div>
-          <label htmlFor="contact-email" className="text-xs uppercase tracking-[0.16em] text-white/40">
-            Email
-          </label>
-          <input
-            id="contact-email"
-            type="email"
-            name="email"
-            required
-            autoComplete="email"
-            disabled={submitting}
-            placeholder="you@example.com"
-            value={value.email}
-            onChange={(event) => onChange({ ...value, email: event.target.value })}
-            aria-invalid={emailInvalid || undefined}
-            className={`${fieldClass()} ${emailInvalid ? "!border-[#F6E7A1]" : ""}`}
-          />
-        </div>
-
-        {showSupport ? (
-          <p className="-mt-4 text-sm font-normal text-[#F6E7A1]/90" role="status">
-            {CONTACTS_SUPPORT}
-          </p>
-        ) : null}
-
         <PdConsentCheckbox
           id="contact-pd-consent"
           checked={value.pd_consent}
@@ -1548,6 +1651,24 @@ function ContactsStep({
           onChange={(checked) => onChange({ ...value, pd_consent: checked })}
           includeTerms
         />
+
+        {showConsentError ? (
+          <p className="-mt-4 text-sm font-normal text-[#F6E7A1]/90" role="status">
+            {error}
+          </p>
+        ) : null}
+
+        {signedIn ? null : (
+          <button
+            type="button"
+            disabled={submitting || !yandexReady}
+            onClick={onYandex}
+            className="inline-flex w-full items-center justify-center gap-3 rounded-full bg-black px-8 py-3 font-grotesk text-lg font-medium text-white transition-all hover:scale-[1.02] hover:bg-black/80 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-white/12 disabled:text-white/35 disabled:hover:scale-100 disabled:hover:bg-white/12"
+          >
+            <YandexMark />
+            {submitting ? "Открываем Яндекс…" : "Войти через Яндекс ID"}
+          </button>
+        )}
       </div>
     </div>
   );
@@ -1558,11 +1679,13 @@ function ConfirmContactsStep({
   onChange,
   error,
   submitting,
+  emailFromYandex = false,
 }: {
   value: ContactsAnswers;
   onChange: (value: ContactsAnswers) => void;
   error: string;
   submitting: boolean;
+  emailFromYandex?: boolean;
 }) {
   const telegramInvalid =
     Boolean(value.telegram.trim()) && !isValidTelegram(value.telegram);
@@ -1582,8 +1705,9 @@ function ConfirmContactsStep({
         Проверь <span className="font-display italic text-[#F6E7A1]">почту</span>
       </h1>
       <p className="mt-4 text-base font-normal leading-relaxed text-white/75 sm:text-lg">
-        Сюда придёт PDF-разбор. Если опечатка — поправь сейчас, после оплаты письмо уйдёт на этот
-        адрес.
+        {emailFromYandex
+          ? "Почту взяли из Яндекс ID. Осталось указать Telegram — туда пришлём доступ к разбору."
+          : "Сюда придёт PDF-разбор. Если опечатка — поправь сейчас, после оплаты письмо уйдёт на этот адрес."}
       </p>
 
       <div className="mt-7 flex flex-col gap-6">
@@ -1597,7 +1721,6 @@ function ConfirmContactsStep({
             name="email"
             required
             autoComplete="email"
-            autoFocus
             disabled={submitting}
             placeholder="you@example.com"
             value={value.email}
@@ -1619,6 +1742,7 @@ function ConfirmContactsStep({
             type="text"
             name="telegram"
             required
+            autoFocus
             disabled={submitting}
             placeholder="@username"
             value={value.telegram}
@@ -1766,6 +1890,18 @@ function MapLoadingPreloader() {
         скоро закончим
       </p>
     </div>
+  );
+}
+
+function YandexMark() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden>
+      <rect width="24" height="24" rx="6" fill="#FC3F1D" />
+      <path
+        d="M13.1 6h-2.2L7.4 18h2.15l.72-2.55h3.5L14.5 18H16.7L13.1 6zm-.55 7.2h-2.1L11.7 8.9h.1l.75 4.3z"
+        fill="#fff"
+      />
+    </svg>
   );
 }
 

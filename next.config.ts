@@ -8,6 +8,10 @@ const nextConfig: NextConfig = {
     return [
       { source: "/demo-return", destination: "/pay/failed/", permanent: false },
       { source: "/demo-return/", destination: "/pay/failed/", permanent: false },
+      { source: "/report", destination: "/account/", permanent: false },
+      { source: "/report/", destination: "/account/", permanent: false },
+      { source: "/report/:orderId", destination: "/account/", permanent: false },
+      { source: "/report/:orderId/", destination: "/account/", permanent: false },
     ];
   },
   // Serve images directly from /public so Cursor Simple Browser

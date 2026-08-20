@@ -85,7 +85,7 @@ export async function ensureSessionToken(): Promise<string> {
   return session.token;
 }
 
-/** Сброс клиентского состояния онбординга (токен + черновик). */
+/** Сброс клиентского состояния онбординга (токен + черновик). Вход через Яндекс ID сохраняем. */
 export function clearOnboardingClientState() {
   if (typeof window === "undefined") return;
   localStorage.removeItem(SESSION_KEY);

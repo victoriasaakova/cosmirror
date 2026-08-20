@@ -6,6 +6,6 @@ export const metadata: Metadata = {
   description: "Персональный астрологический отчёт в кабинете Cosmirror.",
 };
 
-export default function ReportRoute() {
+export default function AccountPage() {
   return <ReportPage />;
 }

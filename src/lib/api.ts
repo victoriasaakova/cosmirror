@@ -1,5 +1,16 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
 
+function authHeaders(extra?: HeadersInit): Headers {
+  const headers = new Headers(extra);
+  if (typeof window !== "undefined") {
+    const token = window.localStorage.getItem("cosmirror.auth.token");
+    if (token && !headers.has("Authorization")) {
+      headers.set("Authorization", `Bearer ${token}`);
+    }
+  }
+  return headers;
+}
+
 async function parseJson(res: Response): Promise<unknown> {
   return res.json().catch(() => ({}));
 }
@@ -13,10 +24,12 @@ function networkErrorMessage(err: unknown, fallback: string): string {
 }
 
 async function fetchWithRetry(input: string, init?: RequestInit, retries = 3): Promise<Response> {
+  const headers = authHeaders(init?.headers);
+  const nextInit: RequestInit = { ...init, headers };
   let lastErr: unknown;
   for (let attempt = 0; attempt < retries; attempt += 1) {
     try {
-      return await fetch(input, init);
+      return await fetch(input, nextInit);
     } catch (err) {
       lastErr = err;
       if (!(err instanceof TypeError) || attempt === retries - 1) throw err;
@@ -103,6 +116,8 @@ export type OnboardingSession = {
   answers: OnboardingStepAnswer[];
   next_step: OnboardingStep | null;
   progress: { done: number; total: number };
+  authenticated?: boolean;
+  user_email?: string;
   created_at: string;
   updated_at: string;
   completed_at: string | null;
@@ -345,14 +360,38 @@ export type ReportTransitHit = {
   motion?: string;
   natal_house?: number | null;
   fact?: string;
+  meaning?: string;
+  duration?: string;
+  practice?: string;
+  use_for?: string;
   work_with?: string;
   score?: number;
+  days_to_exact?: number | null;
   focus_match?: string[];
   window?: {
     span_note?: string;
     peak_estimate?: string | null;
     motion?: string;
   };
+};
+
+export type ReportWheel = {
+  ascendant_longitude: number;
+  mc_longitude?: number | null;
+  has_birth_time?: boolean;
+  house_system?: string;
+  planets: Array<{
+    key: string;
+    name?: string;
+    glyph?: string;
+    longitude: number;
+    sign_ru?: string;
+    house?: number | null;
+    retrograde?: boolean;
+  }>;
+  houses?: Array<{ house: number; cusp: number; sign_ru?: string }>;
+  aspects?: Array<{ a: string; b: string; kind?: string; aspect?: string }>;
+  signs?: Array<{ sign: string; sign_ru: string; start: number }>;
 };
 
 export type ReportDocument = {
@@ -372,6 +411,8 @@ export type ReportDocument = {
     supporting?: ReportTransitHit[];
     pressure?: ReportTransitHit[];
     resource?: ReportTransitHit[];
+    upcoming?: ReportTransitHit[];
+    focus_matches?: ReportTransitHit[];
     through_line?: {
       transit_name?: string;
       natal_points?: string[];
@@ -384,11 +425,13 @@ export type ReportDocument = {
       points?: Array<{
         key: string;
         name: string;
+        sign?: string;
         sign_ru: string;
         degree?: number;
         house?: number | null;
         fact: string;
         retrograde?: boolean;
+        glyph?: string;
       }>;
       houses?: Array<{
         house: number;
@@ -403,6 +446,9 @@ export type ReportDocument = {
         orb: number;
         theme: string;
       }>;
+      wheel?: ReportWheel;
+      has_birth_time?: boolean;
+      house_system?: string;
     };
     sky?: {
       collective?: Array<{
@@ -457,7 +503,6 @@ export type Order = {
   currency: string;
   payment_url: string;
   paid_at: string | null;
-  customer_email?: string;
   fulfilled_at?: string | null;
   fulfillment_error?: string;
   report?: PaidReport | null;
@@ -465,6 +510,84 @@ export type Order = {
   created_at: string;
   updated_at: string;
 };
+
+export type AuthUser = {
+  id: number;
+  username: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  profile?: {
+    display_name?: string;
+    telegram?: string;
+  };
+};
+
+export async function startYandexAuth(sessionToken: string): Promise<{ url: string }> {
+  let res: Response;
+  try {
+    res = await fetchWithRetry(
+      `${API_URL}/api/auth/yandex/start/?session_token=${encodeURIComponent(sessionToken)}`,
+      { cache: "no-store" },
+    );
+  } catch (err) {
+    throw new Error(networkErrorMessage(err, "Не удалось начать вход через Яндекс ID"));
+  }
+  const data = await parseJson(res);
+  if (!res.ok) throw new Error(errorMessage(data, "Не удалось начать вход через Яндекс ID"));
+  return data as { url: string };
+}
+
+export async function completeYandexAuth(
+  code: string,
+  state: string,
+): Promise<{ token: string; session_token: string; user: AuthUser }> {
+  let res: Response;
+  try {
+    res = await fetchWithRetry(`${API_URL}/api/auth/yandex/callback/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code, state }),
+    });
+  } catch (err) {
+    throw new Error(networkErrorMessage(err, "Не удалось войти через Яндекс ID"));
+  }
+  const data = await parseJson(res);
+  if (!res.ok) throw new Error(errorMessage(data, "Не удалось войти через Яндекс ID"));
+  return data as { token: string; session_token: string; user: AuthUser };
+}
+
+export async function fetchMe(): Promise<AuthUser> {
+  let res: Response;
+  try {
+    res = await fetchWithRetry(`${API_URL}/api/me/`, { cache: "no-store" });
+  } catch (err) {
+    throw new Error(networkErrorMessage(err, "Не удалось загрузить профиль"));
+  }
+  const data = await parseJson(res);
+  if (!res.ok) throw new Error(errorMessage(data, "Не удалось загрузить профиль"));
+  return data as AuthUser;
+}
+
+export async function fetchMyOrder(): Promise<Order> {
+  let res: Response;
+  try {
+    res = await fetchWithRetry(`${API_URL}/api/me/report/`, { cache: "no-store" });
+  } catch (err) {
+    throw new Error(networkErrorMessage(err, "Не удалось загрузить заказ"));
+  }
+  const data = await parseJson(res);
+  if (!res.ok) {
+    if (res.status === 401) {
+      throw new Error("Войди через Яндекс ID, чтобы открыть отчёт.");
+    }
+    if (res.status === 404) {
+      throw new Error("Пока нет заказа. Вернись к разбору и оформи оплату.");
+    }
+    throw new Error(errorMessage(data, "Не удалось загрузить заказ"));
+  }
+  return data as Order;
+}
 
 export async function createOrder(
   sessionToken: string,
@@ -509,10 +632,10 @@ export async function fetchOrder(orderId: string): Promise<Order> {
   return data as Order;
 }
 
-export async function completeDemoOrder(orderId: string): Promise<Order> {
+export async function completeMyDemoOrder(): Promise<Order> {
   let res: Response;
   try {
-    res = await fetchWithRetry(`${API_URL}/api/orders/${orderId}/demo-complete/`, {
+    res = await fetchWithRetry(`${API_URL}/api/me/report/demo-complete/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: "{}",
@@ -525,10 +648,10 @@ export async function completeDemoOrder(orderId: string): Promise<Order> {
   return data as Order;
 }
 
-export async function resendOrderReport(orderId: string, email: string): Promise<Order> {
+export async function resendMyReport(email: string): Promise<Order> {
   let res: Response;
   try {
-    res = await fetchWithRetry(`${API_URL}/api/orders/${orderId}/email/`, {
+    res = await fetchWithRetry(`${API_URL}/api/me/report/email/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email }),
@@ -539,6 +662,20 @@ export async function resendOrderReport(orderId: string, email: string): Promise
   const data = await parseJson(res);
   if (!res.ok) throw new Error(errorMessage(data, "Не удалось отправить отчёт"));
   return data as Order;
+}
+
+export async function downloadMyReportPdf(): Promise<Blob> {
+  let res: Response;
+  try {
+    res = await fetchWithRetry(`${API_URL}/api/me/report.pdf/`, { cache: "no-store" });
+  } catch (err) {
+    throw new Error(networkErrorMessage(err, "Не удалось скачать PDF"));
+  }
+  if (!res.ok) {
+    const data = await parseJson(res);
+    throw new Error(errorMessage(data, "Не удалось скачать PDF"));
+  }
+  return res.blob();
 }
 
 export { API_URL };

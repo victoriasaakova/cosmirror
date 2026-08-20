@@ -7,16 +7,17 @@ import { FormEvent, ReactNode, Suspense, useEffect, useState } from "react";
 import { CosmirrorMark } from "@/components/CosmirrorMark";
 import { InteractiveReport } from "@/components/InteractiveReport";
 import {
-  completeDemoOrder,
-  fetchOrder,
-  resendOrderReport,
+  completeMyDemoOrder,
+  downloadMyReportPdf,
+  fetchMyOrder,
+  resendMyReport,
   type Order,
 } from "@/lib/api";
-import { readLastOrderId, writeLastOrderId } from "@/lib/onboarding/session";
+import { isLoggedIn } from "@/lib/auth";
 
-function orderChannel(orderId: string): BroadcastChannel | null {
+function orderChannel(): BroadcastChannel | null {
   try {
-    return new BroadcastChannel(`cosmirror-order-${orderId}`);
+    return new BroadcastChannel("cosmirror-account-report");
   } catch {
     return null;
   }
@@ -36,57 +37,44 @@ function isCheckoutReturnPath(pathname: string): boolean {
     pathname === "/demo-success" ||
     pathname === "/demo-success/" ||
     pathname === "/pay/success" ||
-    pathname === "/pay/success/"
+    pathname === "/pay/success/" ||
+    pathname === "/account" ||
+    pathname === "/account/"
   );
 }
 
-function ReportInner({ initialOrderId = "" }: { initialOrderId?: string }) {
+function ReportInner() {
   const searchParams = useSearchParams();
   const pathname = usePathname();
-  const [storedOrderId, setStoredOrderId] = useState("");
-  const [storageReady, setStorageReady] = useState(false);
-  const orderId =
-    initialOrderId ||
-    searchParams.get("order") ||
-    searchParams.get("order_id") ||
-    storedOrderId;
   const fromProdamus =
     searchParams.get("from") === "prodamus" || isCheckoutReturnPath(pathname);
   const preview = previewMode(searchParams.get("preview"));
   const [order, setOrder] = useState<Order | null>(null);
   const [error, setError] = useState("");
-  const [email, setEmail] = useState("");
+  const [needsAuth, setNeedsAuth] = useState(false);
   const [emailNote, setEmailNote] = useState("");
   const [sending, setSending] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const [checkoutReturned, setCheckoutReturned] = useState(fromProdamus);
   const [revealReady, setRevealReady] = useState(false);
+  const [paymentSlow, setPaymentSlow] = useState(false);
   const isLocalDemo = process.env.NODE_ENV === "development";
   const unpaidLocal =
     isLocalDemo &&
-    Boolean(orderId) &&
     Boolean(order) &&
     order?.status !== "paid" &&
     order?.status !== "canceled" &&
     order?.status !== "denied";
 
   useEffect(() => {
-    setStoredOrderId(readLastOrderId());
-    setStorageReady(true);
-  }, []);
-
-  useEffect(() => {
-    if (orderId) writeLastOrderId(orderId);
-  }, [orderId]);
-
-  useEffect(() => {
     if (preview) return;
-    if (!storageReady) return;
-    if (!orderId) {
-      setError("Не найден номер заказа. Открой ссылку из письма целиком.");
+    if (!isLoggedIn()) {
+      setNeedsAuth(true);
+      setError("Войди через Яндекс ID, чтобы открыть отчёт.");
       return;
     }
     let cancelled = false;
-    const channel = orderChannel(orderId);
+    const channel = orderChannel();
 
     if (fromProdamus) {
       channel?.postMessage({ type: "checkout-returned" });
@@ -106,17 +94,31 @@ function ReportInner({ initialOrderId = "" }: { initialOrderId?: string }) {
       };
     }
 
+    const startedAt = Date.now();
+    let timer = 0;
+
+    function delayFor(status: string, errored: boolean) {
+      const elapsed = Date.now() - startedAt;
+      if (errored) return elapsed > 60_000 ? 10_000 : 4_000;
+      if (status === "paid") return 2_000;
+      if (elapsed > 180_000) return 15_000;
+      if (elapsed > 90_000) return 8_000;
+      if (elapsed > 30_000) return 4_000;
+      return 2_000;
+    }
+
     async function poll() {
       try {
-        const next = await fetchOrder(orderId);
+        const next = await fetchMyOrder();
         if (cancelled) return;
         setOrder(next);
         setError("");
-        if (next.customer_email) {
-          setEmail((current) => current || next.customer_email || "");
-        }
+        setNeedsAuth(false);
         if (next.status === "paid") {
           channel?.postMessage({ type: "order", order: next });
+          setPaymentSlow(false);
+        } else if (Date.now() - startedAt > 90_000) {
+          setPaymentSlow(true);
         }
         if (next.status === "canceled" || next.status === "denied") {
           return;
@@ -124,24 +126,29 @@ function ReportInner({ initialOrderId = "" }: { initialOrderId?: string }) {
         if (next.status === "paid" && next.report) {
           return;
         }
-        window.setTimeout(() => {
+        timer = window.setTimeout(() => {
           void poll();
-        }, 2000);
+        }, delayFor(next.status, false));
       } catch (err) {
         if (cancelled) return;
-        setError(err instanceof Error ? err.message : "Не удалось проверить оплату");
-        window.setTimeout(() => {
+        const message = err instanceof Error ? err.message : "Не удалось проверить оплату";
+        if (message.toLowerCase().includes("яндекс")) {
+          setNeedsAuth(true);
+        }
+        setError(message);
+        timer = window.setTimeout(() => {
           void poll();
-        }, 4000);
+        }, delayFor("", true));
       }
     }
 
     void poll();
     return () => {
       cancelled = true;
+      window.clearTimeout(timer);
       channel?.close();
     };
-  }, [orderId, fromProdamus, preview, storageReady]);
+  }, [fromProdamus, preview]);
 
   useEffect(() => {
     const paid = order?.status === "paid";
@@ -154,19 +161,16 @@ function ReportInner({ initialOrderId = "" }: { initialOrderId?: string }) {
   }, [checkoutReturned, order?.status]);
 
   useEffect(() => {
-    if (!isLocalDemo || preview || !orderId) return;
+    if (!isLocalDemo || preview) return;
     if (!fromProdamus && !checkoutReturned) return;
     let cancelled = false;
-    void completeDemoOrder(orderId)
+    void completeMyDemoOrder()
       .then((next) => {
         if (cancelled) return;
         setOrder(next);
         setCheckoutReturned(true);
-        if (next.customer_email) {
-          setEmail((current) => current || next.customer_email || "");
-        }
         try {
-          const channel = orderChannel(orderId);
+          const channel = orderChannel();
           channel?.postMessage({ type: "order", order: next });
           channel?.close();
         } catch {
@@ -179,26 +183,23 @@ function ReportInner({ initialOrderId = "" }: { initialOrderId?: string }) {
     return () => {
       cancelled = true;
     };
-  }, [isLocalDemo, preview, orderId, fromProdamus, checkoutReturned]);
+  }, [isLocalDemo, preview, fromProdamus, checkoutReturned]);
 
   useEffect(() => {
-    if (!unpaidLocal || preview || !orderId) return;
+    if (!unpaidLocal || preview) return;
     let cancelled = false;
     let hiddenOnce = false;
 
     const fulfill = () => {
       if (cancelled) return;
-      void completeDemoOrder(orderId)
+      void completeMyDemoOrder()
         .then((next) => {
           if (cancelled) return;
           setOrder(next);
           setCheckoutReturned(true);
-          if (next.customer_email) {
-            setEmail((current) => current || next.customer_email || "");
-          }
         })
         .catch(() => {
-          /* webhook на localhost не доходит — повтор через poll не поможет */
+          /* webhook на localhost не доходит */
         });
     };
 
@@ -214,17 +215,17 @@ function ReportInner({ initialOrderId = "" }: { initialOrderId?: string }) {
       document.removeEventListener("visibilitychange", onVisibility);
       window.clearTimeout(fallback);
     };
-  }, [unpaidLocal, preview, orderId]);
+  }, [unpaidLocal, preview]);
 
   async function onResend(event: FormEvent) {
     event.preventDefault();
-    if (!orderId || sending) return;
+    if (sending) return;
     setSending(true);
     setEmailNote("");
     try {
-      const next = await resendOrderReport(orderId, email);
+      const next = await resendMyReport("");
       setOrder(next);
-      setEmailNote(`Отчёт отправили на ${next.customer_email}.`);
+      setEmailNote("PDF отправили на почту Яндекс ID.");
     } catch (err) {
       setEmailNote(err instanceof Error ? err.message : "Не удалось отправить");
     } finally {
@@ -232,20 +233,38 @@ function ReportInner({ initialOrderId = "" }: { initialOrderId?: string }) {
     }
   }
 
+  async function onDownloadPdf() {
+    if (downloading) return;
+    setDownloading(true);
+    try {
+      const blob = await downloadMyReportPdf();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "cosmirror-report.pdf";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setEmailNote(err instanceof Error ? err.message : "Не удалось скачать PDF");
+    } finally {
+      setDownloading(false);
+    }
+  }
+
   const failed = order?.status === "canceled" || order?.status === "denied";
   const confirmed = order?.status === "paid";
   const report = confirmed ? order?.report : null;
-  const pdfUrl = order?.report_pdf_url || "";
   const showReport = Boolean(report) && revealReady;
   const generating =
     preview === "report" ||
-    (!preview && Boolean(orderId) && !failed && !showReport && (confirmed || checkoutReturned));
+    (!preview && !failed && !showReport && (confirmed || checkoutReturned) && !needsAuth);
   const waitingPayment =
     preview === "pay" ||
     (!preview && Boolean(order) && !failed && !confirmed && !checkoutReturned);
   const loading =
-    !preview &&
-    (!storageReady || (Boolean(orderId) && !order && !error && !checkoutReturned));
+    !preview && !needsAuth && !order && !error && !checkoutReturned;
   const isStatus = loading || generating || waitingPayment;
 
   return (
@@ -278,7 +297,23 @@ function ReportInner({ initialOrderId = "" }: { initialOrderId?: string }) {
           </Link>
         </div>
 
-        {loading ? (
+        {needsAuth ? (
+          <div className="mt-16 text-center">
+            <h1 className="text-3xl font-normal leading-tight sm:text-4xl">
+              Отчёт в{" "}
+              <span className="font-display italic text-[#F6E7A1]">личном кабинете</span>
+            </h1>
+            <p className="mt-6 text-white/75">
+              {error || "Войди через Яндекс ID, чтобы открыть разбор."}
+            </p>
+            <Link
+              href="/onboarding/contacts/"
+              className="mt-10 inline-flex w-full items-center justify-center rounded-full bg-[#F6E7A1] px-10 py-2.5 font-grotesk text-lg font-medium text-[#0a1a3a]"
+            >
+              Войти через Яндекс ID
+            </Link>
+          </div>
+        ) : loading ? (
           <StatusScreen titleBefore="" titleAccent="секунду">
             <p className="mt-4 font-grotesk text-base text-white/70 sm:text-lg">
               {error || "собираем страницу"}
@@ -287,9 +322,9 @@ function ReportInner({ initialOrderId = "" }: { initialOrderId?: string }) {
         ) : generating ? (
           <StatusScreen titleBefore="отчёт" titleAccent="формируется" showEye>
             <p className="mt-4 max-w-md font-grotesk text-base font-normal leading-relaxed text-white/70 sm:text-lg">
-              собираю твой разбор — это займёт пару минут.
-              <br />
-              считаю положения планет по твоим данным рождения.
+              {paymentSlow && order?.status !== "paid"
+                ? "оплата ещё подтверждается. не закрывай страницу — отчёт откроется сам, как только банк пришлёт уведомление."
+                : "собираю твой разбор — это займёт пару минут."}
             </p>
           </StatusScreen>
         ) : waitingPayment ? (
@@ -334,36 +369,25 @@ function ReportInner({ initialOrderId = "" }: { initialOrderId?: string }) {
         ) : showReport && report ? (
           <article className="mt-8 pb-16">
             <div className="flex flex-col gap-3 sm:flex-row">
-              {pdfUrl ? (
-                <a
-                  href={pdfUrl}
-                  className="inline-flex flex-1 items-center justify-center rounded-full bg-[#F6E7A1] px-8 py-2.5 font-grotesk text-base font-medium text-[#0a1a3a]"
-                >
-                  Скачать PDF
-                </a>
-              ) : null}
+              <button
+                type="button"
+                onClick={() => void onDownloadPdf()}
+                disabled={downloading}
+                className="inline-flex flex-1 items-center justify-center rounded-full bg-[#F6E7A1] px-8 py-2.5 font-grotesk text-base font-medium text-[#0a1a3a] disabled:opacity-50"
+              >
+                {downloading ? "Готовим PDF…" : "Скачать PDF"}
+              </button>
             </div>
 
             <form onSubmit={onResend} className="mt-5 rounded-3xl border border-white/10 bg-white/5 p-5">
               <p className="text-sm text-white/75">
                 {order?.fulfilled_at
-                  ? `Копия ушла на ${order.customer_email || "указанную почту"}. Если адрес неверный — поправь.`
-                  : `Письмо не ушло${order?.customer_email ? ` на ${order.customer_email}` : ""}. Укажи почту — отправим PDF.`}
+                  ? "Копия PDF ушла на почту Яндекс ID."
+                  : "Можно отправить PDF на почту аккаунта."}
               </p>
               {order?.fulfillment_error && !order.fulfilled_at ? (
                 <p className="mt-2 text-sm text-red-300">{order.fulfillment_error}</p>
               ) : null}
-              <label className="mt-4 block">
-                <span className="sr-only">Email для отчёта</span>
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  placeholder="email"
-                  className="w-full rounded-full border border-white/15 bg-white/5 px-5 py-2.5 text-white outline-none placeholder:text-white/35 focus:border-[#F6E7A1]/60"
-                />
-              </label>
               <button
                 type="submit"
                 disabled={sending}
@@ -378,11 +402,16 @@ function ReportInner({ initialOrderId = "" }: { initialOrderId?: string }) {
           </article>
         ) : (
           <div className="mt-16 text-center">
-            <h1 className="font-display text-3xl italic text-[#F6E7A1]">Нет заказа</h1>
+            <h1 className="font-display text-3xl italic text-[#F6E7A1]">Нет отчёта</h1>
             <p className="mt-4 text-white/70">
-              {error ||
-                "Открой ссылку из письма целиком. Если снова пусто — PDF во вложении или hello@cosmirror.ru."}
+              {error || "Пройди онбординг и оплати разбор — он появится в этом кабинете."}
             </p>
+            <Link
+              href="/onboarding/insight/"
+              className="mt-10 inline-flex w-full items-center justify-center rounded-full bg-[#F6E7A1] px-10 py-2.5 font-grotesk text-lg font-medium text-[#0a1a3a]"
+            >
+              К разбору
+            </Link>
           </div>
         )}
       </div>
@@ -438,7 +467,7 @@ function StatusScreen({
   );
 }
 
-export function ReportPage({ orderId = "" }: { orderId?: string } = {}) {
+export function ReportPage() {
   return (
     <Suspense
       fallback={
@@ -447,7 +476,7 @@ export function ReportPage({ orderId = "" }: { orderId?: string } = {}) {
         </main>
       }
     >
-      <ReportInner initialOrderId={orderId} />
+      <ReportInner />
     </Suspense>
   );
 }

@@ -3,7 +3,7 @@ import { OnboardingFlow } from "@/components/OnboardingFlow";
 
 type Props = {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ new?: string }>;
+  searchParams: Promise<{ new?: string; code?: string; state?: string; error?: string }>;
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -20,7 +20,13 @@ export default async function OnboardingStepPage({ params, searchParams }: Props
   const forceNew = query.new === "1";
   return (
     <div className="flex h-[100dvh] flex-col overflow-hidden">
-      <OnboardingFlow slug={slug} forceNew={forceNew} />
+      <OnboardingFlow
+        slug={slug}
+        forceNew={forceNew}
+        oauthCode={query.code ?? ""}
+        oauthState={query.state ?? ""}
+        oauthError={query.error ?? ""}
+      />
     </div>
   );
 }

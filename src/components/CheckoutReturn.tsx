@@ -2,16 +2,24 @@
 
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect } from "react";
 import { CosmirrorMark } from "@/components/CosmirrorMark";
-import { completeDemoOrder, type Order } from "@/lib/api";
+import { completeMyDemoOrder, type Order } from "@/lib/api";
 import { readLastOrderId, writeLastOrderId } from "@/lib/onboarding/session";
 
-function notifyOrder(orderId: string, payload: { type: string; order?: Order }) {
+function orderChannel(): BroadcastChannel | null {
   try {
-    const channel = new BroadcastChannel(`cosmirror-order-${orderId}`);
-    channel.postMessage(payload);
-    channel.close();
+    return new BroadcastChannel("cosmirror-account-report");
+  } catch {
+    return null;
+  }
+}
+
+function notifyOrder(payload: { type: string; order?: Order }) {
+  try {
+    const channel = orderChannel();
+    channel?.postMessage(payload);
+    channel?.close();
   } catch {
     /* Safari private mode */
   }
@@ -70,30 +78,25 @@ function GeneratingShell({ children }: { children?: React.ReactNode }) {
 function CheckoutReturnInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [missing, setMissing] = useState(false);
 
   useEffect(() => {
     const orderId =
       searchParams.get("order_id") ||
       searchParams.get("order") ||
       readLastOrderId();
-    if (!orderId) {
-      setMissing(true);
-      return;
-    }
-    writeLastOrderId(orderId);
-    notifyOrder(orderId, { type: "checkout-returned" });
+    if (orderId) writeLastOrderId(orderId);
+    notifyOrder({ type: "checkout-returned" });
 
     let cancelled = false;
-    void completeDemoOrder(orderId)
+    void completeMyDemoOrder()
       .then((order) => {
         if (cancelled) return;
-        notifyOrder(orderId, { type: "order", order });
-        router.replace(`/report/${orderId}/?from=prodamus`);
+        notifyOrder({ type: "order", order });
+        router.replace("/account/?from=prodamus");
       })
       .catch(() => {
         if (cancelled) return;
-        router.replace(`/report/${orderId}/?from=prodamus`);
+        router.replace("/account/?from=prodamus");
       });
 
     return () => {
@@ -104,15 +107,9 @@ function CheckoutReturnInner() {
   return (
     <GeneratingShell>
       <p className="mt-4 max-w-md font-grotesk text-base font-normal leading-relaxed text-white/70 sm:text-lg">
-        {missing
-          ? "не найден номер заказа — открой вкладку Cosmirror, где ждёт оплата"
-          : "собираю твой разбор — это займёт пару минут."}
-        {missing ? null : (
-          <>
-            <br />
-            считаю положения планет по твоим данным рождения.
-          </>
-        )}
+        собираю твой разбор — это займёт пару минут.
+        <br />
+        считаю положения планет по твоим данным рождения.
       </p>
     </GeneratingShell>
   );
