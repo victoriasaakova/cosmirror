@@ -8,6 +8,7 @@ import { CosmirrorMark } from "@/components/CosmirrorMark";
 import {
   completeYandexAuth,
   createOrder,
+  fetchMe,
   fetchOnboardingInsight,
   fetchOnboardingInsightReady,
   fetchOnboardingSession,
@@ -204,6 +205,15 @@ function contactsFromPayload(payload: Record<string, unknown> | undefined): Cont
 
 function waitlistStepOf(steps: OnboardingStep[] | null | undefined): OnboardingStep | undefined {
   return steps?.find((step) => step.step_type === "waitlist");
+}
+
+function readYandexHash(): { auth: string; sessionToken: string } {
+  if (typeof window === "undefined") return { auth: "", sessionToken: "" };
+  const params = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+  return {
+    auth: params.get("auth") || "",
+    sessionToken: params.get("session_token") || "",
+  };
 }
 
 function withAuthedEmail(
@@ -580,6 +590,46 @@ export function OnboardingFlow({
   }, [oauthError]);
 
   useEffect(() => {
+    const fromHash = readYandexHash();
+    if (!fromHash.auth) return;
+    writeAuthToken(fromHash.auth);
+    if (fromHash.sessionToken) applyToken(fromHash.sessionToken);
+    window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
+    setOauthBusy(true);
+    let cancelled = false;
+    void (async () => {
+      try {
+        const me = await fetchMe();
+        if (cancelled) return;
+        const email = me.email || "";
+        setAuthedEmail(email);
+        if (fromHash.sessionToken && steps) {
+          const session = await fetchOnboardingSession(fromHash.sessionToken);
+          if (cancelled) return;
+          const next = { ...flowCache.payloadByStep };
+          for (const answer of session.answers) {
+            const payload =
+              answer.payload && typeof answer.payload === "object"
+                ? (answer.payload as Record<string, unknown>)
+                : {};
+            next[answer.step_slug] = { ...(next[answer.step_slug] ?? {}), ...payload };
+          }
+          applyPayload(withAuthedEmail(steps, next, email));
+        }
+        router.replace(stepHref(INSIGHT_SLUG));
+      } catch {
+        if (!cancelled) {
+          setError("Не удалось войти через Яндекс ID");
+          setOauthBusy(false);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [applyPayload, applyToken, router, steps]);
+
+  useEffect(() => {
     if (!oauthCode || !oauthState || !sessionToken || !steps) return;
     const waitlist = waitlistStepOf(steps);
     if (!waitlist || slug !== waitlist.slug) return;
@@ -734,7 +784,8 @@ export function OnboardingFlow({
         },
         false,
       );
-      const { url } = await startYandexAuth(token);
+      const redirectUri = `${window.location.origin}${window.location.pathname.replace(/\/+$/, "")}`;
+      const { url } = await startYandexAuth(token, redirectUri);
       window.location.assign(url);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Не удалось начать вход через Яндекс ID");

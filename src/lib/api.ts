@@ -523,13 +523,17 @@ export type AuthUser = {
   };
 };
 
-export async function startYandexAuth(sessionToken: string): Promise<{ url: string }> {
+export async function startYandexAuth(
+  sessionToken: string,
+  redirectUri?: string,
+): Promise<{ url: string; redirect_uri?: string }> {
+  const query = new URLSearchParams({ session_token: sessionToken });
+  if (redirectUri) query.set("redirect_uri", redirectUri);
   let res: Response;
   try {
-    res = await fetchWithRetry(
-      `${API_URL}/api/auth/yandex/start/?session_token=${encodeURIComponent(sessionToken)}`,
-      { cache: "no-store" },
-    );
+    res = await fetchWithRetry(`${API_URL}/api/auth/yandex/start/?${query.toString()}`, {
+      cache: "no-store",
+    });
   } catch (err) {
     throw new Error(networkErrorMessage(err, "Не удалось начать вход через Яндекс ID"));
   }
