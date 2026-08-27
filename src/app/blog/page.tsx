@@ -29,7 +29,7 @@ export default function BlogPage() {
 
   return (
     <BlogShell>
-      <header className="mt-14 border-b border-white/10 pb-10 md:mt-16">
+      <header className="border-b border-white/10 pb-10">
         <h1 className="text-4xl font-normal leading-[1.1] tracking-tight text-white md:text-5xl">
           Блог{" "}
           <span className="font-display italic text-[#F6E7A1]">Cosmirror</span>

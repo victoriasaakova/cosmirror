@@ -1,10 +1,9 @@
 import Image from "next/image";
 import { CosmirrorMark } from "@/components/CosmirrorMark";
-import { Header } from "@/components/Header";
+import { Header, JourneyCta } from "@/components/Header";
 import { FallingPills } from "@/components/FallingPills";
 import { PrefetchOnboarding } from "@/components/PrefetchOnboarding";
 import { WhatYouGet } from "@/components/WhatYouGet";
-import { freshOnboardingHref } from "@/lib/onboarding/paths";
 
 const FAMILIAR_CARDS = [
   {
@@ -258,12 +257,10 @@ export default function Home() {
           </p>
 
           <div className="reveal reveal-delay-2 mt-8 flex justify-center sm:mt-9">
-            <a
-              href={freshOnboardingHref()}
+            <JourneyCta
+              label="Начать путешествие"
               className="inline-flex items-center justify-center rounded-full bg-[#F6E7A1] hover:bg-[#f0dc82] text-[#0a1a3a] font-grotesk font-medium text-lg md:text-xl px-10 py-2.5 shadow-[0_10px_28px_rgba(246,231,161,0.28)] transition-all transform hover:scale-[1.03] active:scale-[0.98] cursor-pointer"
-            >
-              Начать путешествие
-            </a>
+            />
           </div>
         </div>
       </section>
@@ -326,8 +323,8 @@ export default function Home() {
 
         {/* Constellation — full-bleed stars background */}
         <div
-          id="access"
-          className="relative mt-8 min-h-[36rem] scroll-mt-24 overflow-hidden pb-8 pt-10 sm:mt-10 sm:min-h-[42rem] sm:pb-10 sm:pt-12 md:min-h-[52rem] md:pb-44 md:pt-14"
+          id="about"
+          className="relative mt-8 min-h-[36rem] scroll-mt-28 overflow-hidden pb-8 pt-10 sm:mt-10 sm:min-h-[42rem] sm:pb-10 sm:pt-12 md:min-h-[52rem] md:pb-44 md:pt-14"
         >
           <Image
             src="/images/landscape_stars.webp"
@@ -409,12 +406,10 @@ export default function Home() {
           <WhatYouGet />
 
           <div className="mt-12 flex justify-center sm:mt-14">
-            <a
-              href={freshOnboardingHref()}
+            <JourneyCta
+              label="Попробовать"
               className="inline-flex items-center justify-center rounded-full bg-[#F6E7A1] px-10 py-2.5 font-grotesk text-lg font-medium text-[#0a1a3a] shadow-[0_10px_28px_rgba(246,231,161,0.28)] transition-all hover:scale-[1.03] hover:bg-[#f0dc82] active:scale-[0.98] md:text-xl"
-            >
-              Попробовать
-            </a>
+            />
           </div>
         </div>
       </section>
@@ -511,9 +506,6 @@ export default function Home() {
             </a>
             <a href="/offer/" className="transition hover:text-white">
               Публичная оферта
-            </a>
-            <a href="/source/" className="transition hover:text-white">
-              Исходный код
             </a>
             <a href="mailto:hello@cosmirror.ru" className="transition hover:text-white">
               hello@cosmirror.ru

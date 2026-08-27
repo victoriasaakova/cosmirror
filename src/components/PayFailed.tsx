@@ -6,7 +6,7 @@ import { CosmirrorMark } from "@/components/CosmirrorMark";
 
 function PayFailedInner() {
   return (
-    <main className="relative flex min-h-[100dvh] flex-col overflow-hidden bg-[#050d4a] text-white">
+    <main className="relative flex min-h-[100dvh] flex-col overflow-x-clip bg-[#050d4a] text-white">
       <div className="relative z-10 mx-auto flex w-full max-w-lg flex-1 flex-col px-5 py-10 md:px-8 md:py-14">
         <Link href="/" className="text-xl font-medium transition hover:opacity-90">
           <CosmirrorMark />
@@ -20,10 +20,7 @@ function PayFailedInner() {
             Платёж отменили или банк его отклонил. Вернись к разбору и нажми оплату ещё раз.
           </p>
         </div>
-        <Link
-          href="/onboarding/insight/"
-          className="mt-10 inline-flex w-full items-center justify-center rounded-full bg-[#F6E7A1] px-10 py-2.5 font-grotesk text-lg font-medium text-[#0a1a3a]"
-        >
+        <Link href="/onboarding/insight/" className="cabinet-cta mt-10">
           Вернуться к разбору
         </Link>
       </div>

@@ -25,9 +25,9 @@ function notifyOrder(payload: { type: string; order?: Order }) {
   }
 }
 
-function GeneratingShell({ children }: { children?: React.ReactNode }) {
+function WaitingBankShell({ children }: { children?: React.ReactNode }) {
   return (
-    <main className="relative flex min-h-[100dvh] flex-col overflow-hidden bg-[#050d4a] text-white">
+    <main className="relative flex min-h-[100dvh] flex-col overflow-x-clip bg-[#050d4a] text-white">
       <Image
         src="/images/hero-coastal-moon-trail_4.webp"
         alt=""
@@ -66,7 +66,7 @@ function GeneratingShell({ children }: { children?: React.ReactNode }) {
             priority
           />
           <h1 className="mt-8 text-3xl font-normal leading-tight tracking-tight text-white sm:text-4xl md:text-[2.6rem]">
-            отчёт <span className="font-display italic text-[#F6E7A1]">формируется</span>
+            ожидаем оплату <span className="font-display italic text-[#F6E7A1]">от банка</span>
           </h1>
           {children}
         </div>
@@ -105,13 +105,11 @@ function CheckoutReturnInner() {
   }, [router, searchParams]);
 
   return (
-    <GeneratingShell>
+    <WaitingBankShell>
       <p className="mt-4 max-w-md font-grotesk text-base font-normal leading-relaxed text-white/70 sm:text-lg">
-        собираю твой разбор — это займёт пару минут.
-        <br />
-        считаю положения планет по твоим данным рождения.
+        банк ещё подтверждает платёж. не закрывай страницу — отчёт соберём сразу после этого.
       </p>
-    </GeneratingShell>
+    </WaitingBankShell>
   );
 }
 
@@ -119,11 +117,11 @@ export function CheckoutReturn() {
   return (
     <Suspense
       fallback={
-        <GeneratingShell>
+        <WaitingBankShell>
           <p className="mt-4 max-w-md font-grotesk text-base font-normal leading-relaxed text-white/70 sm:text-lg">
-            собираю твой разбор — это займёт пару минут.
+            банк ещё подтверждает платёж. не закрывай страницу — отчёт соберём сразу после этого.
           </p>
-        </GeneratingShell>
+        </WaitingBankShell>
       }
     >
       <CheckoutReturnInner />

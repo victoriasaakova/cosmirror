@@ -3,17 +3,20 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { FormEvent, ReactNode, Suspense, useEffect, useState } from "react";
-import { CosmirrorMark } from "@/components/CosmirrorMark";
+import { ReactNode, Suspense, useEffect, useState } from "react";
+import { Header, SecondaryButton } from "@/components/Header";
 import { InteractiveReport } from "@/components/InteractiveReport";
+import { useAuth } from "@/components/AuthProvider";
 import {
   completeMyDemoOrder,
   downloadMyReportPdf,
   fetchMyOrder,
-  resendMyReport,
+  reportLayersPending,
   type Order,
 } from "@/lib/api";
-import { isLoggedIn } from "@/lib/auth";
+import { writeAuthToken } from "@/lib/auth";
+import { freshOnboardingHref } from "@/lib/onboarding/paths";
+import { greetingName } from "@/lib/user-name";
 
 function orderChannel(): BroadcastChannel | null {
   try {
@@ -23,10 +26,16 @@ function orderChannel(): BroadcastChannel | null {
   }
 }
 
-function previewMode(raw: string | null): "pay" | "report" | null {
+function previewMode(
+  raw: string | null,
+): "pay" | "bank" | "report" | "empty" | "failed" | "auth" | null {
   if (process.env.NODE_ENV !== "development") return null;
   if (raw === "pay" || raw === "waiting") return "pay";
+  if (raw === "bank" || raw === "waiting-bank") return "bank";
   if (raw === "report" || raw === "generating") return "report";
+  if (raw === "empty" || raw === "cabinet") return "empty";
+  if (raw === "failed" || raw === "fail") return "failed";
+  if (raw === "auth" || raw === "login") return "auth";
   return null;
 }
 
@@ -37,26 +46,25 @@ function isCheckoutReturnPath(pathname: string): boolean {
     pathname === "/demo-success" ||
     pathname === "/demo-success/" ||
     pathname === "/pay/success" ||
-    pathname === "/pay/success/" ||
-    pathname === "/account" ||
-    pathname === "/account/"
+    pathname === "/pay/success/"
   );
 }
 
 function ReportInner() {
   const searchParams = useSearchParams();
   const pathname = usePathname();
+  const { user, ready, refresh, startLogin } = useAuth();
   const fromProdamus =
     searchParams.get("from") === "prodamus" || isCheckoutReturnPath(pathname);
   const preview = previewMode(searchParams.get("preview"));
   const [order, setOrder] = useState<Order | null>(null);
   const [error, setError] = useState("");
   const [needsAuth, setNeedsAuth] = useState(false);
-  const [emailNote, setEmailNote] = useState("");
-  const [sending, setSending] = useState(false);
+  const [cabinetEmpty, setCabinetEmpty] = useState(false);
+  const [bootstrapped, setBootstrapped] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [downloadNote, setDownloadNote] = useState("");
   const [checkoutReturned, setCheckoutReturned] = useState(fromProdamus);
-  const [revealReady, setRevealReady] = useState(false);
   const [paymentSlow, setPaymentSlow] = useState(false);
   const isLocalDemo = process.env.NODE_ENV === "development";
   const unpaidLocal =
@@ -67,10 +75,28 @@ function ReportInner() {
     order?.status !== "denied";
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    const auth = params.get("auth") || "";
+    if (!auth) {
+      setBootstrapped(true);
+      return;
+    }
+    writeAuthToken(auth);
+    window.history.replaceState(
+      null,
+      "",
+      `${window.location.pathname}${window.location.search}`,
+    );
+    void refresh().finally(() => setBootstrapped(true));
+  }, [refresh]);
+
+  useEffect(() => {
     if (preview) return;
-    if (!isLoggedIn()) {
+    if (!bootstrapped || !ready) return;
+    if (!user) {
       setNeedsAuth(true);
-      setError("Войди через Яндекс ID, чтобы открыть отчёт.");
+      setCabinetEmpty(false);
+      setError("Войди через Яндекс ID, чтобы открыть кабинет.");
       return;
     }
     let cancelled = false;
@@ -89,6 +115,7 @@ function ReportInner() {
         }
         if (data.type === "order" && data.order) {
           setOrder(data.order);
+          setCabinetEmpty(false);
           setError("");
         }
       };
@@ -111,9 +138,23 @@ function ReportInner() {
       try {
         const next = await fetchMyOrder();
         if (cancelled) return;
-        setOrder(next);
         setError("");
         setNeedsAuth(false);
+        if (!next) {
+          if (fromProdamus || checkoutReturned) {
+            setCabinetEmpty(false);
+            if (Date.now() - startedAt > 90_000) setPaymentSlow(true);
+            timer = window.setTimeout(() => {
+              void poll();
+            }, delayFor("", false));
+            return;
+          }
+          setOrder(null);
+          setCabinetEmpty(true);
+          return;
+        }
+        setOrder(next);
+        setCabinetEmpty(false);
         if (next.status === "paid") {
           channel?.postMessage({ type: "order", order: next });
           setPaymentSlow(false);
@@ -123,7 +164,12 @@ function ReportInner() {
         if (next.status === "canceled" || next.status === "denied") {
           return;
         }
-        if (next.status === "paid" && next.report) {
+        const layersOpen =
+          next.status === "paid" &&
+          Boolean(next.report) &&
+          reportLayersPending(next.report) &&
+          Date.now() - startedAt < 8 * 60_000;
+        if (next.status === "paid" && next.report && !layersOpen) {
           return;
         }
         timer = window.setTimeout(() => {
@@ -134,6 +180,7 @@ function ReportInner() {
         const message = err instanceof Error ? err.message : "Не удалось проверить оплату";
         if (message.toLowerCase().includes("яндекс")) {
           setNeedsAuth(true);
+          setCabinetEmpty(false);
         }
         setError(message);
         timer = window.setTimeout(() => {
@@ -148,17 +195,7 @@ function ReportInner() {
       window.clearTimeout(timer);
       channel?.close();
     };
-  }, [fromProdamus, preview]);
-
-  useEffect(() => {
-    const paid = order?.status === "paid";
-    if (!checkoutReturned && !paid) {
-      setRevealReady(false);
-      return;
-    }
-    const timer = window.setTimeout(() => setRevealReady(true), 2200);
-    return () => window.clearTimeout(timer);
-  }, [checkoutReturned, order?.status]);
+  }, [bootstrapped, checkoutReturned, fromProdamus, preview, ready, user]);
 
   useEffect(() => {
     if (!isLocalDemo || preview) return;
@@ -168,6 +205,7 @@ function ReportInner() {
       .then((next) => {
         if (cancelled) return;
         setOrder(next);
+        setCabinetEmpty(false);
         setCheckoutReturned(true);
         try {
           const channel = orderChannel();
@@ -196,6 +234,7 @@ function ReportInner() {
         .then((next) => {
           if (cancelled) return;
           setOrder(next);
+          setCabinetEmpty(false);
           setCheckoutReturned(true);
         })
         .catch(() => {
@@ -217,25 +256,10 @@ function ReportInner() {
     };
   }, [unpaidLocal, preview]);
 
-  async function onResend(event: FormEvent) {
-    event.preventDefault();
-    if (sending) return;
-    setSending(true);
-    setEmailNote("");
-    try {
-      const next = await resendMyReport("");
-      setOrder(next);
-      setEmailNote("PDF отправили на почту Яндекс ID.");
-    } catch (err) {
-      setEmailNote(err instanceof Error ? err.message : "Не удалось отправить");
-    } finally {
-      setSending(false);
-    }
-  }
-
   async function onDownloadPdf() {
     if (downloading) return;
     setDownloading(true);
+    setDownloadNote("");
     try {
       const blob = await downloadMyReportPdf();
       const url = URL.createObjectURL(blob);
@@ -247,28 +271,57 @@ function ReportInner() {
       link.remove();
       URL.revokeObjectURL(url);
     } catch (err) {
-      setEmailNote(err instanceof Error ? err.message : "Не удалось скачать PDF");
+      setDownloadNote(err instanceof Error ? err.message : "Не удалось скачать PDF");
     } finally {
       setDownloading(false);
     }
   }
 
-  const failed = order?.status === "canceled" || order?.status === "denied";
+  const failed =
+    preview === "failed" || order?.status === "canceled" || order?.status === "denied";
   const confirmed = order?.status === "paid";
   const report = confirmed ? order?.report : null;
-  const showReport = Boolean(report) && revealReady;
+  // Paid report always opens once the payload exists (YAML fallback is enough for design).
+  const showReport = Boolean(report?.document || (report?.sections && report.sections.length > 0));
+  const waitingAuth = !preview && (!bootstrapped || !ready);
+  const waitingBank =
+    preview === "bank" ||
+    (!preview &&
+      !needsAuth &&
+      !failed &&
+      !confirmed &&
+      !cabinetEmpty &&
+      checkoutReturned);
   const generating =
     preview === "report" ||
-    (!preview && !failed && !showReport && (confirmed || checkoutReturned) && !needsAuth);
+    (!preview && !needsAuth && !failed && confirmed && !showReport);
   const waitingPayment =
     preview === "pay" ||
     (!preview && Boolean(order) && !failed && !confirmed && !checkoutReturned);
+  const emptyCabinet =
+    preview === "empty" ||
+    (!preview && !needsAuth && !waitingAuth && cabinetEmpty && !fromProdamus);
+  const showNeedsAuth = preview === "auth" || (!preview && needsAuth);
   const loading =
-    !preview && !needsAuth && !order && !error && !checkoutReturned;
-  const isStatus = loading || generating || waitingPayment;
+    !preview &&
+    !needsAuth &&
+    !order &&
+    !error &&
+    !cabinetEmpty &&
+    !checkoutReturned &&
+    (waitingAuth || Boolean(user));
+  const isStatus =
+    waitingAuth ||
+    loading ||
+    waitingBank ||
+    generating ||
+    waitingPayment ||
+    emptyCabinet ||
+    showNeedsAuth;
 
   return (
-    <main className="relative flex min-h-[100dvh] flex-col overflow-hidden bg-[#050d4a] text-white">
+    <main className="relative flex min-h-[100dvh] flex-col overflow-x-clip bg-[var(--background)] text-[var(--foreground)]">
+      <Header />
       {isStatus ? (
         <>
           <Image
@@ -290,46 +343,58 @@ function ReportInner() {
         </>
       ) : null}
 
-      <div className="relative z-10 mx-auto flex w-full max-w-2xl flex-1 flex-col px-5 pb-[max(2.5rem,env(safe-area-inset-bottom))] pt-6 md:px-8 md:pt-8">
-        <div className="flex shrink-0 items-center justify-center">
-          <Link href="/" className="text-xl font-medium transition hover:opacity-90">
-            <CosmirrorMark />
-          </Link>
-        </div>
-
-        {needsAuth ? (
-          <div className="mt-16 text-center">
-            <h1 className="text-3xl font-normal leading-tight sm:text-4xl">
-              Отчёт в{" "}
-              <span className="font-display italic text-[#F6E7A1]">личном кабинете</span>
-            </h1>
-            <p className="mt-6 text-white/75">
-              {error || "Войди через Яндекс ID, чтобы открыть разбор."}
+      <div
+        className={`relative z-10 mx-auto flex w-full max-w-[720px] flex-1 flex-col px-5 pt-[var(--cabinet-header-offset)] lg:max-w-[68rem] lg:px-8 ${
+          showReport
+            ? "pb-[calc(var(--report-tabs-h)+env(safe-area-inset-bottom)+var(--space-3))] lg:pb-[max(2.5rem,env(safe-area-inset-bottom))]"
+            : "pb-[max(2.5rem,env(safe-area-inset-bottom))]"
+        }`}
+      >
+        {showNeedsAuth ? (
+          <StatusScreen titleBefore="открой" titleAccent="кабинет">
+            <p className="report-lede mt-4 max-w-md">
+              {error || "войди через Яндекс ID — здесь будет твоя карта."}
             </p>
-            <Link
-              href="/onboarding/contacts/"
-              className="mt-10 inline-flex w-full items-center justify-center rounded-full bg-[#F6E7A1] px-10 py-2.5 font-grotesk text-lg font-medium text-[#0a1a3a]"
-            >
-              Войти через Яндекс ID
-            </Link>
-          </div>
-        ) : loading ? (
+            <div className="mt-10 flex w-full justify-center">
+              <SecondaryButton fullWidth onClick={() => void startLogin("/account/")}>
+                Войти
+              </SecondaryButton>
+            </div>
+          </StatusScreen>
+        ) : waitingAuth || loading ? (
           <StatusScreen titleBefore="" titleAccent="секунду">
-            <p className="mt-4 font-grotesk text-base text-white/70 sm:text-lg">
+            <p className="report-lede mt-4">
               {error || "собираем страницу"}
+            </p>
+          </StatusScreen>
+        ) : emptyCabinet ? (
+          <StatusScreen titleBefore="здесь будет" titleAccent="твоя карта">
+            <p className="report-lede mt-4 max-w-md">
+              пройди короткий путь — соберём персональный разбор и сохраним его в кабинете.
+            </p>
+            <Link href={freshOnboardingHref()} className="cabinet-cta mt-10">
+              Начать путешествие
+            </Link>
+          </StatusScreen>
+        ) : waitingBank ? (
+          <StatusScreen titleBefore="ожидаем оплату" titleAccent="от банка" showEye>
+            <p className="report-lede mt-4 max-w-md">
+              {paymentSlow
+                ? "банк подтверждает дольше обычного. не закрывай страницу — отчёт соберём сразу после оплаты."
+                : "банк ещё подтверждает платёж. не закрывай страницу — отчёт соберём сразу после этого."}
             </p>
           </StatusScreen>
         ) : generating ? (
           <StatusScreen titleBefore="отчёт" titleAccent="формируется" showEye>
-            <p className="mt-4 max-w-md font-grotesk text-base font-normal leading-relaxed text-white/70 sm:text-lg">
-              {paymentSlow && order?.status !== "paid"
-                ? "оплата ещё подтверждается. не закрывай страницу — отчёт откроется сам, как только банк пришлёт уведомление."
-                : "собираю твой разбор — это займёт пару минут."}
+            <p className="report-lede mt-4 max-w-md">
+              собираю твой разбор — это займёт пару минут.
+              <br />
+              считаю положения планет по твоим данным рождения.
             </p>
           </StatusScreen>
         ) : waitingPayment ? (
           <StatusScreen titleBefore="остался один" titleAccent="шаг">
-            <p className="mt-4 max-w-md font-grotesk text-base font-normal leading-relaxed text-white/70 sm:text-lg">
+            <p className="report-lede mt-4 max-w-md">
               {error ||
                 "оплати заказ на защищённой странице Prodamus. после оплаты разбор откроется здесь"}
             </p>
@@ -338,81 +403,51 @@ function ReportInner() {
                 href={order?.payment_url || "#"}
                 target={order?.payment_url ? "cosmirror-prodamus" : undefined}
                 rel="noopener noreferrer"
-                className="mt-10 inline-flex w-full items-center justify-center rounded-full bg-[#F6E7A1] px-10 py-2.5 font-grotesk text-lg font-medium text-[#0a1a3a] transition-all hover:scale-[1.02] hover:bg-[#f0dc82] active:scale-[0.98]"
+                className="cabinet-cta mt-10"
               >
                 К оплате
               </a>
             ) : null}
             {isLocalDemo ? (
-              <p className="mt-5 max-w-sm font-grotesk text-sm leading-relaxed text-white/40">
+              <p className="report-lede mt-5 max-w-sm text-base">
                 на localhost после оплаты смотри эту вкладку. Prodamus не умеет вернуться на
                 http://localhost — кнопка «в магазин» откроет https и упадёт.
               </p>
             ) : null}
           </StatusScreen>
         ) : failed ? (
-          <div className="mt-16">
-            <h1 className="text-3xl font-normal leading-tight sm:text-4xl">
+          <div className="mt-8 max-w-md">
+            <h1 className="text-3xl font-normal leading-[1.15] tracking-tight sm:text-4xl">
               Оплата не прошла.{" "}
-              <span className="font-display italic text-[#F6E7A1]">можно попробовать ещё раз</span>
+              <span className="font-display inline-block pb-1 italic leading-[1.15] text-[#F6E7A1]">можно попробовать ещё раз</span>
             </h1>
-            <p className="mt-6 text-white/75">
+            <p className="report-lede mt-6">
               Платёж отменили или банк его отклонил. Вернись к разбору и нажми оплату ещё раз.
             </p>
-            <Link
-              href="/onboarding/insight/"
-              className="mt-10 inline-flex w-full items-center justify-center rounded-full bg-[#F6E7A1] px-10 py-2.5 font-grotesk text-lg font-medium text-[#0a1a3a]"
-            >
+            <Link href="/onboarding/insight/" className="cabinet-cta mt-10">
               Вернуться к разбору
             </Link>
           </div>
         ) : showReport && report ? (
-          <article className="mt-8 pb-16">
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <button
-                type="button"
-                onClick={() => void onDownloadPdf()}
-                disabled={downloading}
-                className="inline-flex flex-1 items-center justify-center rounded-full bg-[#F6E7A1] px-8 py-2.5 font-grotesk text-base font-medium text-[#0a1a3a] disabled:opacity-50"
-              >
-                {downloading ? "Готовим PDF…" : "Скачать PDF"}
-              </button>
-            </div>
-
-            <form onSubmit={onResend} className="mt-5 rounded-3xl border border-white/10 bg-white/5 p-5">
-              <p className="text-sm text-white/75">
-                {order?.fulfilled_at
-                  ? "Копия PDF ушла на почту Яндекс ID."
-                  : "Можно отправить PDF на почту аккаунта."}
-              </p>
-              {order?.fulfillment_error && !order.fulfilled_at ? (
-                <p className="mt-2 text-sm text-red-300">{order.fulfillment_error}</p>
-              ) : null}
-              <button
-                type="submit"
-                disabled={sending}
-                className="mt-3 inline-flex w-full items-center justify-center rounded-full border border-[#F6E7A1]/40 px-8 py-2.5 text-base text-[#F6E7A1] disabled:opacity-50"
-              >
-                {sending ? "Отправляем…" : "Отправить PDF на почту"}
-              </button>
-              {emailNote ? <p className="mt-3 text-sm text-white/70">{emailNote}</p> : null}
-            </form>
-
-            <InteractiveReport report={report} />
+          <article className="mt-4 min-w-0 pb-8 sm:mt-6 lg:pb-16">
+            <InteractiveReport
+              report={report}
+              displayName={greetingName(user)}
+              orderId={order?.id}
+              downloading={downloading}
+              onDownloadPdf={() => void onDownloadPdf()}
+              actionNote={downloadNote}
+            />
           </article>
         ) : (
-          <div className="mt-16 text-center">
-            <h1 className="font-display text-3xl italic text-[#F6E7A1]">Нет отчёта</h1>
-            <p className="mt-4 text-white/70">
-              {error || "Пройди онбординг и оплати разбор — он появится в этом кабинете."}
+          <StatusScreen titleBefore="здесь будет" titleAccent="твоя карта">
+            <p className="report-lede mt-4 max-w-md">
+              {error || "пройди короткий путь — соберём персональный разбор и сохраним его в кабинете."}
             </p>
-            <Link
-              href="/onboarding/insight/"
-              className="mt-10 inline-flex w-full items-center justify-center rounded-full bg-[#F6E7A1] px-10 py-2.5 font-grotesk text-lg font-medium text-[#0a1a3a]"
-            >
-              К разбору
+            <Link href={freshOnboardingHref()} className="cabinet-cta mt-10">
+              Начать путешествие
             </Link>
-          </div>
+          </StatusScreen>
         )}
       </div>
     </main>
@@ -449,17 +484,17 @@ function StatusScreen({
         />
       ) : null}
       <h1
-        className={`text-3xl font-normal leading-tight tracking-tight text-white sm:text-4xl md:text-[2.6rem] ${
+        className={`text-3xl font-normal leading-[1.15] tracking-tight text-white sm:text-4xl md:text-[2.6rem] ${
           showEye ? "mt-8" : ""
         }`}
       >
         {titleBefore ? (
           <>
             {titleBefore}{" "}
-            <span className="font-display italic text-[#F6E7A1]">{titleAccent}</span>
+            <span className="font-display inline-block pb-1 italic leading-[1.15] text-[#F6E7A1]">{titleAccent}</span>
           </>
         ) : (
-          <span className="font-display italic text-[#F6E7A1]">{titleAccent}</span>
+          <span className="font-display inline-block pb-1 italic leading-[1.15] text-[#F6E7A1]">{titleAccent}</span>
         )}
       </h1>
       {children}

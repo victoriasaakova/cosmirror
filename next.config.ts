@@ -8,6 +8,12 @@ const nextConfig: NextConfig = {
     return [
       { source: "/demo-return", destination: "/pay/failed/", permanent: false },
       { source: "/demo-return/", destination: "/pay/failed/", permanent: false },
+      { source: "/onboarding/intent", destination: "/onboarding/goal/", permanent: false },
+      { source: "/onboarding/intent/", destination: "/onboarding/goal/", permanent: false },
+      { source: "/onboarding/chart_knowledge", destination: "/onboarding/astrolevel/", permanent: false },
+      { source: "/onboarding/chart_knowledge/", destination: "/onboarding/astrolevel/", permanent: false },
+      { source: "/onboarding/astrology_trigger", destination: "/onboarding/questions/", permanent: false },
+      { source: "/onboarding/astrology_trigger/", destination: "/onboarding/questions/", permanent: false },
       { source: "/report", destination: "/account/", permanent: false },
       { source: "/report/", destination: "/account/", permanent: false },
       { source: "/report/:orderId", destination: "/account/", permanent: false },

@@ -49,9 +49,6 @@ export function LegalDocument({ title, updatedAt, children }: LegalDocumentProps
           <a href="/offer/" className="transition hover:text-white">
             Публичная оферта
           </a>
-          <a href="/source/" className="transition hover:text-white">
-            Исходный код
-          </a>
           <a href="mailto:hello@cosmirror.ru" className="transition hover:text-white">
             hello@cosmirror.ru
           </a>

@@ -88,10 +88,11 @@ function titleToInsightClause(title: string): string {
   const low = t.toLowerCase();
   const map: Record<string, string> = {
     "тяга выйти из тесной роли": "пора выйти из тесной роли",
-    "эмоциональная нагрузка цикла": "важно беречь эмоциональные границы",
-    "что может отзываться сейчас": "важно замедлиться и прислушаться к себе",
+    "эмоциональная нагрузка цикла": "беречь эмоциональные границы",
+    "что может отзываться сейчас": "замедлиться и прислушаться к себе",
     "размытие и чувствительность": "легко потерять ясность — стоит чаще сверяться с собой",
     "глубинная перестройка": "назрела внутренняя перестройка",
+    "где жизнь просит шире": "уже тесно в привычном масштабе",
     "что имеет смысл наблюдать": "стоит внимательнее смотреть на свои автоматические реакции",
   };
   if (map[low]) return map[low];
@@ -112,7 +113,18 @@ function fallbackOpening(
   const seed = focusLabels.join("") + intentLabel;
   const bridge = OPENING_BRIDGES[Math.abs(seed.length) % OPENING_BRIDGES.length];
   const title = influences[0]?.title ?? "";
-  return { bridge, insight: titleToInsightClause(title) };
+  const insight = fitClauseToBridge(bridge, titleToInsightClause(title));
+  return { bridge, insight };
+}
+
+function fitClauseToBridge(bridge: string, clause: string): string {
+  const tail = bridge.trim().split(/\s+/).pop()?.toLowerCase() ?? "";
+  const words = clause.trim().split(/\s+/);
+  if (tail && words[0]?.toLowerCase().replace(/[.,!]/g, "") === tail) {
+    const rest = words.slice(1).join(" ").trim();
+    return rest || clause.trim();
+  }
+  return clause.trim();
 }
 
 function fallbackBody(
@@ -219,8 +231,12 @@ export function InsightFunnel({
   const influences = insight.insight.influences ?? [];
   const offerCards = fallbackOfferCards(focusLabels, intentLabel);
 
-  const opening =
+  const rawOpening =
     insight.insight.opening ?? fallbackOpening(influences, focusLabels, intentLabel);
+  const opening = {
+    bridge: rawOpening.bridge,
+    insight: fitClauseToBridge(rawOpening.bridge, rawOpening.insight),
+  };
   const body =
     insight.insight.body?.trim() ||
     fallbackBody(influences, focusLabels, intentLabel, lifeStageLabel);

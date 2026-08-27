@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CosmirrorMark } from "@/components/CosmirrorMark";
 import {
   completeYandexAuth,
@@ -20,17 +20,24 @@ import {
   type OnboardingStep,
   type PlaceSuggestion,
 } from "@/lib/api";
-import { writeAuthToken, readAuthToken } from "@/lib/auth";
+import { writeAuthToken, readAuthToken, clearAuthNext } from "@/lib/auth";
+import { destinationAfterYandexLogin } from "@/lib/yandex-login";
+import { useAuth } from "@/components/AuthProvider";
 import {
   adjacentStep,
   buildProgressModel,
+  canonicalOnboardingSlug,
   firstIncompleteScreenIndex,
+  insightHrefForScreen,
+  insightScreenForSlug,
   INSIGHT_SLUG,
   isReservedSlug,
+  LEGACY_ONBOARDING_SLUGS,
   mergeContentPayloads,
   nextStepHref,
   prevStepHref,
   progressIndexFor,
+  REPORT_SLUG,
   screenIsComplete,
   screensForStep,
   stepHref,
@@ -39,6 +46,7 @@ import {
 } from "@/lib/onboarding/screens";
 import {
   INSIGHT_CONFIRM_INDEX,
+  INSIGHT_OFFER_INDEX,
   INSIGHT_SCREEN_COUNT,
   InsightFunnel,
   insightCtaLabel,
@@ -53,6 +61,25 @@ import {
   startFreshOnboardingSession,
   writeLastOrderId,
 } from "@/lib/onboarding/session";
+
+function remapLegacyPayloads(
+  byStep: Record<string, Record<string, unknown>>,
+): Record<string, Record<string, unknown>> {
+  const next = { ...byStep };
+  for (const [oldSlug, newSlug] of Object.entries(LEGACY_ONBOARDING_SLUGS)) {
+    if (next[oldSlug] && !next[newSlug]) {
+      next[newSlug] = next[oldSlug];
+    }
+  }
+  return next;
+}
+
+function insightIndexForSlug(slug: string, saved?: number): number {
+  if (slug === REPORT_SLUG && saved === INSIGHT_CONFIRM_INDEX) {
+    return INSIGHT_CONFIRM_INDEX;
+  }
+  return insightScreenForSlug(slug);
+}
 
 type BirthAnswers = {
   birth_date: string;
@@ -366,6 +393,9 @@ export function OnboardingFlow({
   oauthError?: string;
 }) {
   const router = useRouter();
+  const { user, ready: authReady, hasPaidReport, refresh: refreshAuth } = useAuth();
+  const [showPaidMapCta, setShowPaidMapCta] = useState(false);
+  const oauthHandledRef = useRef(false);
   const [steps, setSteps] = useState<OnboardingStep[] | null>(() => flowCache.steps);
   const [loadError, setLoadError] = useState("");
   const [sessionToken, setSessionToken] = useState<string | null>(() =>
@@ -451,7 +481,9 @@ export function OnboardingFlow({
           fetchOnboardingSession(ensuredToken),
         ]);
 
-        const byStep: Record<string, Record<string, unknown>> = { ...draft.byStep };
+        const byStep: Record<string, Record<string, unknown>> = remapLegacyPayloads({
+          ...draft.byStep,
+        });
         for (const answer of session.answers) {
           const payload =
             answer.payload && typeof answer.payload === "object"
@@ -459,18 +491,26 @@ export function OnboardingFlow({
               : {};
           byStep[answer.step_slug] = { ...(byStep[answer.step_slug] ?? {}), ...payload };
         }
-        applyPayload(byStep);
-        patchDraft({ byStep });
+        const remapped = remapLegacyPayloads(byStep);
+        applyPayload(remapped);
+        patchDraft({ byStep: remapped });
         if (session.user_email) {
           setAuthedEmail(session.user_email);
-          const withEmail = withAuthedEmail(fetchedSteps, byStep, session.user_email);
+          const withEmail = withAuthedEmail(fetchedSteps, remapped, session.user_email);
           applyPayload(withEmail);
           patchDraft({ byStep: withEmail });
         }
       }
 
       const draft = readDraft();
-      const byStep = flowCache.payloadByStep;
+      const byStep = remapLegacyPayloads(flowCache.payloadByStep);
+      applyPayload(byStep);
+      patchDraft({ byStep });
+      const canonical = canonicalOnboardingSlug(slug);
+      if (canonical !== slug) {
+        router.replace(stepHref(canonical));
+        return;
+      }
       const stepMeta = apiSteps!.find((step) => step.slug === slug);
       const screens = stepMeta ? screensForStep(stepMeta) : [];
       const stepPayload = byStep[slug] ?? {};
@@ -481,7 +521,7 @@ export function OnboardingFlow({
             ? draft.screenIndexByStep[slug]
             : 0;
       const clampedResume = isReservedSlug(slug)
-        ? Math.min(Math.max(0, resumeScreen), INSIGHT_SCREEN_COUNT - 1)
+        ? insightIndexForSlug(slug, draft.screenIndexByStep[slug])
         : resumeScreen;
       setScreenIndex(clampedResume);
       patchDraft({ stepSlug: slug, screenIndex: clampedResume });
@@ -590,8 +630,31 @@ export function OnboardingFlow({
   }, [oauthError]);
 
   useEffect(() => {
+    if (user?.email) setAuthedEmail(user.email);
+  }, [user]);
+
+  useEffect(() => {
+    if (!authReady || !hasPaidReport || showPaidMapCta) return;
+    if (oauthCode || oauthError || oauthBusy) return;
+    if (typeof window !== "undefined") {
+      const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+      if (hash.get("auth")) return;
+    }
+    router.replace("/account/");
+  }, [
+    authReady,
+    hasPaidReport,
+    oauthBusy,
+    oauthCode,
+    oauthError,
+    router,
+    showPaidMapCta,
+  ]);
+
+  useEffect(() => {
     const fromHash = readYandexHash();
-    if (!fromHash.auth) return;
+    if (!fromHash.auth || oauthHandledRef.current) return;
+    oauthHandledRef.current = true;
     writeAuthToken(fromHash.auth);
     if (fromHash.sessionToken) applyToken(fromHash.sessionToken);
     window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
@@ -603,6 +666,7 @@ export function OnboardingFlow({
         if (cancelled) return;
         const email = me.email || "";
         setAuthedEmail(email);
+        void refreshAuth();
         if (fromHash.sessionToken && steps) {
           const session = await fetchOnboardingSession(fromHash.sessionToken);
           if (cancelled) return;
@@ -614,10 +678,20 @@ export function OnboardingFlow({
                 : {};
             next[answer.step_slug] = { ...(next[answer.step_slug] ?? {}), ...payload };
           }
-          applyPayload(withAuthedEmail(steps, next, email));
+          const withEmail = withAuthedEmail(steps, next, email);
+          applyPayload(withEmail);
+          patchDraft({ byStep: withEmail });
         }
-        router.replace(stepHref(INSIGHT_SLUG));
+        const dest = destinationAfterYandexLogin(Boolean(me.has_paid_report));
+        if (!dest) {
+          setShowPaidMapCta(true);
+          setOauthBusy(false);
+          window.history.replaceState(null, "", window.location.pathname);
+          return;
+        }
+        router.replace(dest);
       } catch {
+        oauthHandledRef.current = false;
         if (!cancelled) {
           setError("Не удалось войти через Яндекс ID");
           setOauthBusy(false);
@@ -627,12 +701,14 @@ export function OnboardingFlow({
     return () => {
       cancelled = true;
     };
-  }, [applyPayload, applyToken, router, steps]);
+  }, [applyPayload, applyToken, refreshAuth, router, steps]);
 
   useEffect(() => {
     if (!oauthCode || !oauthState || !sessionToken || !steps) return;
     const waitlist = waitlistStepOf(steps);
     if (!waitlist || slug !== waitlist.slug) return;
+    if (oauthHandledRef.current) return;
+    oauthHandledRef.current = true;
     let cancelled = false;
     setOauthBusy(true);
     setError("");
@@ -656,8 +732,17 @@ export function OnboardingFlow({
         const withEmail = withAuthedEmail(steps, next, email);
         applyPayload(withEmail);
         patchDraft({ byStep: withEmail });
-        router.replace(stepHref(INSIGHT_SLUG));
+        void refreshAuth();
+        const dest = destinationAfterYandexLogin(Boolean(result.user.has_paid_report));
+        if (!dest) {
+          setShowPaidMapCta(true);
+          setOauthBusy(false);
+          window.history.replaceState(null, "", window.location.pathname);
+          return;
+        }
+        router.replace(dest);
       } catch (err) {
+        oauthHandledRef.current = false;
         if (!cancelled) {
           setError(err instanceof Error ? err.message : "Не удалось войти через Яндекс ID");
           setOauthBusy(false);
@@ -672,6 +757,7 @@ export function OnboardingFlow({
     applyToken,
     oauthCode,
     oauthState,
+    refreshAuth,
     router,
     sessionToken,
     slug,
@@ -679,13 +765,24 @@ export function OnboardingFlow({
   ]);
 
   useEffect(() => {
+    const canonical = canonicalOnboardingSlug(slug);
+    if (canonical !== slug) {
+      router.replace(stepHref(canonical));
+      return;
+    }
     const draft = readDraft();
     const saved = draft.screenIndexByStep[slug];
+    if (isReservedSlug(slug)) {
+      const nextIndex = insightIndexForSlug(slug, saved);
+      setScreenIndex(nextIndex);
+      patchDraft({ stepSlug: slug, screenIndex: nextIndex });
+      setError("");
+      return;
+    }
     const raw = typeof saved === "number" ? saved : 0;
-    const max = isReservedSlug(slug) ? INSIGHT_SCREEN_COUNT - 1 : Number.POSITIVE_INFINITY;
-    setScreenIndex(Math.min(Math.max(0, raw), max));
+    setScreenIndex(Math.min(Math.max(0, raw), Number.POSITIVE_INFINITY));
     setError("");
-  }, [slug]);
+  }, [router, slug]);
 
   useEffect(() => {
     if (!isReservedSlug(slug) || !steps || insightStatus !== "missing") return;
@@ -720,8 +817,13 @@ export function OnboardingFlow({
   function goBack() {
     setError("");
     if (isReservedSlug(slug)) {
-      if (screenIndex > 0) {
-        setScreen(screenIndex - 1);
+      if (screenIndex >= INSIGHT_CONFIRM_INDEX) {
+        setScreen(INSIGHT_OFFER_INDEX);
+        return;
+      }
+      const current = insightScreenForSlug(slug);
+      if (current > 0) {
+        void goTo(insightHrefForScreen(current - 1));
         return;
       }
       if (steps?.length) {
@@ -775,6 +877,7 @@ export function OnboardingFlow({
     setSubmitting(true);
     setError("");
     try {
+      clearAuthNext();
       const token = await persistStep(
         currentStep.slug,
         {
@@ -927,6 +1030,10 @@ export function OnboardingFlow({
         return;
       }
       if (alreadyIn) {
+        if (hasPaidReport || showPaidMapCta) {
+          router.replace("/account/");
+          return;
+        }
         if (!isValidEmail(email)) {
           setError(CONTACTS_SUPPORT);
           return;
@@ -1037,8 +1144,10 @@ export function OnboardingFlow({
   if (authedEmail && !waitlistContacts.email) {
     waitlistContacts.email = authedEmail;
   }
-  const signedIn = Boolean(authedEmail || readAuthToken());
-  const isInsightConfirm = isReservedSlug(slug) && screenIndex >= INSIGHT_CONFIRM_INDEX;
+  const signedIn = Boolean(user || authedEmail || readAuthToken());
+  const hasPaidMap = hasPaidReport || showPaidMapCta;
+  const homeHref = signedIn ? "/account/" : "/";
+  const isInsightConfirm = slug === REPORT_SLUG && screenIndex >= INSIGHT_CONFIRM_INDEX;
   const confirmReady =
     contactsAreValid(waitlistContacts) &&
     waitlistContacts.pd_consent &&
@@ -1123,7 +1232,7 @@ export function OnboardingFlow({
             </span>
           ) : (
             <Link
-              href="/"
+              href={homeHref}
               className="text-xl font-medium transition hover:opacity-90"
             >
               <CosmirrorMark />
@@ -1167,7 +1276,11 @@ export function OnboardingFlow({
                 void startCheckout();
                 return;
               }
-              setScreen(screenIndex + 1);
+              if (screenIndex >= INSIGHT_OFFER_INDEX) {
+                setScreen(INSIGHT_CONFIRM_INDEX);
+                return;
+              }
+              void goTo(insightHrefForScreen(screenIndex + 1));
             }}
             className="mx-auto flex w-full max-w-lg min-h-0 flex-1 flex-col pt-2 md:pt-4"
           >
@@ -1247,6 +1360,7 @@ export function OnboardingFlow({
                 submitting={submitting}
                 signedIn={signedIn}
                 authedEmail={authedEmail}
+                hasPaidMap={hasPaidMap}
                 yandexReady={ready}
                 onYandex={() => void startYandexLogin()}
                 onPayload={(patch) => {
@@ -1275,7 +1389,7 @@ export function OnboardingFlow({
             ) : null}
 
             <div className="shrink-0 pt-3">
-              {currentStep.step_type === "waitlist" && !signedIn ? null : (
+              {currentStep.step_type === "waitlist" && (!signedIn || hasPaidMap) ? null : (
                 <button
                   type="submit"
                   disabled={!ready}
@@ -1305,6 +1419,7 @@ function StepBody({
   submitting,
   signedIn,
   authedEmail,
+  hasPaidMap,
   yandexReady,
   onYandex,
   onPayload,
@@ -1317,6 +1432,7 @@ function StepBody({
   submitting: boolean;
   signedIn: boolean;
   authedEmail: string;
+  hasPaidMap: boolean;
   yandexReady: boolean;
   onYandex: () => void;
   onPayload: (patch: Record<string, unknown>) => void;
@@ -1346,6 +1462,7 @@ function StepBody({
         submitting={submitting}
         signedIn={signedIn}
         authedEmail={authedEmail}
+        hasPaidMap={hasPaidMap}
         yandexReady={yandexReady}
         onYandex={onYandex}
       />
@@ -1666,6 +1783,7 @@ function ContactsStep({
   submitting,
   signedIn,
   authedEmail,
+  hasPaidMap = false,
   yandexReady,
   onYandex,
 }: {
@@ -1675,6 +1793,7 @@ function ContactsStep({
   submitting: boolean;
   signedIn: boolean;
   authedEmail: string;
+  hasPaidMap?: boolean;
   yandexReady: boolean;
   onYandex: () => void;
 }) {
@@ -1682,6 +1801,25 @@ function ContactsStep({
   const showConsentError =
     Boolean(error) &&
     (error.toLowerCase().includes("соглас") || error.toLowerCase().includes("яндекс"));
+
+  if (hasPaidMap) {
+    return (
+      <div className="flex flex-col">
+        <h1 className="text-3xl font-normal leading-tight tracking-tight text-white sm:text-4xl md:text-[2.6rem]">
+          Твоя карта <span className="font-display italic text-[#F6E7A1]">уже здесь</span>
+        </h1>
+        <p className="mt-5 text-base font-normal leading-relaxed text-white/75 sm:text-lg">
+          Вошли как {email || "Яндекс ID"}. Открой персональный разбор в кабинете.
+        </p>
+        <Link
+          href="/account/"
+          className="mt-10 inline-flex w-full items-center justify-center rounded-full bg-[#F6E7A1] px-10 py-2.5 font-grotesk text-lg font-medium text-[#0a1a3a] transition-all hover:scale-[1.02] hover:bg-[#f0dc82] active:scale-[0.98]"
+        >
+          Открыть мою карту
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col">

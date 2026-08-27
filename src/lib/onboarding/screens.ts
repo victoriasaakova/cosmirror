@@ -1,5 +1,15 @@
 import type { OnboardingStep } from "@/lib/api";
-import { hrefFromUrlPath, INSIGHT_SLUG, isReservedSlug, stepHref } from "./paths";
+import {
+  canonicalOnboardingSlug,
+  hrefFromUrlPath,
+  insightHrefForScreen,
+  insightScreenForSlug,
+  INSIGHT_SLUG,
+  isReservedSlug,
+  LEGACY_ONBOARDING_SLUGS,
+  REPORT_SLUG,
+  stepHref,
+} from "./paths";
 
 export type TitlePart = { t: string; accent?: boolean };
 
@@ -106,7 +116,7 @@ export const CONTENT_UIS: Record<string, ContentScreen[]> = {
       ],
     },
     {
-      id: "intent",
+      id: "goal",
       kind: "single",
       field: "intent",
       title: [
@@ -124,7 +134,7 @@ export const CONTENT_UIS: Record<string, ContentScreen[]> = {
       ],
     },
     {
-      id: "chart_knowledge",
+      id: "astrolevel",
       kind: "single",
       field: "chart_knowledge",
       title: [
@@ -139,7 +149,7 @@ export const CONTENT_UIS: Record<string, ContentScreen[]> = {
       ],
     },
     {
-      id: "astrology_trigger",
+      id: "questions",
       kind: "single",
       field: "astrology_trigger",
       title: [
@@ -302,4 +312,14 @@ export function firstIncompleteScreenIndex(
   return idx === -1 ? screens.length - 1 : idx;
 }
 
-export { isReservedSlug, INSIGHT_SLUG, stepHref, hrefFromUrlPath };
+export {
+  canonicalOnboardingSlug,
+  hrefFromUrlPath,
+  insightHrefForScreen,
+  insightScreenForSlug,
+  INSIGHT_SLUG,
+  isReservedSlug,
+  LEGACY_ONBOARDING_SLUGS,
+  REPORT_SLUG,
+  stepHref,
+};

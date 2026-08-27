@@ -21,6 +21,8 @@ const TARGETS = [
   { src: "hero-coastal-moon-trail_4.png", out: "hero-coastal-moon-trail_4.webp", maxWidth: 1600, quality: 86 },
   { src: "landscape_stars.png", out: "landscape_stars.webp", maxWidth: 1600, quality: 84 },
   { src: "landscape_natal_map_2.png", out: "landscape_natal_map_2.webp", maxWidth: 1600, quality: 84 },
+  { src: "cosmoportrait.png", out: "cosmoportrait.webp", maxWidth: 1600, quality: 84 },
+  { src: "report.jpeg", out: "report.webp", maxWidth: 1600, quality: 84 },
 
   // Eye mark ~14rem / 42vw → 512px covers 3x retina
   { src: "eye-silver.png", out: "eye-silver.webp", maxWidth: 512, quality: 90 },

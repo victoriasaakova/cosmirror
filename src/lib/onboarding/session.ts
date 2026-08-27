@@ -81,8 +81,13 @@ export async function ensureSessionToken(): Promise<string> {
     }
   }
   const session = await createOnboardingSession();
-  localStorage.setItem(SESSION_KEY, session.token);
+  writeOnboardingSessionToken(session.token);
   return session.token;
+}
+
+export function writeOnboardingSessionToken(token: string) {
+  if (typeof window === "undefined" || !token) return;
+  localStorage.setItem(SESSION_KEY, token);
 }
 
 /** Сброс клиентского состояния онбординга (токен + черновик). Вход через Яндекс ID сохраняем. */
@@ -104,9 +109,7 @@ export function clearOnboardingClientState() {
 export async function startFreshOnboardingSession(): Promise<OnboardingSession> {
   clearOnboardingClientState();
   const session = await createOnboardingSession();
-  if (typeof window !== "undefined") {
-    localStorage.setItem(SESSION_KEY, session.token);
-  }
+  writeOnboardingSessionToken(session.token);
   return session;
 }
 

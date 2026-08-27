@@ -270,7 +270,7 @@ export function WhatYouGet() {
   const ActivePreview = PREVIEWS[activeIndex];
 
   return (
-    <section id="get" className="mt-28 scroll-mt-24">
+    <section id="what-you-get" className="mt-28 scroll-mt-28">
       <h2 className="text-center text-3xl font-normal leading-tight tracking-tight text-white md:text-5xl lg:text-6xl">
         Что ты <span className="font-display italic text-[#F6E7A1]">получишь</span>
       </h2>

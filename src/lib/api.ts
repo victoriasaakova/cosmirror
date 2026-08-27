@@ -378,6 +378,8 @@ export type ReportTransitHit = {
 export type ReportWheel = {
   ascendant_longitude: number;
   mc_longitude?: number | null;
+  dsc_longitude?: number | null;
+  ic_longitude?: number | null;
   has_birth_time?: boolean;
   house_system?: string;
   planets: Array<{
@@ -385,13 +387,282 @@ export type ReportWheel = {
     name?: string;
     glyph?: string;
     longitude: number;
+    sign?: string;
     sign_ru?: string;
+    degree?: number;
+    minute?: number;
     house?: number | null;
     retrograde?: boolean;
   }>;
   houses?: Array<{ house: number; cusp: number; sign_ru?: string }>;
   aspects?: Array<{ a: string; b: string; kind?: string; aspect?: string }>;
   signs?: Array<{ sign: string; sign_ru: string; start: number }>;
+};
+
+export type NatalThemeSection = {
+  id?: string;
+  title?: string;
+  headline?: string;
+  summary?: string;
+  deep_read?: string[];
+  why?: string;
+  question?: string;
+};
+
+export type NatalBigThreeCard = {
+  headline?: string;
+  body?: string;
+  why?: string;
+  question?: string;
+};
+
+export type NatalFallbackTheme = {
+  theme_id?: string;
+  headline?: string;
+  narrative?: string;
+  reflection_question?: string;
+  basis?: string[];
+};
+
+export type NatalPlacementCard = {
+  key?: string;
+  point_key?: string;
+  body?: string;
+  sign?: string;
+  headline?: string;
+  summary?: string;
+  deep_read?: string[];
+  protective_hypothesis?: string;
+  resource?: string;
+  blind_spot?: string;
+  flexibility?: string;
+  reflection_question?: string;
+  astro_explanation?: string;
+  house_modifier?: string | null;
+  theme_tags?: string[];
+  paragraphs?: string[];
+};
+
+export type NatalInterpretationPayload = {
+  report_type?: string;
+  source?: "fallback" | "llm" | string;
+  core_portrait?: {
+    headline?: string;
+    summary?: string;
+    themes?: NatalFallbackTheme[];
+  };
+  repeating_themes?: NatalFallbackTheme[];
+  placements?: NatalPlacementCard[];
+  big_three?: {
+    sun?: NatalBigThreeCard;
+    moon?: NatalBigThreeCard;
+    ascendant?: NatalBigThreeCard;
+  };
+  sections?: NatalThemeSection[];
+  reflection_questions?: string[];
+  limitations?: string[];
+};
+
+export type NatalInterpretationLayer = {
+  source?: string;
+  status?: string;
+  model?: string;
+  can_generate?: boolean;
+  error?: string;
+  payload?: NatalInterpretationPayload;
+};
+
+export type AspectCategory = "tension" | "resource" | "mixed";
+
+export type NatalAspectCard = {
+  aspect_id?: string;
+  unit_key?: string;
+  source?: "semantic_fallback" | "factual_fallback" | "llm" | "fallback" | string;
+  category?: AspectCategory | string;
+  aspect_label_ru?: string;
+  orb_deg?: number;
+  headline?: string;
+  summary?: string;
+  deep_read?: string[];
+  possible_manifestations?: string[];
+  protective_hypothesis?: string;
+  resource?: string;
+  blind_spot?: string;
+  tension_or_blind_spot?: string;
+  flexibility?: string;
+  how_to_work?: string;
+  reflection_questions?: string[];
+  astro_explanation?: string;
+  theme_tags?: string[];
+  a?: string;
+  b?: string;
+  aspect?: string;
+  aspect_ru?: string;
+  a_name?: string;
+  b_name?: string;
+};
+
+export type AspectsInterpretationPayload = {
+  report_type?: string;
+  source?: "fallback" | "llm" | string;
+  intro?: { headline?: string; summary?: string };
+  themes?: NatalFallbackTheme[];
+  aspects?: NatalAspectCard[];
+};
+
+export type AspectsInterpretationLayer = {
+  source?: string;
+  status?: string;
+  model?: string;
+  can_generate?: boolean;
+  error?: string;
+  payload?: AspectsInterpretationPayload;
+};
+
+export type CycleCategory = "tension" | "support" | "mixed";
+
+export type CycleTiming = {
+  orb_deg?: number;
+  phase?: string;
+  active_window_text?: string;
+  exact_passes_text?: string;
+};
+
+export type CycleCard = {
+  source?: "semantic_fallback" | "factual_fallback" | "llm" | "fallback" | string;
+  unit_key?: string;
+  cycle_id?: string;
+  category?: CycleCategory | string;
+  technical_title?: string;
+  headline?: string;
+  human_theme?: string;
+  short_explanation?: string;
+  timing?: CycleTiming;
+  astrology_explanation?: string;
+  astro_explanation?: string;
+  summary?: string;
+  deep_read?: string | string[];
+  personalization?: string;
+  possible_manifestations?: string[];
+  protective_hypothesis?: string;
+  protective_function?: string;
+  tension_or_blind_spot?: string;
+  resource?: string;
+  flexibility?: string;
+  how_to_work?: string;
+  reflection_question?: string;
+  reflection_questions?: string[];
+  theme_tags?: string[];
+  transit?: string;
+  natal?: string;
+  aspect?: string;
+  aspect_ru?: string;
+  transit_name?: string;
+  natal_name?: string;
+};
+
+export type CyclesInterpretationPayload = {
+  report_type?: string;
+  source?: "fallback" | "llm" | string;
+  period_overview?: {
+    headline?: string;
+    summary?: string;
+    main_tension?: string;
+    main_support?: string;
+  };
+  themes?: NatalFallbackTheme[];
+  primary_cycles?: CycleCard[];
+  secondary_cycles?: CycleCard[];
+  cross_cycle_synthesis?: {
+    headline?: string;
+    narrative?: string;
+    what_to_watch?: string[];
+    available_support?: string[];
+    reflection_questions?: string[];
+  };
+};
+
+export type CyclesInterpretationLayer = {
+  source?: string;
+  generation_status?: "fallback" | "generated" | "generation_failed" | string;
+  status?: string;
+  model?: string;
+  can_generate?: boolean;
+  error?: string;
+  payload?: CyclesInterpretationPayload;
+};
+
+export type RequestConnection = {
+  source_id?: string;
+  source_type?: "cycle" | "aspect" | "natal_theme" | string;
+  source?: string;
+  title?: string;
+  text?: string;
+  canonical_theme?: string;
+};
+
+export type RequestInterpretationPayload = {
+  report_type?: string;
+  source?: "semantic_fallback" | "fallback" | "llm" | string;
+  request?: { title?: string; text?: string };
+  connections?: RequestConnection[];
+  core_distinction?: {
+    title?: string;
+    text?: string;
+    provenance?: string[];
+    canonical_theme?: string;
+  };
+  /** @deprecated Skill 04 uses core_distinction */
+  core_pattern?: { title?: string; text?: string };
+  resource?: {
+    source_id?: string;
+    source_type?: string;
+    title?: string;
+    source?: string;
+    text?: string;
+  };
+  takeaway?: string;
+};
+
+export type RequestInterpretationLayer = {
+  source?: string;
+  status?: string;
+  model?: string;
+  can_generate?: boolean;
+  error?: string;
+  payload?: RequestInterpretationPayload;
+};
+
+export type PracticeDistinction = {
+  left?: string;
+  right?: string;
+  note?: string;
+};
+
+export type PracticeInterpretationPayload = {
+  report_type?: string;
+  source?: "semantic_fallback" | "fallback" | "llm" | string;
+  module_id?: string;
+  start_here?: { headline?: string; text?: string; provenance?: string[] };
+  pattern?: { title?: string; text?: string; source_ids?: string[] };
+  protective_function?: { title?: string; text?: string };
+  cost?: { title?: string; text?: string };
+  key_distinctions?: PracticeDistinction[];
+  values?: { title?: string; text?: string };
+  reflection_questions?: string[];
+  experiment?: { title?: string; text?: string; duration?: string | null };
+  observe_over_time?: string[];
+  user_takeaway_prompt?: string;
+  provenance?: string[];
+};
+
+export type PracticeInterpretationLayer = {
+  source?: string;
+  status?: string;
+  model?: string;
+  can_generate?: boolean;
+  error?: string;
+  payload?: PracticeInterpretationPayload;
 };
 
 export type ReportDocument = {
@@ -428,6 +699,7 @@ export type ReportDocument = {
         sign?: string;
         sign_ru: string;
         degree?: number;
+        minute?: number;
         house?: number | null;
         fact: string;
         retrograde?: boolean;
@@ -435,16 +707,22 @@ export type ReportDocument = {
       }>;
       houses?: Array<{
         house: number;
+        sign?: string;
         sign_ru: string;
         theme: string;
         occupants?: string[];
       }>;
       aspects?: Array<{
+        a?: string;
+        b?: string;
         a_name: string;
         b_name: string;
+        aspect?: string;
         aspect_ru: string;
+        kind?: string;
         orb: number;
         theme: string;
+        fact?: string;
       }>;
       wheel?: ReportWheel;
       has_birth_time?: boolean;
@@ -471,8 +749,23 @@ export type ReportDocument = {
       default_tab?: string;
     };
   };
-  interpretive?: { status?: string };
-  generation?: { status?: string; system_prompt_id?: string };
+  interpretive?: {
+    status?: string;
+    generation?: { status?: "idle" | "running" | "done" | string };
+    natal?: NatalInterpretationLayer;
+    aspects?: AspectsInterpretationLayer;
+    cycles?: CyclesInterpretationLayer;
+    request?: RequestInterpretationLayer;
+    practice?: PracticeInterpretationLayer;
+  };
+  generation?: {
+    status?: string;
+    system_prompt_id?: string;
+    section_prompts?: Record<
+      string,
+      { system_prompt_id?: string; system_prompt_path?: string; model?: string }
+    >;
+  };
   sections?: Record<
     string,
     { id: string; title: string; blocks: ReportBlock[]; questions?: string[] }
@@ -488,6 +781,7 @@ export type PaidReport = {
     birth_date?: string;
     birth_time?: string;
     birth_place?: string;
+    has_birth_time?: boolean;
   };
   document?: ReportDocument;
   sections: ReportSection[];
@@ -511,12 +805,28 @@ export type Order = {
   updated_at: string;
 };
 
+export function reportLayersPending(report?: PaidReport | null): boolean {
+  if (!report?.document?.interpretive) return false;
+  const interpretive = report.document.interpretive;
+  if (interpretive.generation?.status === "done") return false;
+  const waiting = (layer?: { source?: string; can_generate?: boolean }) =>
+    Boolean(layer?.can_generate && layer.source !== "llm");
+  return (
+    waiting(interpretive.natal) ||
+    waiting(interpretive.aspects) ||
+    waiting(interpretive.cycles) ||
+    waiting(interpretive.request) ||
+    waiting(interpretive.practice)
+  );
+}
+
 export type AuthUser = {
   id: number;
   username: string;
   email: string;
   first_name: string;
   last_name: string;
+  has_paid_report?: boolean;
   profile?: {
     display_name?: string;
     telegram?: string;
@@ -524,10 +834,11 @@ export type AuthUser = {
 };
 
 export async function startYandexAuth(
-  sessionToken: string,
+  sessionToken?: string,
   redirectUri?: string,
 ): Promise<{ url: string; redirect_uri?: string }> {
-  const query = new URLSearchParams({ session_token: sessionToken });
+  const query = new URLSearchParams();
+  if (sessionToken) query.set("session_token", sessionToken);
   if (redirectUri) query.set("redirect_uri", redirectUri);
   let res: Response;
   try {
@@ -573,7 +884,7 @@ export async function fetchMe(): Promise<AuthUser> {
   return data as AuthUser;
 }
 
-export async function fetchMyOrder(): Promise<Order> {
+export async function fetchMyOrder(): Promise<Order | null> {
   let res: Response;
   try {
     res = await fetchWithRetry(`${API_URL}/api/me/report/`, { cache: "no-store" });
@@ -586,11 +897,89 @@ export async function fetchMyOrder(): Promise<Order> {
       throw new Error("Войди через Яндекс ID, чтобы открыть отчёт.");
     }
     if (res.status === 404) {
-      throw new Error("Пока нет заказа. Вернись к разбору и оформи оплату.");
+      return null;
     }
     throw new Error(errorMessage(data, "Не удалось загрузить заказ"));
   }
   return data as Order;
+}
+
+export async function generateReportNatal(force = false): Promise<{
+  status: string;
+  natal?: NatalInterpretationLayer;
+  report?: PaidReport;
+}> {
+  let res: Response;
+  try {
+    res = await fetchWithRetry(`${API_URL}/api/me/report/natal/generate/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ force }),
+    });
+  } catch (err) {
+    throw new Error(networkErrorMessage(err, "Не удалось собрать разбор карты"));
+  }
+  const data = await parseJson(res);
+  if (!res.ok) {
+    throw new Error(errorMessage(data, "Не удалось собрать разбор карты"));
+  }
+  return data as {
+    status: string;
+    natal?: NatalInterpretationLayer;
+    report?: PaidReport;
+  };
+}
+
+export async function generateReportAspects(force = false): Promise<{
+  status: string;
+  aspects?: AspectsInterpretationLayer;
+  report?: PaidReport;
+}> {
+  let res: Response;
+  try {
+    res = await fetchWithRetry(`${API_URL}/api/me/report/aspects/generate/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ force }),
+    });
+  } catch (err) {
+    throw new Error(networkErrorMessage(err, "Не удалось собрать разбор аспектов"));
+  }
+  const data = await parseJson(res);
+  if (!res.ok) {
+    throw new Error(errorMessage(data, "Не удалось собрать разбор аспектов"));
+  }
+  return data as {
+    status: string;
+    aspects?: AspectsInterpretationLayer;
+    report?: PaidReport;
+  };
+}
+
+export async function generateReportCycles(force = false): Promise<{
+  status: string;
+  cycles?: CyclesInterpretationLayer;
+  report?: PaidReport;
+}> {
+  let res: Response;
+  try {
+    res = await fetchWithRetry(`${API_URL}/api/me/report/cycles/generate/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ force }),
+    });
+  } catch (err) {
+    throw new Error(networkErrorMessage(err, "Не удалось собрать разбор циклов"));
+  }
+  const data = await parseJson(res);
+  if (!res.ok) {
+    throw new Error(errorMessage(data, "Не удалось собрать разбор циклов"));
+  }
+  return data as {
+    status: string;
+    cycles?: CyclesInterpretationLayer;
+    report?: PaidReport;
+  };
 }
 
 export async function createOrder(
@@ -680,6 +1069,20 @@ export async function downloadMyReportPdf(): Promise<Blob> {
     throw new Error(errorMessage(data, "Не удалось скачать PDF"));
   }
   return res.blob();
+}
+
+export async function logoutOnServer(): Promise<void> {
+  const token =
+    typeof window === "undefined" ? "" : window.localStorage.getItem("cosmirror.auth.token") || "";
+  if (!token) return;
+  try {
+    await fetch(`${API_URL}/api/auth/logout/`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  } catch {
+    /* offline: local session still drops */
+  }
 }
 
 export { API_URL };

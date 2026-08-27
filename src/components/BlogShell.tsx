@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
-import { CosmirrorMark } from "@/components/CosmirrorMark";
-import { freshOnboardingHref } from "@/lib/onboarding/paths";
+import { Header } from "@/components/Header";
 
 type BlogShellProps = {
   children: ReactNode;
@@ -8,23 +7,10 @@ type BlogShellProps = {
 
 /** Shared chrome for blog index and posts — Cosmirror world, reading mode. */
 export function BlogShell({ children }: BlogShellProps) {
-  const startHref = freshOnboardingHref();
-
   return (
     <main className="min-h-full bg-[#050d4a] text-[#f4efe8]">
-      <div className="mx-auto max-w-3xl px-5 pb-20 pt-10 md:px-8 md:pt-14">
-        <div className="flex items-center justify-between gap-4">
-          <a href="/" className="text-lg font-medium transition hover:opacity-90">
-            <CosmirrorMark />
-          </a>
-          <a
-            href={startHref}
-            className="shrink-0 rounded-full bg-[#F6E7A1] px-4 py-1.5 font-grotesk text-sm font-medium text-[#0a1a3a] shadow-[0_8px_20px_rgba(246,231,161,0.22)] transition hover:scale-[1.02] hover:bg-[#f0dc82] active:scale-[0.98]"
-          >
-            Начать путешествие
-          </a>
-        </div>
-
+      <Header />
+      <div className="mx-auto max-w-3xl px-5 pb-20 pt-24 md:px-8 md:pt-28">
         {children}
 
         <nav className="mt-16 flex flex-wrap gap-x-6 gap-y-3 border-t border-white/10 pt-8 text-sm text-white/80">
@@ -42,9 +28,6 @@ export function BlogShell({ children }: BlogShellProps) {
           </a>
           <a href="/offer/" className="transition hover:text-white">
             Публичная оферта
-          </a>
-          <a href="/source/" className="transition hover:text-white">
-            Исходный код
           </a>
           <a href="mailto:hello@cosmirror.ru" className="transition hover:text-white">
             hello@cosmirror.ru

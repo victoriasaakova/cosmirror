@@ -46,7 +46,7 @@ export default async function BlogPostPage({ params }: PageProps) {
     <BlogShell>
       <a
         href="/blog/"
-        className="mt-10 inline-flex items-center gap-1.5 text-sm text-white/45 transition hover:text-white"
+        className="inline-flex items-center gap-1.5 text-sm text-white/45 transition hover:text-[#F6E7A1]"
       >
         <ChevronLeft className="h-4 w-4" />
         Все статьи

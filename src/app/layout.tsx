@@ -1,6 +1,7 @@
-import type { Metadata } from "next";
-import { Onest, Playfair_Display } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Noto_Sans_Symbols_2, Onest, Playfair_Display } from "next/font/google";
 import { YandexMetrika } from "@/components/YandexMetrika";
+import { AuthProvider } from "@/components/AuthProvider";
 import "./globals.css";
 
 // Keep font files minimal: each weight/style is a separate mobile download.
@@ -22,6 +23,22 @@ const grotesk = Onest({
   display: "swap",
   preload: true,
 });
+
+const astro = Noto_Sans_Symbols_2({
+  variable: "--font-astro",
+  subsets: ["symbols", "latin"],
+  weight: "400",
+  display: "swap",
+  preload: true,
+  adjustFontFallback: false,
+  fallback: ["Apple Symbols", "Segoe UI Symbol"],
+});
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://cosmirror.ru"),
@@ -69,12 +86,12 @@ export default function RootLayout({
   return (
     <html
       lang="ru"
-      className={`${display.variable} ${grotesk.variable} h-full antialiased`}
+      className={`${display.variable} ${grotesk.variable} ${astro.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <body className="flex min-h-full flex-col font-grotesk" suppressHydrationWarning>
         <YandexMetrika />
-        {children}
+        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );
