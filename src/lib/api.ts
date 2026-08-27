@@ -1041,6 +1041,59 @@ export async function completeMyDemoOrder(): Promise<Order> {
   return data as Order;
 }
 
+export type CheckoutReturnParams = {
+  payform_status: string;
+  payform_id: string;
+  payform_order_id: string;
+};
+
+export function checkoutReturnParamsFromSearch(search: URLSearchParams): CheckoutReturnParams {
+  return {
+    payform_status: search.get("_payform_status") || search.get("payform_status") || "",
+    payform_id: search.get("_payform_id") || search.get("payform_id") || "",
+    payform_order_id:
+      search.get("_payform_order_id") ||
+      search.get("payform_order_id") ||
+      search.get("order_id") ||
+      search.get("order") ||
+      "",
+  };
+}
+
+export function accountReturnQuery(search: URLSearchParams): string {
+  const next = new URLSearchParams();
+  next.set("from", "prodamus");
+  const params = checkoutReturnParamsFromSearch(search);
+  if (params.payform_status) next.set("_payform_status", params.payform_status);
+  if (params.payform_id) next.set("_payform_id", params.payform_id);
+  if (params.payform_order_id) next.set("_payform_order_id", params.payform_order_id);
+  return next.toString();
+}
+
+export async function confirmMyPayment(params: CheckoutReturnParams): Promise<Order | null> {
+  let res: Response;
+  try {
+    res = await fetchWithRetry(`${API_URL}/api/me/report/confirm-payment/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        payform_status: params.payform_status,
+        payform_id: params.payform_id,
+        payform_order_id: params.payform_order_id,
+        _payform_status: params.payform_status,
+        _payform_id: params.payform_id,
+        _payform_order_id: params.payform_order_id,
+      }),
+    });
+  } catch (err) {
+    throw new Error(networkErrorMessage(err, "Не удалось подтвердить оплату"));
+  }
+  const data = await parseJson(res);
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(errorMessage(data, "Не удалось подтвердить оплату"));
+  return data as Order;
+}
+
 export async function resendMyReport(email: string): Promise<Order> {
   let res: Response;
   try {

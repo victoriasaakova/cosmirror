@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect } from "react";
 import { CosmirrorMark } from "@/components/CosmirrorMark";
-import { completeMyDemoOrder, type Order } from "@/lib/api";
+import { completeMyDemoOrder, confirmMyPayment, checkoutReturnParamsFromSearch, accountReturnQuery, type Order } from "@/lib/api";
 import { readLastOrderId, writeLastOrderId } from "@/lib/onboarding/session";
 
 function orderChannel(): BroadcastChannel | null {
@@ -88,15 +88,19 @@ function CheckoutReturnInner() {
     notifyOrder({ type: "checkout-returned" });
 
     let cancelled = false;
-    void completeMyDemoOrder()
+    const params = checkoutReturnParamsFromSearch(searchParams);
+    const nextPath = `/account/?${accountReturnQuery(searchParams)}`;
+
+    void confirmMyPayment(params)
+      .catch(() => (process.env.NODE_ENV === "development" ? completeMyDemoOrder() : null))
       .then((order) => {
         if (cancelled) return;
-        notifyOrder({ type: "order", order });
-        router.replace("/account/?from=prodamus");
+        if (order) notifyOrder({ type: "order", order });
+        router.replace(nextPath);
       })
       .catch(() => {
         if (cancelled) return;
-        router.replace("/account/?from=prodamus");
+        router.replace(nextPath);
       });
 
     return () => {

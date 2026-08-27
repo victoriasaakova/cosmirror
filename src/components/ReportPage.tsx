@@ -9,6 +9,8 @@ import { InteractiveReport } from "@/components/InteractiveReport";
 import { useAuth } from "@/components/AuthProvider";
 import {
   completeMyDemoOrder,
+  confirmMyPayment,
+  checkoutReturnParamsFromSearch,
   downloadMyReportPdf,
   fetchMyOrder,
   reportLayersPending,
@@ -196,6 +198,35 @@ function ReportInner() {
       channel?.close();
     };
   }, [bootstrapped, checkoutReturned, fromProdamus, preview, ready, user]);
+
+  useEffect(() => {
+    if (preview) return;
+    if (!bootstrapped || !ready || !user) return;
+    const params = checkoutReturnParamsFromSearch(searchParams);
+    if (!fromProdamus && params.payform_status !== "success") return;
+    let cancelled = false;
+    void confirmMyPayment(params)
+      .then((next) => {
+        if (cancelled || !next) return;
+        setOrder(next);
+        setCabinetEmpty(false);
+        setError("");
+        if (next.status === "paid") setPaymentSlow(false);
+        try {
+          const channel = orderChannel();
+          channel?.postMessage({ type: "order", order: next });
+          channel?.close();
+        } catch {
+          /* ignore */
+        }
+      })
+      .catch(() => {
+        /* poll / webhook подхватят */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [bootstrapped, fromProdamus, preview, ready, searchParams, user]);
 
   useEffect(() => {
     if (!isLocalDemo || preview) return;
