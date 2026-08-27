@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { CosmirrorMark } from "@/components/CosmirrorMark";
+import { CookieSettingsLink } from "@/components/CookieConsent";
 
 type LegalDocumentProps = {
   title: string;
@@ -43,6 +44,7 @@ export function LegalDocument({ title, updatedAt, children }: LegalDocumentProps
           <a href="/cookies/" className="transition hover:text-white">
             Политика cookie
           </a>
+          <CookieSettingsLink className="transition hover:text-white" />
           <a href="/terms/" className="transition hover:text-white">
             Пользовательское соглашение
           </a>

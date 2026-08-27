@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Header } from "@/components/Header";
+import { CookieSettingsLink } from "@/components/CookieConsent";
 
 type BlogShellProps = {
   children: ReactNode;
@@ -23,6 +24,7 @@ export function BlogShell({ children }: BlogShellProps) {
           <a href="/cookies/" className="transition hover:text-white">
             Политика cookie
           </a>
+          <CookieSettingsLink className="transition hover:text-white" />
           <a href="/terms/" className="transition hover:text-white">
             Пользовательское соглашение
           </a>

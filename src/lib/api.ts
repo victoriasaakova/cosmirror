@@ -40,9 +40,19 @@ async function fetchWithRetry(input: string, init?: RequestInit, retries = 3): P
 }
 
 function errorMessage(data: unknown, fallback: string): string {
-  if (typeof data !== "object" || !data) return fallback;
+  if (typeof data !== "object" || data === null) return fallback;
   const record = data as Record<string, unknown>;
-  for (const key of ["email", "detail", "non_field_errors", "astro", "telegram", "phone"]) {
+  for (const key of [
+    "email",
+    "detail",
+    "non_field_errors",
+    "astro",
+    "telegram",
+    "phone",
+    "birth_date",
+    "birth_time",
+    "birth_place",
+  ]) {
     const value = record[key];
     if (typeof value === "string" && value) return value;
     if (Array.isArray(value) && value[0]) return String(value[0]);
@@ -826,11 +836,37 @@ export type AuthUser = {
   email: string;
   first_name: string;
   last_name: string;
+  display_name?: string;
   has_paid_report?: boolean;
+  birth?: {
+    birth_date?: string | null;
+    birth_time?: string | null;
+    birth_place?: string;
+    birth_lat?: string | null;
+    birth_lng?: string | null;
+    timezone?: string;
+    has_birth_time?: boolean;
+  };
   profile?: {
     display_name?: string;
     telegram?: string;
+    birth_date?: string | null;
+    birth_time?: string | null;
+    birth_place?: string;
+    birth_lat?: string | null;
+    birth_lng?: string | null;
+    timezone?: string;
   };
+};
+
+export type BirthUpdatePayload = {
+  birth_date: string;
+  birth_time?: string;
+  birth_place: string;
+  birth_lat?: number | string | null;
+  birth_lng?: number | string | null;
+  timezone?: string;
+  unknown_time?: boolean;
 };
 
 export async function startYandexAuth(
@@ -882,6 +918,35 @@ export async function fetchMe(): Promise<AuthUser> {
   const data = await parseJson(res);
   if (!res.ok) throw new Error(errorMessage(data, "Не удалось загрузить профиль"));
   return data as AuthUser;
+}
+
+export async function updateMyBirth(payload: BirthUpdatePayload): Promise<AuthUser> {
+  let res: Response;
+  try {
+    res = await fetchWithRetry(`${API_URL}/api/me/birth/`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+  } catch (err) {
+    throw new Error(networkErrorMessage(err, "Не удалось сохранить данные рождения"));
+  }
+  const data = await parseJson(res);
+  if (!res.ok) throw new Error(errorMessage(data, "Не удалось сохранить данные рождения"));
+  return data as AuthUser;
+}
+
+export async function deleteMyAccount(): Promise<void> {
+  let res: Response;
+  try {
+    res = await fetchWithRetry(`${API_URL}/api/me/`, { method: "DELETE" });
+  } catch (err) {
+    throw new Error(networkErrorMessage(err, "Не удалось удалить аккаунт"));
+  }
+  if (!res.ok) {
+    const data = await parseJson(res);
+    throw new Error(errorMessage(data, "Не удалось удалить аккаунт"));
+  }
 }
 
 export async function fetchMyOrder(): Promise<Order | null> {

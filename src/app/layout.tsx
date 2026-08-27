@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Noto_Sans_Symbols_2, Onest, Playfair_Display } from "next/font/google";
+import { CookieConsentProvider } from "@/components/CookieConsent";
 import { YandexMetrika } from "@/components/YandexMetrika";
 import { AuthProvider } from "@/components/AuthProvider";
 import "./globals.css";
@@ -90,8 +91,10 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="flex min-h-full flex-col font-grotesk" suppressHydrationWarning>
-        <YandexMetrika />
-        <AuthProvider>{children}</AuthProvider>
+        <CookieConsentProvider>
+          <YandexMetrika />
+          <AuthProvider>{children}</AuthProvider>
+        </CookieConsentProvider>
       </body>
     </html>
   );

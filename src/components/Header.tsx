@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { CircleUser } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { freshOnboardingHref } from "@/lib/onboarding/paths";
 import { userDisplayName } from "@/lib/user-name";
@@ -23,13 +24,14 @@ export function Header() {
   const [isOpen, setIsOpen] = useState(false);
   const [loginBusy, setLoginBusy] = useState(false);
   const pathname = usePathname();
-  const { user, hasPaidReport, startLogin, logout } = useAuth();
+  const { user, hasPaidReport, startLogin } = useAuth();
   const onHome = pathname === "/" || pathname === "";
   const signedIn = Boolean(user);
   const startHref = freshOnboardingHref();
   const homeHref = signedIn ? "/account/" : onHome ? "#top" : "/";
   const ctaHref = hasPaidReport ? "/account/" : startHref;
   const ctaLabel = hasPaidReport ? "Моя карта" : "Начать путешествие";
+  const onAccountSettings = pathname === "/account/settings" || pathname === "/account/settings/";
   const onBlog = isBlogPath(pathname);
   const nav = GUEST_NAV.map((item) => ({
     id: item.id,
@@ -87,13 +89,16 @@ export function Header() {
           </a>
 
           {signedIn ? (
-            <button
-              type="button"
-              onClick={logout}
-              className="inline-flex h-11 shrink-0 items-center justify-self-end rounded-full px-3 font-grotesk text-base font-normal text-white/70 transition-colors hover:text-[#F6E7A1]"
+            <Link
+              href="/account/settings/"
+              aria-label="Аккаунт"
+              aria-current={onAccountSettings ? "page" : undefined}
+              className={`inline-flex h-11 w-11 shrink-0 items-center justify-center justify-self-end rounded-full text-white/80 transition-colors hover:text-[#F6E7A1] ${
+                onAccountSettings ? "text-[#F6E7A1]" : ""
+              }`}
             >
-              Выйти
-            </button>
+              <CircleUser className="h-6 w-6" strokeWidth={1.7} aria-hidden />
+            </Link>
           ) : (
             <>
               <nav className="hidden items-center justify-center gap-6 justify-self-center lg:flex">

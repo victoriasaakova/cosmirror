@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { AccountSettings } from "@/components/AccountSettings";
 import { ReportOpening } from "@/components/ReportOpening";
 import { aspectGlyph, formatDms, planetGlyph, signGlyph } from "@/lib/astro-glyphs";
 import {
@@ -26,6 +27,7 @@ const REPORT_NAV = [
   { id: "cycles", label: "Циклы", subtitle: "что актуально сейчас" },
   { id: "request", label: "Запрос", subtitle: "расшифровка запроса" },
   { id: "practice", label: "Практика", subtitle: "как работать с темами" },
+  { id: "account", label: "Аккаунт", subtitle: "данные рождения и выход" },
 ] as const;
 
 const NATAL_GROUPS: { title: string; subtitle: string; keys: string[] }[] = [
@@ -88,46 +90,14 @@ type Props = {
   downloading: boolean;
   onDownloadPdf: () => void;
   actionNote?: string;
+  initialTab?: string;
+  onBirthSaved?: () => Promise<void> | void;
 };
 
 function scrollReportTop() {
   const reduce =
     typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
-}
-
-function MobileReportTabs({
-  tabs,
-  tab,
-  onOpen,
-}: {
-  tabs: readonly { id: string; label: string }[];
-  tab: string;
-  onOpen: (id: string) => void;
-}) {
-  useEffect(() => {
-    const el = document.querySelector<HTMLElement>(`[data-report-tab="${tab}"]`);
-    el?.scrollIntoView({ inline: "center", block: "nearest", behavior: "auto" });
-  }, [tab]);
-
-  return (
-    <nav aria-label="Разделы отчёта" className="report-tabs lg:hidden">
-      <div className="report-tabs-scroller">
-        {tabs.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            data-report-tab={item.id}
-            aria-current={tab === item.id ? "page" : undefined}
-            onClick={() => onOpen(item.id)}
-            className="report-tab"
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
-    </nav>
-  );
 }
 
 function keepLlmLayers(prev: PaidReport | undefined, next: PaidReport): PaidReport {
@@ -196,15 +166,21 @@ export function InteractiveReport({
   downloading,
   onDownloadPdf,
   actionNote,
+  initialTab = "home",
+  onBirthSaved,
 }: Props) {
   const [live, setLive] = useState(report);
-  const [tab, setTab] = useState("home");
+  const [tab, setTab] = useState(initialTab);
   const [focusKey, setFocusKey] = useState<string | null>(null);
   const [categoryFilter, setCategoryFilter] = useState("all");
 
   useEffect(() => {
     setLive((prev) => keepLlmLayers(prev, report));
   }, [report]);
+
+  useEffect(() => {
+    if (initialTab) setTab(initialTab);
+  }, [initialTab]);
 
   const document = live.document;
   const sectionTabs = document?.presentation?.web?.tabs ?? [];
@@ -241,6 +217,13 @@ export function InteractiveReport({
   );
 
   if (!document || sectionTabs.length === 0) {
+    if (tab === "account") {
+      return (
+        <div className="min-w-0 pb-8 lg:pb-16">
+          <AccountSettings onSaved={onBirthSaved} />
+        </div>
+      );
+    }
     return (
       <div className="min-w-0 pb-8 lg:pb-16">
         {opening}
@@ -253,7 +236,6 @@ export function InteractiveReport({
 
   return (
     <div className="min-w-0 pb-8 lg:grid lg:grid-cols-[15.5rem_minmax(0,45rem)] lg:items-start lg:gap-10 lg:pb-16 xl:gap-14">
-      <MobileReportTabs tabs={tabs} tab={tab} onOpen={openSection} />
       <nav
         aria-label="Разделы отчёта"
         className="hidden lg:sticky lg:top-28 lg:flex lg:max-h-[calc(100dvh-7.5rem)] lg:flex-col lg:gap-1.5 lg:self-start"
@@ -297,8 +279,15 @@ export function InteractiveReport({
           </>
         ) : null}
 
-        {tab !== "home" && activeNav ? (
+        {tab !== "home" && tab !== "account" && activeNav ? (
           <div className="mb-8 lg:mb-6">
+            <button
+              type="button"
+              onClick={() => openSection("home")}
+              className="mb-4 inline-flex min-h-11 items-center text-base text-[#F6E7A1] lg:hidden"
+            >
+              Все разделы
+            </button>
             <h1 className="report-section-title pb-1">{activeNav.label}</h1>
           </div>
         ) : null}
@@ -319,7 +308,7 @@ export function InteractiveReport({
           <p className="mt-2 text-base text-[#F6E7A1]/80">собираем практику для самостоятельной работы…</p>
         ) : null}
 
-        {tab !== "home" ? (
+        {tab !== "home" && tab !== "account" ? (
           <div>
             {tab === "natal" ? <NatalTab document={document} focusKey={focusKey} /> : null}
             {tab === "aspects" ? (
@@ -333,7 +322,20 @@ export function InteractiveReport({
           </div>
         ) : null}
 
-        {live.disclaimer ? (
+        {tab === "account" ? (
+          <div>
+            <button
+              type="button"
+              onClick={() => openSection("home")}
+              className="mb-4 inline-flex min-h-11 items-center text-base text-[#F6E7A1] lg:hidden"
+            >
+              Все разделы
+            </button>
+            <AccountSettings onSaved={onBirthSaved} />
+          </div>
+        ) : null}
+
+        {live.disclaimer && tab !== "account" ? (
           <p className="report-lede mt-14">{live.disclaimer}</p>
         ) : null}
       </div>
@@ -600,6 +602,18 @@ function MobileSectionCatalog({
       {rows.map((row) => (
         <RailRow key={row.id} row={row} onOpen={onOpen} />
       ))}
+      <button
+        type="button"
+        onClick={() => onOpen("account")}
+        className="flex w-full flex-col items-start rounded-2xl border border-white/12 bg-white/[0.03] px-4 py-3 text-left transition hover:border-white/25 hover:bg-white/[0.05]"
+      >
+        <span className="font-display text-[18px] italic font-normal leading-[1.2] tracking-tight text-white">
+          Аккаунт
+        </span>
+        <span className="mt-0.5 text-sm font-normal leading-snug text-[color:var(--muted)]">
+          данные рождения и выход
+        </span>
+      </button>
     </div>
   );
 }
@@ -1843,15 +1857,6 @@ function LinearSections({ report }: { report: PaidReport }) {
     <div className="mt-12 space-y-12">
       {sections.length > 0 ? (
         <>
-          <nav aria-label="Разделы отчёта" className="report-tabs lg:hidden">
-            <div className="report-tabs-scroller">
-              {sections.map((section) => (
-                <a key={section.id} href={`#report-${section.id}`} className="report-tab">
-                  {section.title}
-                </a>
-              ))}
-            </div>
-          </nav>
           <nav aria-label="Разделы отчёта" className="mb-2 hidden flex-col gap-2 lg:flex">
             {sections.map((section) => (
               <a

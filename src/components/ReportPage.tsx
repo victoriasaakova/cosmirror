@@ -6,6 +6,8 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { ReactNode, Suspense, useEffect, useState } from "react";
 import { Header, SecondaryButton } from "@/components/Header";
 import { InteractiveReport } from "@/components/InteractiveReport";
+import { AccountSettings } from "@/components/AccountSettings";
+import { SiteFooter } from "@/components/SiteFooter";
 import { useAuth } from "@/components/AuthProvider";
 import {
   completeMyDemoOrder,
@@ -52,13 +54,18 @@ function isCheckoutReturnPath(pathname: string): boolean {
   );
 }
 
-function ReportInner() {
+function ReportInner({ initialSection }: { initialSection?: "account" }) {
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const { user, ready, refresh, startLogin } = useAuth();
   const fromProdamus =
     searchParams.get("from") === "prodamus" || isCheckoutReturnPath(pathname);
   const preview = previewMode(searchParams.get("preview"));
+  const accountOpen =
+    initialSection === "account" ||
+    pathname === "/account/settings" ||
+    pathname === "/account/settings/" ||
+    searchParams.get("s") === "account";
   const [order, setOrder] = useState<Order | null>(null);
   const [error, setError] = useState("");
   const [needsAuth, setNeedsAuth] = useState(false);
@@ -342,13 +349,25 @@ function ReportInner() {
     !checkoutReturned &&
     (waitingAuth || Boolean(user));
   const isStatus =
-    waitingAuth ||
-    loading ||
-    waitingBank ||
-    generating ||
-    waitingPayment ||
-    emptyCabinet ||
-    showNeedsAuth;
+    !accountOpen &&
+    (waitingAuth ||
+      loading ||
+      waitingBank ||
+      generating ||
+      waitingPayment ||
+      emptyCabinet ||
+      showNeedsAuth);
+
+  async function reloadOrder() {
+    await refresh();
+    try {
+      const next = await fetchMyOrder();
+      setOrder(next);
+      setCabinetEmpty(!next);
+    } catch {
+      /* keep current order on screen */
+    }
+  }
 
   return (
     <main className="relative flex min-h-[100dvh] flex-col overflow-x-clip bg-[var(--background)] text-[var(--foreground)]">
@@ -375,11 +394,7 @@ function ReportInner() {
       ) : null}
 
       <div
-        className={`relative z-10 mx-auto flex w-full max-w-[720px] flex-1 flex-col px-5 pt-[var(--cabinet-header-offset)] lg:max-w-[68rem] lg:px-8 ${
-          showReport
-            ? "pb-[calc(var(--report-tabs-h)+env(safe-area-inset-bottom)+var(--space-3))] lg:pb-[max(2.5rem,env(safe-area-inset-bottom))]"
-            : "pb-[max(2.5rem,env(safe-area-inset-bottom))]"
-        }`}
+        className="relative z-10 mx-auto flex w-full max-w-[720px] flex-1 flex-col px-5 pt-[var(--cabinet-header-offset)] pb-[max(2.5rem,env(safe-area-inset-bottom))] lg:max-w-[68rem] lg:px-8"
       >
         {showNeedsAuth ? (
           <StatusScreen titleBefore="открой" titleAccent="кабинет">
@@ -392,6 +407,23 @@ function ReportInner() {
               </SecondaryButton>
             </div>
           </StatusScreen>
+        ) : accountOpen && user ? (
+          <div className="mt-4 min-w-0 pb-8 sm:mt-6 lg:pb-16">
+            {showReport && report ? (
+              <InteractiveReport
+                report={report}
+                displayName={greetingName(user)}
+                orderId={order?.id}
+                downloading={downloading}
+                onDownloadPdf={() => void onDownloadPdf()}
+                actionNote={downloadNote}
+                initialTab="account"
+                onBirthSaved={() => void reloadOrder()}
+              />
+            ) : (
+              <AccountSettings onSaved={() => void reloadOrder()} />
+            )}
+          </div>
         ) : waitingAuth || loading ? (
           <StatusScreen titleBefore="" titleAccent="секунду">
             <p className="report-lede mt-4">
@@ -468,6 +500,7 @@ function ReportInner() {
               downloading={downloading}
               onDownloadPdf={() => void onDownloadPdf()}
               actionNote={downloadNote}
+              onBirthSaved={() => void reloadOrder()}
             />
           </article>
         ) : (
@@ -481,6 +514,7 @@ function ReportInner() {
           </StatusScreen>
         )}
       </div>
+      <SiteFooter />
     </main>
   );
 }
@@ -533,7 +567,7 @@ function StatusScreen({
   );
 }
 
-export function ReportPage() {
+export function ReportPage({ initialSection }: { initialSection?: "account" } = {}) {
   return (
     <Suspense
       fallback={
@@ -542,7 +576,7 @@ export function ReportPage() {
         </main>
       }
     >
-      <ReportInner />
+      <ReportInner initialSection={initialSection} />
     </Suspense>
   );
 }
