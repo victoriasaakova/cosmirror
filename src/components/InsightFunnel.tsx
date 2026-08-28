@@ -2,6 +2,7 @@
 
 import type { OnboardingInsight, OnboardingStep } from "@/lib/api";
 import { CONTENT_UIS, mergeContentPayloads, screensForStep } from "@/lib/onboarding/screens";
+import { sanitizePersonName } from "@/lib/person-name";
 
 export const INSIGHT_OFFER_INDEX = 2;
 export const INSIGHT_CONFIRM_INDEX = 3;
@@ -42,7 +43,8 @@ function quizContext(
   const intentScreen = allScreens.find((s) => s.field === "intent" && s.kind !== "text");
   const lifeScreen = allScreens.find((s) => s.field === "life_stage" && s.kind !== "text");
 
-  const name = typeof contentPayload.name === "string" ? contentPayload.name.trim() : "";
+  const name =
+    typeof contentPayload.name === "string" ? sanitizePersonName(contentPayload.name) : "";
   const focusLabels = asStringList(contentPayload.focus).map((value) =>
     focusScreen && focusScreen.kind !== "text" ? labelFor(focusScreen.options, value) : value,
   );
@@ -57,12 +59,6 @@ function quizContext(
 
   return { name, focusLabels, intentLabel, lifeStageLabel };
 }
-
-const OPENING_BRIDGES = [
-  "ты можешь замечать, что",
-  "ты можешь чувствовать, что",
-  "сейчас важно",
-];
 
 const METHOD_TITLE = "Стань ближе к своему истинному я через подробный разбор";
 
@@ -82,39 +78,24 @@ const TOPIC_BLOCKS = [
   { key: "path", label: "реализация", hint: "возможности по карте" },
 ];
 
-function titleToInsightClause(title: string): string {
-  const t = title.trim();
-  if (!t) return "пора прислушаться к себе";
-  const low = t.toLowerCase();
-  const map: Record<string, string> = {
-    "тяга выйти из тесной роли": "пора выйти из тесной роли",
-    "эмоциональная нагрузка цикла": "беречь эмоциональные границы",
-    "что может отзываться сейчас": "замедлиться и прислушаться к себе",
-    "размытие и чувствительность": "легко потерять ясность — стоит чаще сверяться с собой",
-    "глубинная перестройка": "назрела внутренняя перестройка",
-    "где жизнь просит шире": "уже тесно в привычном масштабе",
-    "что имеет смысл наблюдать": "стоит внимательнее смотреть на свои автоматические реакции",
+function fallbackOpening(
+  _influences: InsightItem[],
+  _focusLabels: string[],
+  _intentLabel: string,
+): { bridge: string; insight: string } {
+  return {
+    bridge: "Попробуй проверить такую гипотезу:",
+    insight: "карта может быть полезна не как ответ, а как способ точнее задать вопрос",
   };
-  if (map[low]) return map[low];
-  for (const prefix of ["тяга ", "желание ", "ощущение ", "тема "]) {
-    if (low.startsWith(prefix)) {
-      const rest = t.slice(prefix.length).trim();
-      if (rest) return rest.charAt(0).toLowerCase() + rest.slice(1);
-    }
-  }
-  return t.charAt(0).toLowerCase() + t.slice(1);
 }
 
-function fallbackOpening(
-  influences: InsightItem[],
-  focusLabels: string[],
-  intentLabel: string,
-): { bridge: string; insight: string } {
-  const seed = focusLabels.join("") + intentLabel;
-  const bridge = OPENING_BRIDGES[Math.abs(seed.length) % OPENING_BRIDGES.length];
-  const title = influences[0]?.title ?? "";
-  const insight = fitClauseToBridge(bridge, titleToInsightClause(title));
-  return { bridge, insight };
+function fallbackBody(
+  _influences: InsightItem[],
+  _focusLabels: string[],
+  _intentLabel: string,
+  _lifeStageLabel: string,
+): string {
+  return "Сейчас данных недостаточно для уверенного персонального вывода. Поэтому лучше взять эту интерпретацию как гипотезу и сверить её с опытом.";
 }
 
 function fitClauseToBridge(bridge: string, clause: string): string {
@@ -125,20 +106,6 @@ function fitClauseToBridge(bridge: string, clause: string): string {
     return rest || clause.trim();
   }
   return clause.trim();
-}
-
-function fallbackBody(
-  influences: InsightItem[],
-  focusLabels: string[],
-  intentLabel: string,
-  _lifeStageLabel: string,
-): string {
-  const focus = focusLabels[0] ?? "жизни";
-  const primary = influences[0]?.text?.split(".")[0]?.trim();
-  if (primary) {
-    return `${primary}. Чтобы ${intentLabel.toLowerCase() || "разобраться в себе"}, важно сначала назвать, что уже не даёт опоры в теме «${focus}».`;
-  }
-  return `Сейчас особенно заметно, где привычная роль стала тесной в теме «${focus}». Чтобы ${intentLabel.toLowerCase() || "разобраться в себе"}, полезно честно увидеть, что больше не работает.`;
 }
 
 function requestHint(focusLabels: string[], intentLabel: string): string {
