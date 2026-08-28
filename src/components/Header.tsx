@@ -7,7 +7,6 @@ import { usePathname } from "next/navigation";
 import { CircleUser } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { freshOnboardingHref } from "@/lib/onboarding/paths";
-import { userDisplayName } from "@/lib/user-name";
 
 const GUEST_NAV = [
   { id: "how", hash: "#how-it-works", path: "/#how-it-works", label: "Как это работает" },
@@ -85,7 +84,7 @@ export function Header() {
           }`}
         >
           <a href={homeHref} className="flex h-full min-w-0 items-center justify-self-start">
-            <HeaderBrand name={signedIn ? userDisplayName(user) : undefined} />
+            <HeaderBrand />
           </a>
 
           {signedIn ? (
@@ -229,7 +228,7 @@ function isBlogPath(pathname: string) {
   return pathname === "/blog" || pathname.startsWith("/blog/");
 }
 
-function HeaderBrand({ name }: { name?: string }) {
+function HeaderBrand() {
   return (
     <span className="flex h-8 min-w-0 items-center gap-1">
       <span className="flex h-8 w-6 shrink-0 items-center justify-center">
@@ -242,7 +241,7 @@ function HeaderBrand({ name }: { name?: string }) {
         />
       </span>
       <span className="font-display truncate text-lg leading-none tracking-tight text-white">
-        {name || "Cosmirror"}
+        Cosmirror
       </span>
     </span>
   );

@@ -24,7 +24,6 @@ import {
   isoToDisplayDate,
   toIsoDate,
 } from "@/lib/birth-input";
-import { greetingName } from "@/lib/user-name";
 
 type BirthDraft = {
   birth_date: string;
@@ -38,7 +37,6 @@ type BirthDraft = {
 
 export function AccountSettings({ onSaved }: { onSaved?: () => Promise<void> | void }) {
   const { user, logout, refresh } = useAuth();
-  const name = greetingName(user);
   const email = user?.email?.trim() || "";
   const birth = user?.birth ?? user?.profile;
   const [editing, setEditing] = useState(false);
@@ -158,16 +156,7 @@ export function AccountSettings({ onSaved }: { onSaved?: () => Promise<void> | v
     <div className="min-w-0">
       <p className="text-sm leading-relaxed text-white/45">{loginLine}</p>
       <h1 className="mt-3 text-3xl font-normal leading-[1.15] tracking-tight text-white sm:text-4xl">
-        {name ? (
-          <>
-            Аккаунт{" "}
-            <span className="font-display inline-block pb-1 italic leading-[1.15] text-[#F6E7A1]">
-              {name}
-            </span>
-          </>
-        ) : (
-          "Аккаунт"
-        )}
+        Аккаунт
       </h1>
 
       <section className="mt-10">

@@ -49,6 +49,16 @@ git reset --hard origin/main
 if [[ ! -f .env.production ]]; then
   echo "NEXT_PUBLIC_API_URL=https://api.cosmirror.ru" > .env.production
 fi
+ensure_env() {
+  local key="$1"
+  local value="$2"
+  if grep -q "^${key}=" .env.production; then
+    return
+  fi
+  printf '%s=%s\n' "$key" "$value" >> .env.production
+}
+ensure_env NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN "phc_APmaNrkAD26rcLdUKopGwiWNe3ufT4KVzoMDi7Ye2ikm"
+ensure_env NEXT_PUBLIC_POSTHOG_HOST "https://us.i.posthog.com"
 cp -f .env.production .env.local
 
 echo "==> Stopping $SERVICE to free RAM for build"

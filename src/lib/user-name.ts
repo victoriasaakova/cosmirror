@@ -1,4 +1,5 @@
 import type { AuthUser } from "@/lib/api";
+import { sanitizePersonName } from "@/lib/person-name";
 
 function looksLikeAccountHandle(value: string, user: AuthUser | null): boolean {
   const raw = value.trim();
@@ -19,14 +20,10 @@ function firstHumanName(user: AuthUser | null): string {
   const candidates = [user.display_name, user.profile?.display_name, user.first_name];
   for (const candidate of candidates) {
     const value = candidate?.trim() || "";
-    if (value && !looksLikeAccountHandle(value, user)) return value;
+    const cleaned = sanitizePersonName(value);
+    if (cleaned && !looksLikeAccountHandle(cleaned, user)) return cleaned;
   }
   return "";
-}
-
-/** Header brand. Empty → Cosmirror mark text, never a Yandex login or email. */
-export function userDisplayName(user: AuthUser | null): string {
-  return firstHumanName(user);
 }
 
 export function greetingName(user: AuthUser | null): string {

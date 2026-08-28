@@ -21,6 +21,7 @@ import {
   type PlaceSuggestion,
 } from "@/lib/api";
 import { writeAuthToken, readAuthToken, clearAuthNext } from "@/lib/auth";
+import { captureEvent } from "@/lib/posthog-client";
 import { destinationAfterYandexLogin } from "@/lib/yandex-login";
 import { useAuth } from "@/components/AuthProvider";
 import {
@@ -44,6 +45,7 @@ import {
   type ContentScreen,
   type TitlePart,
 } from "@/lib/onboarding/screens";
+import { sanitizePersonName, sanitizePersonNameInput } from "@/lib/person-name";
 import {
   INSIGHT_CONFIRM_INDEX,
   INSIGHT_OFFER_INDEX,
@@ -960,7 +962,7 @@ export function OnboardingFlow({
       currentStep.step_type === "input" ||
       currentStep.step_type === "custom"
     ) {
-      const payload = {
+      const payload: Record<string, unknown> = {
         ...(payloadByStep[currentStep.slug] ?? {}),
         _screen:
           contentScreens.length > 0
@@ -969,6 +971,10 @@ export function OnboardingFlow({
       };
       if (contentScreens.length > 0) {
         const screen = contentScreens[screenIndex];
+        if (screen.kind === "text" && screen.field === "name") {
+          payload.name = sanitizePersonName(String(payload.name || ""));
+          updateStepPayload(currentStep.slug, { name: payload.name });
+        }
         if (!screenIsComplete(screen, payload)) return;
         if (screenIndex < contentScreens.length - 1) {
           setSubmitting(true);
@@ -1082,6 +1088,10 @@ export function OnboardingFlow({
       let order = await createOrder(token, key);
       writeLastOrderId(order.id);
       if (order.status === "paid") {
+        captureEvent("checkout_started", {
+          order_id: order.id,
+          order_status: order.status,
+        });
         if (payWindow && !payWindow.closed) payWindow.close();
         window.location.assign("/account/");
         return;
@@ -1091,6 +1101,10 @@ export function OnboardingFlow({
         order = await createOrder(token, key);
         writeLastOrderId(order.id);
       }
+      captureEvent("checkout_started", {
+        order_id: order.id,
+        order_status: order.status,
+      });
       if (order.payment_url) {
         if (payWindow && !payWindow.closed) {
           payWindow.location.replace(order.payment_url);
@@ -1518,7 +1532,18 @@ function ContentScreenView({
           autoFocus
           placeholder={screen.placeholder}
           value={value}
-          onChange={(event) => onPayload({ [screen.field]: event.target.value })}
+          spellCheck={screen.field === "name" ? false : undefined}
+          autoCorrect={screen.field === "name" ? "off" : undefined}
+          autoCapitalize={screen.field === "name" ? "words" : undefined}
+          maxLength={screen.field === "name" ? 40 : undefined}
+          onChange={(event) =>
+            onPayload({
+              [screen.field]:
+                screen.field === "name"
+                  ? sanitizePersonNameInput(event.target.value)
+                  : event.target.value,
+            })
+          }
           className="mt-10 w-full border-b border-white/20 bg-transparent pb-3 text-2xl text-white outline-none placeholder:text-white/30 focus:border-[#F6E7A1] sm:text-3xl"
         />
       </div>

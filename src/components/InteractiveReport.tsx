@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AccountSettings } from "@/components/AccountSettings";
 import { ReportOpening } from "@/components/ReportOpening";
 import { aspectGlyph, formatDms, planetGlyph, signGlyph } from "@/lib/astro-glyphs";
 import {
@@ -27,7 +26,6 @@ const REPORT_NAV = [
   { id: "cycles", label: "Циклы", subtitle: "что актуально сейчас" },
   { id: "request", label: "Запрос", subtitle: "расшифровка запроса" },
   { id: "practice", label: "Практика", subtitle: "как работать с темами" },
-  { id: "account", label: "Аккаунт", subtitle: "данные рождения и выход" },
 ] as const;
 
 const NATAL_GROUPS: { title: string; subtitle: string; keys: string[] }[] = [
@@ -90,8 +88,6 @@ type Props = {
   downloading: boolean;
   onDownloadPdf: () => void;
   actionNote?: string;
-  initialTab?: string;
-  onBirthSaved?: () => Promise<void> | void;
 };
 
 function scrollReportTop() {
@@ -152,11 +148,9 @@ function layerCollecting(
   layer?: { source?: string; can_generate?: boolean; payload?: unknown },
   generationStatus?: string,
 ): boolean {
-  if (!layer?.can_generate || layer.source === "llm") return false;
-  // Fallback text is already readable — keep the report open for design/QA.
-  // LLM can still replace layers in the background without blocking the UI.
-  if (layer.source === "fallback" || layer.payload) return false;
-  return generationStatus !== "done";
+  if (layer?.source === "llm") return false;
+  if (!layer?.can_generate) return false;
+  return generationStatus === "running";
 }
 
 export function InteractiveReport({
@@ -166,21 +160,15 @@ export function InteractiveReport({
   downloading,
   onDownloadPdf,
   actionNote,
-  initialTab = "home",
-  onBirthSaved,
 }: Props) {
   const [live, setLive] = useState(report);
-  const [tab, setTab] = useState(initialTab);
+  const [tab, setTab] = useState("home");
   const [focusKey, setFocusKey] = useState<string | null>(null);
   const [categoryFilter, setCategoryFilter] = useState("all");
 
   useEffect(() => {
     setLive((prev) => keepLlmLayers(prev, report));
   }, [report]);
-
-  useEffect(() => {
-    if (initialTab) setTab(initialTab);
-  }, [initialTab]);
 
   const document = live.document;
   const sectionTabs = document?.presentation?.web?.tabs ?? [];
@@ -217,13 +205,6 @@ export function InteractiveReport({
   );
 
   if (!document || sectionTabs.length === 0) {
-    if (tab === "account") {
-      return (
-        <div className="min-w-0 pb-8 lg:pb-16">
-          <AccountSettings onSaved={onBirthSaved} />
-        </div>
-      );
-    }
     return (
       <div className="min-w-0 pb-8 lg:pb-16">
         {opening}
@@ -279,7 +260,7 @@ export function InteractiveReport({
           </>
         ) : null}
 
-        {tab !== "home" && tab !== "account" && activeNav ? (
+        {tab !== "home" && activeNav ? (
           <div className="mb-8 lg:mb-6">
             <button
               type="button"
@@ -308,34 +289,23 @@ export function InteractiveReport({
           <p className="mt-2 text-base text-[#F6E7A1]/80">собираем практику для самостоятельной работы…</p>
         ) : null}
 
-        {tab !== "home" && tab !== "account" ? (
+        {tab !== "home" ? (
           <div>
-            {tab === "natal" ? <NatalTab document={document} focusKey={focusKey} /> : null}
-            {tab === "aspects" ? (
+            {tab === "natal" && !generatingNatal ? (
+              <NatalTab document={document} focusKey={focusKey} />
+            ) : null}
+            {tab === "aspects" && !generatingAspects ? (
               <AspectsTab document={document} focusKey={focusKey} initialFilter={categoryFilter} />
             ) : null}
-            {tab === "cycles" ? (
+            {tab === "cycles" && !generatingCycles ? (
               <CyclesTab document={document} focusKey={focusKey} initialFilter={categoryFilter} />
             ) : null}
-            {tab === "request" ? <RequestTab document={document} /> : null}
-            {tab === "practice" ? <PracticeTab document={document} /> : null}
+            {tab === "request" && !generatingRequest ? <RequestTab document={document} /> : null}
+            {tab === "practice" && !generatingPractice ? <PracticeTab document={document} /> : null}
           </div>
         ) : null}
 
-        {tab === "account" ? (
-          <div>
-            <button
-              type="button"
-              onClick={() => openSection("home")}
-              className="mb-4 inline-flex min-h-11 items-center text-base text-[#F6E7A1] lg:hidden"
-            >
-              Все разделы
-            </button>
-            <AccountSettings onSaved={onBirthSaved} />
-          </div>
-        ) : null}
-
-        {live.disclaimer && tab !== "account" ? (
+        {live.disclaimer ? (
           <p className="report-lede mt-14">{live.disclaimer}</p>
         ) : null}
       </div>
@@ -602,18 +572,6 @@ function MobileSectionCatalog({
       {rows.map((row) => (
         <RailRow key={row.id} row={row} onOpen={onOpen} />
       ))}
-      <button
-        type="button"
-        onClick={() => onOpen("account")}
-        className="flex w-full flex-col items-start rounded-2xl border border-white/12 bg-white/[0.03] px-4 py-3 text-left transition hover:border-white/25 hover:bg-white/[0.05]"
-      >
-        <span className="font-display text-[18px] italic font-normal leading-[1.2] tracking-tight text-white">
-          Аккаунт
-        </span>
-        <span className="mt-0.5 text-sm font-normal leading-snug text-[color:var(--muted)]">
-          данные рождения и выход
-        </span>
-      </button>
     </div>
   );
 }

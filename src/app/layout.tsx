@@ -1,7 +1,9 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import { Noto_Sans_Symbols_2, Onest, Playfair_Display } from "next/font/google";
 import { CookieConsentProvider } from "@/components/CookieConsent";
 import { YandexMetrika } from "@/components/YandexMetrika";
+import { PostHogAnalytics } from "@/components/PostHogAnalytics";
 import { AuthProvider } from "@/components/AuthProvider";
 import "./globals.css";
 
@@ -92,8 +94,13 @@ export default function RootLayout({
     >
       <body className="flex min-h-full flex-col font-grotesk" suppressHydrationWarning>
         <CookieConsentProvider>
-          <YandexMetrika />
-          <AuthProvider>{children}</AuthProvider>
+          <AuthProvider>
+            <YandexMetrika />
+            <Suspense fallback={null}>
+              <PostHogAnalytics />
+            </Suspense>
+            {children}
+          </AuthProvider>
         </CookieConsentProvider>
       </body>
     </html>

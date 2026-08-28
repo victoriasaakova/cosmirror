@@ -1,10 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense } from "react";
+import { Suspense, useEffect } from "react";
 import { CosmirrorMark } from "@/components/CosmirrorMark";
+import { captureEvent } from "@/lib/posthog-client";
 
 function PayFailedInner() {
+  useEffect(() => {
+    captureEvent("payment_failed");
+  }, []);
+
   return (
     <main className="relative flex min-h-[100dvh] flex-col overflow-x-clip bg-[#050d4a] text-white">
       <div className="relative z-10 mx-auto flex w-full max-w-lg flex-1 flex-col px-5 py-10 md:px-8 md:py-14">

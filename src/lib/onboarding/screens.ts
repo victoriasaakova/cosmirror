@@ -10,6 +10,7 @@ import {
   REPORT_SLUG,
   stepHref,
 } from "./paths";
+import { sanitizePersonName } from "@/lib/person-name";
 
 export type TitlePart = { t: string; accent?: boolean };
 
@@ -297,7 +298,9 @@ export function screenIsComplete(
     return Array.isArray(value) && value.length > 0;
   }
   if (screen.kind === "text") {
-    return typeof value === "string" && value.trim().length > 0;
+    if (typeof value !== "string") return false;
+    if (screen.field === "name") return sanitizePersonName(value).length > 0;
+    return value.trim().length > 0;
   }
   return typeof value === "string" && value.length > 0;
 }

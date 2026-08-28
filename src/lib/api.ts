@@ -761,7 +761,10 @@ export type ReportDocument = {
   };
   interpretive?: {
     status?: string;
-    generation?: { status?: "idle" | "running" | "done" | string };
+    generation?: {
+      status?: "idle" | "running" | "done" | string;
+      current_section?: "natal" | "aspects" | "cycles" | "request" | "practice" | string;
+    };
     natal?: NatalInterpretationLayer;
     aspects?: AspectsInterpretationLayer;
     cycles?: CyclesInterpretationLayer;
@@ -815,6 +818,16 @@ export type Order = {
   updated_at: string;
 };
 
+export const PAID_REPORT_LAYERS = [
+  "natal",
+  "aspects",
+  "cycles",
+  "request",
+  "practice",
+] as const;
+
+export type PaidReportLayerId = (typeof PAID_REPORT_LAYERS)[number];
+
 export function reportLayersPending(report?: PaidReport | null): boolean {
   if (!report?.document?.interpretive) return false;
   const interpretive = report.document.interpretive;
@@ -828,6 +841,33 @@ export function reportLayersPending(report?: PaidReport | null): boolean {
     waiting(interpretive.request) ||
     waiting(interpretive.practice)
   );
+}
+
+export function reportReadyToOpen(report?: PaidReport | null): boolean {
+  if (!report?.document && !(report?.sections && report.sections.length > 0)) {
+    return false;
+  }
+  return !reportLayersPending(report);
+}
+
+export function reportGeneratingLayer(report?: PaidReport | null): PaidReportLayerId | "" {
+  const interpretive = report?.document?.interpretive;
+  const fromJob = String(interpretive?.generation?.current_section || "").trim();
+  if (PAID_REPORT_LAYERS.includes(fromJob as PaidReportLayerId)) {
+    return fromJob as PaidReportLayerId;
+  }
+  if (!interpretive) return "natal";
+  for (const key of PAID_REPORT_LAYERS) {
+    const layer = interpretive[key];
+    if (layer?.can_generate && layer.source !== "llm") return key;
+  }
+  return "";
+}
+
+export function reportLlmLayerIds(report?: PaidReport | null): PaidReportLayerId[] {
+  const interpretive = report?.document?.interpretive;
+  if (!interpretive) return [];
+  return PAID_REPORT_LAYERS.filter((key) => interpretive[key]?.source === "llm");
 }
 
 export type AuthUser = {

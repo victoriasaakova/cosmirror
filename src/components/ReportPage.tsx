@@ -3,8 +3,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { ReactNode, Suspense, useEffect, useState } from "react";
-import { Header, SecondaryButton } from "@/components/Header";
+import { ReactNode, Suspense, useEffect, useRef, useState } from "react";
+import { Header } from "@/components/Header";
 import { InteractiveReport } from "@/components/InteractiveReport";
 import { AccountSettings } from "@/components/AccountSettings";
 import { SiteFooter } from "@/components/SiteFooter";
@@ -15,10 +15,15 @@ import {
   checkoutReturnParamsFromSearch,
   downloadMyReportPdf,
   fetchMyOrder,
+  reportGeneratingLayer,
   reportLayersPending,
+  reportLlmLayerIds,
+  reportReadyToOpen,
   type Order,
+  type PaidReportLayerId,
 } from "@/lib/api";
 import { writeAuthToken } from "@/lib/auth";
+import { captureEvent } from "@/lib/posthog-client";
 import { freshOnboardingHref } from "@/lib/onboarding/paths";
 import { greetingName } from "@/lib/user-name";
 
@@ -75,6 +80,7 @@ function ReportInner({ initialSection }: { initialSection?: "account" }) {
   const [downloadNote, setDownloadNote] = useState("");
   const [checkoutReturned, setCheckoutReturned] = useState(fromProdamus);
   const [paymentSlow, setPaymentSlow] = useState(false);
+  const paidCaptured = useRef(false);
   const isLocalDemo = process.env.NODE_ENV === "development";
   const unpaidLocal =
     isLocalDemo &&
@@ -98,6 +104,12 @@ function ReportInner({ initialSection }: { initialSection?: "account" }) {
     );
     void refresh().finally(() => setBootstrapped(true));
   }, [refresh]);
+
+  useEffect(() => {
+    if (!order || order.status !== "paid" || paidCaptured.current) return;
+    paidCaptured.current = true;
+    captureEvent("payment_completed", { order_id: order.id });
+  }, [order]);
 
   useEffect(() => {
     if (preview) return;
@@ -173,12 +185,11 @@ function ReportInner({ initialSection }: { initialSection?: "account" }) {
         if (next.status === "canceled" || next.status === "denied") {
           return;
         }
-        const layersOpen =
+        const awaitingLlm =
           next.status === "paid" &&
           Boolean(next.report) &&
-          reportLayersPending(next.report) &&
-          Date.now() - startedAt < 8 * 60_000;
-        if (next.status === "paid" && next.report && !layersOpen) {
+          reportLayersPending(next.report);
+        if (next.status === "paid" && next.report && !awaitingLlm) {
           return;
         }
         timer = window.setTimeout(() => {
@@ -319,8 +330,7 @@ function ReportInner({ initialSection }: { initialSection?: "account" }) {
     preview === "failed" || order?.status === "canceled" || order?.status === "denied";
   const confirmed = order?.status === "paid";
   const report = confirmed ? order?.report : null;
-  // Paid report always opens once the payload exists (YAML fallback is enough for design).
-  const showReport = Boolean(report?.document || (report?.sections && report.sections.length > 0));
+  const showReport = Boolean(report && reportReadyToOpen(report));
   const waitingAuth = !preview && (!bootstrapped || !ready);
   const waitingBank =
     preview === "bank" ||
@@ -333,6 +343,9 @@ function ReportInner({ initialSection }: { initialSection?: "account" }) {
   const generating =
     preview === "report" ||
     (!preview && !needsAuth && !failed && confirmed && !showReport);
+  const generatingLayer: PaidReportLayerId | "" =
+    preview === "report" ? "natal" : reportGeneratingLayer(report);
+  const generatingDone = preview === "report" ? [] : reportLlmLayerIds(report);
   const waitingPayment =
     preview === "pay" ||
     (!preview && Boolean(order) && !failed && !confirmed && !checkoutReturned);
@@ -356,7 +369,8 @@ function ReportInner({ initialSection }: { initialSection?: "account" }) {
       generating ||
       waitingPayment ||
       emptyCabinet ||
-      showNeedsAuth);
+      showNeedsAuth ||
+      failed);
 
   async function reloadOrder() {
     await refresh();
@@ -398,31 +412,20 @@ function ReportInner({ initialSection }: { initialSection?: "account" }) {
       >
         {showNeedsAuth ? (
           <StatusScreen titleBefore="открой" titleAccent="кабинет">
-            <p className="report-lede mt-4 max-w-md">
+            <p className="report-lede mt-4">
               {error || "войди через Яндекс ID — здесь будет твоя карта."}
             </p>
-            <div className="mt-10 flex w-full justify-center">
-              <SecondaryButton fullWidth onClick={() => void startLogin("/account/")}>
-                Войти
-              </SecondaryButton>
-            </div>
+            <button
+              type="button"
+              className="cabinet-cta mt-10"
+              onClick={() => void startLogin("/account/")}
+            >
+              Войти
+            </button>
           </StatusScreen>
         ) : accountOpen && user ? (
           <div className="mt-4 min-w-0 pb-8 sm:mt-6 lg:pb-16">
-            {showReport && report ? (
-              <InteractiveReport
-                report={report}
-                displayName={greetingName(user)}
-                orderId={order?.id}
-                downloading={downloading}
-                onDownloadPdf={() => void onDownloadPdf()}
-                actionNote={downloadNote}
-                initialTab="account"
-                onBirthSaved={() => void reloadOrder()}
-              />
-            ) : (
-              <AccountSettings onSaved={() => void reloadOrder()} />
-            )}
+            <AccountSettings onSaved={() => void reloadOrder()} />
           </div>
         ) : waitingAuth || loading ? (
           <StatusScreen titleBefore="" titleAccent="секунду">
@@ -432,7 +435,7 @@ function ReportInner({ initialSection }: { initialSection?: "account" }) {
           </StatusScreen>
         ) : emptyCabinet ? (
           <StatusScreen titleBefore="здесь будет" titleAccent="твоя карта">
-            <p className="report-lede mt-4 max-w-md">
+            <p className="report-lede mt-4">
               пройди короткий путь — соберём персональный разбор и сохраним его в кабинете.
             </p>
             <Link href={freshOnboardingHref()} className="cabinet-cta mt-10">
@@ -441,7 +444,7 @@ function ReportInner({ initialSection }: { initialSection?: "account" }) {
           </StatusScreen>
         ) : waitingBank ? (
           <StatusScreen titleBefore="ожидаем оплату" titleAccent="от банка" showEye>
-            <p className="report-lede mt-4 max-w-md">
+            <p className="report-lede mt-4">
               {paymentSlow
                 ? "банк подтверждает дольше обычного. не закрывай страницу — отчёт соберём сразу после оплаты."
                 : "банк ещё подтверждает платёж. не закрывай страницу — отчёт соберём сразу после этого."}
@@ -449,15 +452,16 @@ function ReportInner({ initialSection }: { initialSection?: "account" }) {
           </StatusScreen>
         ) : generating ? (
           <StatusScreen titleBefore="отчёт" titleAccent="формируется" showEye>
-            <p className="report-lede mt-4 max-w-md">
-              собираю твой разбор — это займёт пару минут.
+            <p className="report-lede mt-4">
+              {GENERATING_COPY[generatingLayer || "natal"]}
               <br />
-              считаю положения планет по твоим данным рождения.
+              не закрывай страницу — разбор откроется здесь, как только тексты будут готовы.
             </p>
+            <GeneratingSteps current={generatingLayer || "natal"} done={generatingDone} />
           </StatusScreen>
         ) : waitingPayment ? (
           <StatusScreen titleBefore="остался один" titleAccent="шаг">
-            <p className="report-lede mt-4 max-w-md">
+            <p className="report-lede mt-4">
               {error ||
                 "оплати заказ на защищённой странице Prodamus. после оплаты разбор откроется здесь"}
             </p>
@@ -479,18 +483,14 @@ function ReportInner({ initialSection }: { initialSection?: "account" }) {
             ) : null}
           </StatusScreen>
         ) : failed ? (
-          <div className="mt-8 max-w-md">
-            <h1 className="text-3xl font-normal leading-[1.15] tracking-tight sm:text-4xl">
-              Оплата не прошла.{" "}
-              <span className="font-display inline-block pb-1 italic leading-[1.15] text-[#F6E7A1]">можно попробовать ещё раз</span>
-            </h1>
-            <p className="report-lede mt-6">
+          <StatusScreen titleBefore="оплата не" titleAccent="прошла">
+            <p className="report-lede mt-4">
               Платёж отменили или банк его отклонил. Вернись к разбору и нажми оплату ещё раз.
             </p>
             <Link href="/onboarding/insight/" className="cabinet-cta mt-10">
               Вернуться к разбору
             </Link>
-          </div>
+          </StatusScreen>
         ) : showReport && report ? (
           <article className="mt-4 min-w-0 pb-8 sm:mt-6 lg:pb-16">
             <InteractiveReport
@@ -500,12 +500,11 @@ function ReportInner({ initialSection }: { initialSection?: "account" }) {
               downloading={downloading}
               onDownloadPdf={() => void onDownloadPdf()}
               actionNote={downloadNote}
-              onBirthSaved={() => void reloadOrder()}
             />
           </article>
         ) : (
           <StatusScreen titleBefore="здесь будет" titleAccent="твоя карта">
-            <p className="report-lede mt-4 max-w-md">
+            <p className="report-lede mt-4">
               {error || "пройди короткий путь — соберём персональный разбор и сохраним его в кабинете."}
             </p>
             <Link href={freshOnboardingHref()} className="cabinet-cta mt-10">
@@ -516,6 +515,53 @@ function ReportInner({ initialSection }: { initialSection?: "account" }) {
       </div>
       <SiteFooter />
     </main>
+  );
+}
+
+const GENERATING_STEPS: { id: PaidReportLayerId; label: string }[] = [
+  { id: "natal", label: "карта" },
+  { id: "aspects", label: "аспекты" },
+  { id: "cycles", label: "циклы" },
+  { id: "request", label: "запрос" },
+  { id: "practice", label: "практика" },
+];
+
+const GENERATING_COPY: Record<PaidReportLayerId, string> = {
+  natal: "читаю твою карту — как устроен характер и на чём ты опираешься.",
+  aspects: "собираю аспекты — как планеты в карте связаны друг с другом.",
+  cycles: "смотрю текущие циклы — что сейчас давит и что поддерживает.",
+  request: "связываю карту с тем, с чем ты пришла.",
+  practice: "собираю практику — с чего начать в ближайшие дни.",
+};
+
+function GeneratingSteps({
+  current,
+  done,
+}: {
+  current: PaidReportLayerId;
+  done: PaidReportLayerId[];
+}) {
+  return (
+    <ol className="mt-8 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-sm tracking-wide">
+      {GENERATING_STEPS.map((step) => {
+        const isCurrent = step.id === current;
+        const isDone = done.includes(step.id);
+        return (
+          <li
+            key={step.id}
+            className={
+              isCurrent
+                ? "text-[#F6E7A1]"
+                : isDone
+                  ? "text-white/70"
+                  : "text-white/35"
+            }
+          >
+            {step.label}
+          </li>
+        );
+      })}
+    </ol>
   );
 }
 
@@ -532,7 +578,7 @@ function StatusScreen({
 }) {
   return (
     <div
-      className="mx-auto flex w-full flex-1 flex-col items-center justify-center px-4 text-center"
+      className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center px-4 text-center"
       role="status"
       aria-live="polite"
       aria-busy={showEye}
