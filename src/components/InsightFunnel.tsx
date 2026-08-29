@@ -84,8 +84,8 @@ function fallbackOpening(
   _intentLabel: string,
 ): { bridge: string; insight: string } {
   return {
-    bridge: "Попробуй проверить такую гипотезу:",
-    insight: "карта может быть полезна не как ответ, а как способ точнее задать вопрос",
+    bridge: "",
+    insight: "сейчас карта полезнее как способ точнее задать вопрос, а не как готовый ответ",
   };
 }
 
@@ -96,16 +96,6 @@ function fallbackBody(
   _lifeStageLabel: string,
 ): string {
   return "Сейчас данных недостаточно для уверенного персонального вывода. Поэтому лучше взять эту интерпретацию как гипотезу и сверить её с опытом.";
-}
-
-function fitClauseToBridge(bridge: string, clause: string): string {
-  const tail = bridge.trim().split(/\s+/).pop()?.toLowerCase() ?? "";
-  const words = clause.trim().split(/\s+/);
-  if (tail && words[0]?.toLowerCase().replace(/[.,!]/g, "") === tail) {
-    const rest = words.slice(1).join(" ").trim();
-    return rest || clause.trim();
-  }
-  return clause.trim();
 }
 
 function requestHint(focusLabels: string[], intentLabel: string): string {
@@ -200,13 +190,15 @@ export function InsightFunnel({
 
   const rawOpening =
     insight.insight.opening ?? fallbackOpening(influences, focusLabels, intentLabel);
-  const opening = {
-    bridge: rawOpening.bridge,
-    insight: fitClauseToBridge(rawOpening.bridge, rawOpening.insight),
-  };
+  const insightClause =
+    rawOpening.insight?.trim() ||
+    fallbackOpening(influences, focusLabels, intentLabel).insight;
   const body =
     insight.insight.body?.trim() ||
     fallbackBody(influences, focusLabels, intentLabel, lifeStageLabel);
+  const headlineInsight = name
+    ? insightClause
+    : insightClause.charAt(0).toUpperCase() + insightClause.slice(1);
 
   if (screenIndex === 0) {
     return (
@@ -215,16 +207,10 @@ export function InsightFunnel({
           {name ? (
             <>
               {name},{" "}
-              <span className="text-white/90">{opening.bridge} </span>
-              <span className="font-display italic text-[#F6E7A1]">{opening.insight}</span>
+              <span className="font-display italic text-[#F6E7A1]">{headlineInsight}</span>
             </>
           ) : (
-            <>
-              <span className="text-white/90">
-                {opening.bridge.charAt(0).toUpperCase() + opening.bridge.slice(1)}{" "}
-              </span>
-              <span className="font-display italic text-[#F6E7A1]">{opening.insight}</span>
-            </>
+            <span className="font-display italic text-[#F6E7A1]">{headlineInsight}</span>
           )}
         </h1>
         <p className="mt-6 text-[16px] font-normal leading-[1.55] text-white/80 sm:text-[17px]">
