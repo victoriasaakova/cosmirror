@@ -145,10 +145,11 @@ function ReportInner({ initialSection }: { initialSection?: "account" }) {
     const startedAt = Date.now();
     let timer = 0;
 
-    function delayFor(status: string, errored: boolean) {
+    function delayFor(errored: boolean) {
       const elapsed = Date.now() - startedAt;
       if (errored) return elapsed > 60_000 ? 10_000 : 4_000;
-      if (status === "paid") return 2_000;
+      // Paid generating used to stay at 2s forever — that is the Network "infinite report/" loop.
+      if (elapsed > 12 * 60_000) return 30_000;
       if (elapsed > 180_000) return 15_000;
       if (elapsed > 90_000) return 8_000;
       if (elapsed > 30_000) return 4_000;
@@ -167,7 +168,7 @@ function ReportInner({ initialSection }: { initialSection?: "account" }) {
             if (Date.now() - startedAt > 90_000) setPaymentSlow(true);
             timer = window.setTimeout(() => {
               void poll();
-            }, delayFor("", false));
+            }, delayFor(false));
             return;
           }
           setOrder(null);
@@ -194,7 +195,7 @@ function ReportInner({ initialSection }: { initialSection?: "account" }) {
         }
         timer = window.setTimeout(() => {
           void poll();
-        }, delayFor(next.status, false));
+        }, delayFor(false));
       } catch (err) {
         if (cancelled) return;
         const message = err instanceof Error ? err.message : "Не удалось проверить оплату";
@@ -205,7 +206,7 @@ function ReportInner({ initialSection }: { initialSection?: "account" }) {
         setError(message);
         timer = window.setTimeout(() => {
           void poll();
-        }, delayFor("", true));
+        }, delayFor(true));
       }
     }
 
