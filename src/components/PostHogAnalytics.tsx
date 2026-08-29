@@ -9,14 +9,6 @@ import { useAuth } from "@/components/AuthProvider";
 const PROJECT_TOKEN = process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN;
 const API_HOST = process.env.NEXT_PUBLIC_POSTHOG_HOST ?? "https://us.i.posthog.com";
 
-function apiHostname(): string {
-  try {
-    return new URL(process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000").hostname;
-  } catch {
-    return "127.0.0.1";
-  }
-}
-
 export function PostHogAnalytics() {
   const { ready, analyticsAllowed } = useCookieConsent();
   const { ready: authReady, user } = useAuth();
@@ -28,13 +20,11 @@ export function PostHogAnalytics() {
   useEffect(() => {
     if (!ready || !analyticsAllowed || !PROJECT_TOKEN || started.current) return;
 
-    const host = apiHostname();
     posthog.init(PROJECT_TOKEN, {
       api_host: API_HOST,
       defaults: "2026-05-30",
       capture_pageview: false,
       person_profiles: "identified_only",
-      tracing_headers: [host, "localhost", "127.0.0.1"],
     });
     started.current = true;
   }, [ready, analyticsAllowed]);
