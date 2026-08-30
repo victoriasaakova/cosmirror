@@ -370,7 +370,6 @@ function natalGroupCards(document: ReportDocument): RailCard[] {
       badge: leftover.flatMap((point) =>
         [planetGlyph(point.key, point.glyph), signGlyph(point.sign)].filter(Boolean),
       ),
-      meta: "",
     });
   }
   return cards;
