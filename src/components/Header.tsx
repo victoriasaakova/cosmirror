@@ -62,7 +62,7 @@ export function Header() {
     if (loginBusy) return;
     setLoginBusy(true);
     try {
-      await startLogin("/account/");
+      await startLogin(hasPaidReport ? "/account/" : "/");
     } catch {
       setLoginBusy(false);
     }

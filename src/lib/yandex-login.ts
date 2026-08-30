@@ -13,7 +13,7 @@ export async function beginYandexLogin(nextPath = "/account/") {
 /** After Yandex returns to /onboarding/contacts. `null` = stay and show «Открыть мою карту». */
 export function destinationAfterYandexLogin(hasPaidReport: boolean): string | null {
   const next = consumeAuthNext().trim();
-  if (next.startsWith("/account")) return "/account/";
-  if (hasPaidReport) return null;
+  if (hasPaidReport) return next.startsWith("/account") ? "/account/" : null;
+  if (next.startsWith("/account")) return "/";
   return "/onboarding/insight/";
 }

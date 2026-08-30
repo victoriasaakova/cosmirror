@@ -113,12 +113,23 @@ function ReportInner({ initialSection }: { initialSection?: "account" }) {
   }, [order]);
 
   useEffect(() => {
+    if (preview || fromProdamus) return;
+    if (!bootstrapped || !ready) return;
+    if (accountOpen && user) return;
+    if (!user || cabinetEmpty) {
+      window.location.replace("/");
+    }
+  }, [accountOpen, bootstrapped, cabinetEmpty, fromProdamus, preview, ready, user]);
+
+  useEffect(() => {
     if (preview) return;
     if (!bootstrapped || !ready) return;
     if (!user) {
-      setNeedsAuth(true);
-      setCabinetEmpty(false);
-      setError("Войди через Яндекс ID, чтобы открыть кабинет.");
+      if (fromProdamus) {
+        setNeedsAuth(true);
+        setCabinetEmpty(false);
+        setError("Войди через Яндекс ID, чтобы открыть кабинет.");
+      }
       return;
     }
     let cancelled = false;

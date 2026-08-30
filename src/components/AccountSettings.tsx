@@ -16,7 +16,8 @@ import {
   updateMyBirth,
   type PlaceSuggestion,
 } from "@/lib/api";
-import { clearAuthToken } from "@/lib/auth";
+import { clearAuthNext, clearAuthToken } from "@/lib/auth";
+import { clearOnboardingClientState } from "@/lib/onboarding/session";
 import {
   formatBirthDateInput,
   formatBirthDateLabel,
@@ -137,7 +138,9 @@ export function AccountSettings({ onSaved }: { onSaved?: () => Promise<void> | v
     try {
       await deleteMyAccount();
       clearAuthToken();
-      window.location.assign("/");
+      clearAuthNext();
+      clearOnboardingClientState();
+      window.location.replace("/");
     } catch (err) {
       setDeleting(false);
       setError(err instanceof Error ? err.message : "Не удалось удалить аккаунт");
