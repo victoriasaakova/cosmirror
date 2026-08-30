@@ -118,6 +118,39 @@ const EMPTY_CONTACTS: ContactsAnswers = {
   offer_consent: false,
 };
 
+const PAY_WINDOW_NAME = "cosmirror-prodamus";
+
+function checkoutUsesNewTab() {
+  return !/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+}
+
+function openPayWindow(): Window | null {
+  if (!checkoutUsesNewTab()) return null;
+  if (window.name === PAY_WINDOW_NAME) window.name = "";
+  const child = window.open("", PAY_WINDOW_NAME);
+  if (!child || child === window) return null;
+  try {
+    child.document.open();
+    child.document.write(`<!doctype html>
+<html><head><meta charset="utf-8"><title>Cosmirror</title>
+<style>html,body{height:100%;margin:0;background:#050d4a;color:#fff;display:flex;align-items:center;justify-content:center;font-family:system-ui,sans-serif}</style>
+</head><body><p>открываем оплату…</p></body></html>`);
+    child.document.close();
+  } catch {
+    /* ignore */
+  }
+  return child;
+}
+
+function goToPayment(url: string, payWindow: Window | null) {
+  if (payWindow && !payWindow.closed) {
+    payWindow.location.replace(url);
+    window.location.assign("/account/");
+    return;
+  }
+  window.location.assign(url);
+}
+
 function formatBirthDateInput(raw: string): string {
   const digits = raw.replace(/\D/g, "").slice(0, 8);
   const day = digits.slice(0, 2);
@@ -1074,9 +1107,9 @@ export function OnboardingFlow({
       return;
     }
 
-    // Вкладку надо открыть сразу по клику: после await браузер блокирует window.open,
-    // а noopener даёт null — старый fallback уводил Cosmirror на payform.ru.
-    const payWindow = window.open("about:blank", "cosmirror-prodamus");
+    // На десктопе вкладку открываем сразу по клику — после await браузер режет popup.
+    // На телефоне window.open("about:blank") подменяет текущую вкладку, и Cosmirror умирает.
+    const payWindow = openPayWindow();
     setSubmitting(true);
     setError("");
     try {
@@ -1107,10 +1140,7 @@ export function OnboardingFlow({
         order_status: order.status,
       });
       if (order.payment_url) {
-        if (payWindow && !payWindow.closed) {
-          payWindow.location.replace(order.payment_url);
-        }
-        window.location.assign("/account/");
+        goToPayment(order.payment_url, payWindow);
         return;
       }
       if (payWindow && !payWindow.closed) payWindow.close();
