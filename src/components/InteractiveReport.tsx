@@ -28,13 +28,13 @@ const REPORT_NAV = [
   { id: "practice", label: "Практика", subtitle: "как работать с темами" },
 ] as const;
 
-const NATAL_GROUPS: { title: string; subtitle: string; keys: string[] }[] = [
-  { title: "Солнце, Луна, Асцендент", subtitle: "основа, с которой ты читаешь себя", keys: ["sun", "moon", "ascendant"] },
-  { title: "Как работает твой ум", subtitle: "как думаешь, говоришь и связываешь", keys: ["mercury"] },
-  { title: "Близость и отношения", subtitle: "притяжение и то, что хочется беречь", keys: ["venus"] },
-  { title: "Воля, энергия и действие", subtitle: "как берёшь своё и куда идёт жар", keys: ["mars"] },
-  { title: "Работа, реализация и вклад", subtitle: "длинная дистанция, статус и ответственность", keys: ["jupiter", "saturn", "midheaven"] },
-  { title: "Где ещё звучит напряжение и глубина", subtitle: "сдвиг, растворение и перестройка", keys: ["uranus", "neptune", "pluto"] },
+const NATAL_GROUPS: { title: string; keys: string[] }[] = [
+  { title: "Солнце, Луна, Асцендент", keys: ["sun", "moon", "ascendant"] },
+  { title: "Как работает твой ум", keys: ["mercury"] },
+  { title: "Близость и отношения", keys: ["venus"] },
+  { title: "Воля, энергия и действие", keys: ["mars"] },
+  { title: "Работа, реализация и вклад", keys: ["jupiter", "saturn", "midheaven"] },
+  { title: "Где ещё звучит напряжение и глубина", keys: ["uranus", "neptune", "pluto"] },
 ];
 
 const SECTION_BY_POINT: Record<string, string> = {
@@ -361,7 +361,6 @@ function natalGroupCards(document: ReportDocument): RailCard[] {
     badge: group.items.flatMap((point) =>
       [planetGlyph(point.key, point.glyph), signGlyph(point.sign)].filter(Boolean),
     ),
-    meta: group.subtitle,
   }));
   if (leftover.length) {
     cards.push({
@@ -696,9 +695,6 @@ function NatalTab({ document, focusKey }: { document: ReportDocument; focusKey?:
       {grouped.map((group) => (
         <section key={group.title}>
           <h2 className="report-group-title pb-1">{group.title}</h2>
-          {group.subtitle ? (
-            <p className="mt-2 text-base text-[color:var(--muted)]">{group.subtitle}</p>
-          ) : null}
           <div className="mt-6 space-y-3">
             {group.items.map((point) => (
               <PlanetRow

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Suspense, useEffect } from "react";
 import { CosmirrorMark } from "@/components/CosmirrorMark";
+import { StarCheckPreloaderPage } from "@/components/StarCheckPreloader";
 import { captureEvent } from "@/lib/posthog-client";
 
 function PayFailedInner() {
@@ -35,13 +36,7 @@ function PayFailedInner() {
 
 export function PayFailed() {
   return (
-    <Suspense
-      fallback={
-        <main className="flex min-h-[100dvh] items-center justify-center bg-[#050d4a] text-[#F6E7A1]">
-          секунду
-        </main>
-      }
-    >
+    <Suspense fallback={<StarCheckPreloaderPage />}>
       <PayFailedInner />
     </Suspense>
   );

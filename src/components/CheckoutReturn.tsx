@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect } from "react";
 import { CosmirrorMark } from "@/components/CosmirrorMark";
+import { PRELOADER_LEDE } from "@/components/StarCheckPreloader";
 import { completeMyDemoOrder, confirmMyPayment, checkoutReturnParamsFromSearch, accountReturnQuery, type Order } from "@/lib/api";
 import { readLastOrderId, writeLastOrderId } from "@/lib/onboarding/session";
 
@@ -110,7 +111,7 @@ function CheckoutReturnInner() {
 
   return (
     <WaitingBankShell>
-      <p className="mt-4 max-w-md font-grotesk text-base font-normal leading-relaxed text-white/70 sm:text-lg">
+      <p className={PRELOADER_LEDE}>
         банк ещё подтверждает платёж. не закрывай страницу — отчёт соберём сразу после этого.
       </p>
     </WaitingBankShell>
@@ -122,7 +123,7 @@ export function CheckoutReturn() {
     <Suspense
       fallback={
         <WaitingBankShell>
-          <p className="mt-4 max-w-md font-grotesk text-base font-normal leading-relaxed text-white/70 sm:text-lg">
+          <p className={PRELOADER_LEDE}>
             банк ещё подтверждает платёж. не закрывай страницу — отчёт соберём сразу после этого.
           </p>
         </WaitingBankShell>

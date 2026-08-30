@@ -26,6 +26,7 @@ import { writeAuthToken } from "@/lib/auth";
 import { captureEvent } from "@/lib/posthog-client";
 import { freshOnboardingHref } from "@/lib/onboarding/paths";
 import { greetingName } from "@/lib/user-name";
+import { PRELOADER_LEDE, StarCheckPreloader, StarCheckPreloaderPage } from "@/components/StarCheckPreloader";
 
 function orderChannel(): BroadcastChannel | null {
   try {
@@ -429,11 +430,7 @@ function ReportInner({ initialSection }: { initialSection?: "account" }) {
             <AccountSettings onSaved={() => void reloadOrder()} />
           </div>
         ) : waitingAuth || loading ? (
-          <StatusScreen titleBefore="" titleAccent="секунду">
-            <p className="report-lede mt-4">
-              {error || "собираем страницу"}
-            </p>
-          </StatusScreen>
+          <StarCheckPreloader />
         ) : emptyCabinet ? (
           <StatusScreen titleBefore="здесь будет" titleAccent="твоя карта">
             <p className="report-lede mt-4">
@@ -445,7 +442,7 @@ function ReportInner({ initialSection }: { initialSection?: "account" }) {
           </StatusScreen>
         ) : waitingBank ? (
           <StatusScreen titleBefore="ожидаем оплату" titleAccent="от банка" showEye>
-            <p className="report-lede mt-4">
+            <p className={PRELOADER_LEDE}>
               {paymentSlow
                 ? "банк подтверждает дольше обычного. не закрывай страницу — отчёт соберём сразу после оплаты."
                 : "банк ещё подтверждает платёж. не закрывай страницу — отчёт соберём сразу после этого."}
@@ -453,7 +450,7 @@ function ReportInner({ initialSection }: { initialSection?: "account" }) {
           </StatusScreen>
         ) : generating ? (
           <StatusScreen titleBefore="отчёт" titleAccent="формируется" showEye>
-            <p className="report-lede mt-4">
+            <p className={PRELOADER_LEDE}>
               {GENERATING_COPY[generatingLayer || "natal"]}
               <br />
               не закрывай страницу — разбор откроется здесь, как только тексты будут готовы.
@@ -554,7 +551,7 @@ function GeneratingSteps({
               isCurrent
                 ? "text-[#F6E7A1]"
                 : isDone
-                  ? "text-white/70"
+                  ? "text-white"
                   : "text-white/35"
             }
           >
@@ -616,13 +613,7 @@ function StatusScreen({
 
 export function ReportPage({ initialSection }: { initialSection?: "account" } = {}) {
   return (
-    <Suspense
-      fallback={
-        <main className="flex min-h-[100dvh] items-center justify-center bg-[#050d4a] text-[#F6E7A1]">
-          секунду
-        </main>
-      }
-    >
+    <Suspense fallback={<StarCheckPreloaderPage />}>
       <ReportInner initialSection={initialSection} />
     </Suspense>
   );

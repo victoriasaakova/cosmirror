@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CosmirrorMark } from "@/components/CosmirrorMark";
+import { StarCheckPreloader, StarCheckPreloaderPage } from "@/components/StarCheckPreloader";
 import {
   completeYandexAuth,
   createOrder,
@@ -1191,11 +1192,7 @@ export function OnboardingFlow({
   }
 
   if (!steps) {
-    return (
-      <main className="relative flex h-[100dvh] flex-1 items-center justify-center bg-[#050d4a] text-white/50">
-        Загружаем…
-      </main>
-    );
+    return <StarCheckPreloaderPage />;
   }
 
   return (
@@ -1279,7 +1276,7 @@ export function OnboardingFlow({
         ) : null}
 
         {mapLoading ? (
-          <MapLoadingPreloader />
+          <StarCheckPreloader />
         ) : isReservedSlug(slug) && insight ? (
           <form
             noValidate
@@ -1415,9 +1412,7 @@ export function OnboardingFlow({
             </div>
           </form>
         ) : (
-          <div className="mx-auto flex w-full max-w-lg flex-1 items-center justify-center text-center">
-            <p className="text-white/50">Загружаем…</p>
-          </div>
+          <StarCheckPreloader />
         )}
       </div>
     </main>
@@ -2077,33 +2072,6 @@ function PdConsentCheckbox({
         ) : null}
       </span>
     </label>
-  );
-}
-
-function MapLoadingPreloader() {
-  return (
-    <div
-      className="mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center px-4 text-center"
-      role="status"
-      aria-live="polite"
-      aria-busy="true"
-    >
-      <Image
-        src="/images/eye-silver.webp"
-        alt=""
-        width={512}
-        height={512}
-        className="animate-eye-spin h-auto w-[min(46vw,11rem)] sm:w-[12rem]"
-        sizes="(max-width: 640px) 46vw, 12rem"
-        priority
-      />
-      <h2 className="mt-8 font-display text-3xl font-normal italic leading-snug tracking-normal text-[#F6E7A1] sm:text-4xl md:text-[2.6rem]">
-        сверяемся со&nbsp;звёздами
-      </h2>
-      <p className="mt-3 font-grotesk text-base font-normal text-white/70 sm:text-lg">
-        скоро закончим
-      </p>
-    </div>
   );
 }
 

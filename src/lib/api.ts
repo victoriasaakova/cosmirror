@@ -39,6 +39,19 @@ async function fetchWithRetry(input: string, init?: RequestInit, retries = 3): P
   throw lastErr;
 }
 
+function sanitizeApiError(message: string, fallback: string): string {
+  const lowered = message.toLowerCase();
+  if (
+    lowered.includes("swiss") ||
+    lowered.includes("ephemeris") ||
+    lowered.includes("retflag") ||
+    lowered.includes("placidus")
+  ) {
+    return "Не получилось посчитать карту. Перезагрузи страницу и попробуй ещё раз.";
+  }
+  return message || fallback;
+}
+
 function errorMessage(data: unknown, fallback: string): string {
   if (typeof data !== "object" || data === null) return fallback;
   const record = data as Record<string, unknown>;
@@ -54,16 +67,16 @@ function errorMessage(data: unknown, fallback: string): string {
     "birth_place",
   ]) {
     const value = record[key];
-    if (typeof value === "string" && value) return value;
-    if (Array.isArray(value) && value[0]) return String(value[0]);
+    if (typeof value === "string" && value) return sanitizeApiError(value, fallback);
+    if (Array.isArray(value) && value[0]) return sanitizeApiError(String(value[0]), fallback);
   }
   const payload = record.payload;
   if (typeof payload === "object" && payload) {
     const p = payload as Record<string, unknown>;
     for (const key of ["birth_date", "birth_place", "astro", "email", "telegram", "phone"]) {
       const value = p[key];
-      if (typeof value === "string" && value) return value;
-      if (Array.isArray(value) && value[0]) return String(value[0]);
+      if (typeof value === "string" && value) return sanitizeApiError(value, fallback);
+      if (Array.isArray(value) && value[0]) return sanitizeApiError(String(value[0]), fallback);
     }
   }
   return fallback;

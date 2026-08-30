@@ -6,14 +6,7 @@ import { fetchOnboardingSteps } from "@/lib/api";
 import { freshOnboardingHref } from "@/lib/onboarding/paths";
 import { resumeHref } from "@/lib/onboarding/screens";
 import { loadOrCreateSession } from "@/lib/onboarding/session";
-
-function LoadingScreen({ message = "Загружаем…" }: { message?: string }) {
-  return (
-    <div className="flex h-[100dvh] items-center justify-center bg-[#050d4a] text-white/50">
-      {message}
-    </div>
-  );
-}
+import { StarCheckPreloaderPage } from "@/components/StarCheckPreloader";
 
 /** `/onboarding` → resume. `?new=1` сразу уводит на первый шаг. */
 function OnboardingIndexInner() {
@@ -66,12 +59,12 @@ function OnboardingIndexInner() {
     return <div className="h-[100dvh] bg-[#050d4a]" aria-hidden />;
   }
 
-  return <LoadingScreen message="Загружаем…" />;
+  return <StarCheckPreloaderPage />;
 }
 
 export default function OnboardingIndexPage() {
   return (
-    <Suspense fallback={<div className="h-[100dvh] bg-[#050d4a]" aria-hidden />}>
+    <Suspense fallback={<StarCheckPreloaderPage />}>
       <OnboardingIndexInner />
     </Suspense>
   );
