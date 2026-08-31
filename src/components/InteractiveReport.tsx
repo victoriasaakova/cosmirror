@@ -1148,6 +1148,46 @@ function categoryLabel(category?: string): string {
   return "";
 }
 
+function deepReadParagraphs(deep: string | string[] | undefined): string[] {
+  if (Array.isArray(deep)) {
+    return deep.map((item) => item.trim()).filter(Boolean);
+  }
+  return deep?.trim() ? [deep.trim()] : [];
+}
+
+function visibleManifestations(
+  items: string[] | undefined,
+  deepRead: string | string[] | undefined,
+): string[] {
+  const deepText = deepReadParagraphs(deepRead).join("\n");
+  const seen = new Set<string>();
+  const visible: string[] = [];
+  for (const raw of items ?? []) {
+    const item = raw.trim();
+    if (!item || seen.has(item) || deepText.includes(item)) continue;
+    seen.add(item);
+    visible.push(item);
+    if (visible.length >= 3) break;
+  }
+  return visible;
+}
+
+function ManifestationsBlock({ items }: { items: string[] }) {
+  if (items.length === 0) return null;
+  return (
+    <div>
+      <p className="report-theme-title pb-1">Как это может проявляться</p>
+      <ul className="mt-2 list-disc space-y-2 pl-5">
+        {items.map((item) => (
+          <li key={item.slice(0, 80)} className="report-prose">
+            {item}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function AspectRow({
   card,
   glyphByKey,
@@ -1164,13 +1204,12 @@ function AspectRow({
   const aspect = aspectGlyph(card.aspect);
   const tension = card.tension_or_blind_spot || card.blind_spot || "";
   const work = card.how_to_work || card.flexibility || "";
-  const paragraphs = [
-    card.summary || "",
-    ...(card.deep_read ?? []),
-    card.resource || "",
-    tension,
-    work,
-  ].filter(Boolean);
+  const lead = [card.summary || "", ...(card.deep_read ?? [])].filter(Boolean);
+  const rest = [card.resource || "", tension, work].filter(Boolean);
+  const manifestations = visibleManifestations(
+    card.possible_manifestations,
+    card.deep_read,
+  );
   const questions = card.reflection_questions ?? [];
   const pairLabel = `${card.a_name} ${card.aspect_ru} ${card.b_name}`;
 
@@ -1204,7 +1243,13 @@ function AspectRow({
       </div>
       {open ? (
         <div className="mt-4 space-y-3">
-          {paragraphs.map((paragraph) => (
+          {lead.map((paragraph) => (
+            <p key={paragraph.slice(0, 80)} className="report-prose">
+              {paragraph}
+            </p>
+          ))}
+          <ManifestationsBlock items={manifestations} />
+          {rest.map((paragraph) => (
             <p key={paragraph.slice(0, 80)} className="report-prose">
               {paragraph}
             </p>
@@ -1395,20 +1440,19 @@ function CycleRow({
   const explanation = card.short_explanation || card.summary || "";
   const fallbackQuestion = card.reflection_question || card.reflection_questions?.[0] || "";
 
-  const deep = Array.isArray(card.deep_read)
-    ? card.deep_read
-    : card.deep_read
-      ? [card.deep_read]
-      : [];
-  const generatedParagraphs = [
-    card.summary || "",
-    ...deep,
+  const deep = deepReadParagraphs(card.deep_read);
+  const lead = [card.summary || "", ...deep].filter(Boolean);
+  const rest = [
     card.personalization || "",
     card.protective_function || card.protective_hypothesis || "",
     card.resource || "",
     card.tension_or_blind_spot || "",
     card.how_to_work || card.flexibility || "",
   ].filter(Boolean);
+  const manifestations = visibleManifestations(
+    card.possible_manifestations,
+    card.deep_read,
+  );
   const generatedQuestions = card.reflection_questions ?? [];
   const whyText = card.astro_explanation || card.astrology_explanation || "";
 
@@ -1451,6 +1495,7 @@ function CycleRow({
             {explanation ? (
               <p className="report-prose">{explanation}</p>
             ) : null}
+            <ManifestationsBlock items={manifestations} />
             {fallbackQuestion ? (
               <div className="mt-8">
                 <p className="report-theme-title pb-1">
@@ -1475,7 +1520,13 @@ function CycleRow({
             {card.timing?.active_window_text ? (
               <p className="report-lede">{card.timing.active_window_text}</p>
             ) : null}
-            {generatedParagraphs.map((paragraph) => (
+            {lead.map((paragraph) => (
+              <p key={paragraph.slice(0, 80)} className="report-prose">
+                {paragraph}
+              </p>
+            ))}
+            <ManifestationsBlock items={manifestations} />
+            {rest.map((paragraph) => (
               <p key={paragraph.slice(0, 80)} className="report-prose">
                 {paragraph}
               </p>
