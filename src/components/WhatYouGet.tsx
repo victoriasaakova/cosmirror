@@ -312,12 +312,6 @@ function AspectsPreview() {
             >
               <p className="text-sm text-white">{card.headline}</p>
               <p className="text-xs leading-relaxed text-white/60">{card.summary}</p>
-              {"resource" in card && card.resource ? (
-                <p className="text-xs leading-relaxed text-white/45">{card.resource}</p>
-              ) : null}
-              {"question" in card && card.question ? (
-                <p className="text-xs leading-relaxed text-white/55">{card.question}</p>
-              ) : null}
             </DemoAccordionCard>
           );
         })}
