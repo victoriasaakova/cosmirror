@@ -476,8 +476,7 @@ export function WhatYouGet() {
   return (
     <section id="what-you-get" className="mt-28 scroll-mt-28">
       <h2 className="text-center text-3xl font-normal leading-tight tracking-tight text-white md:text-5xl lg:text-6xl">
-        Что ты{" "}
-        <span className="font-display italic text-[#F6E7A1]">получишь</span>
+        Что <span className="font-display italic text-[#F6E7A1]">внутри</span>
       </h2>
 
       <div className="mt-14 grid items-start gap-8 lg:grid-cols-[0.86fr_1.14fr] lg:gap-14">

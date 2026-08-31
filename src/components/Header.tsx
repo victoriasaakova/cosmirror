@@ -10,8 +10,9 @@ import { continueOnboardingHref, freshOnboardingHref } from "@/lib/onboarding/pa
 import { LANDING_CHART_EVENT, readLandingChartToken } from "@/lib/onboarding/session";
 
 const GUEST_NAV = [
+  { id: "chart", hash: "#chart", path: "/#chart", label: "Расчёт карты" },
   { id: "how", hash: "#how-it-works", path: "/#how-it-works", label: "Как это работает" },
-  { id: "get", hash: "#what-you-get", path: "/#what-you-get", label: "Что ты получишь" },
+  { id: "get", hash: "#what-you-get", path: "/#what-you-get", label: "Что внутри" },
   { id: "blog", hash: "/blog/", path: "/blog/", label: "Блог" },
 ] as const;
 
@@ -114,7 +115,7 @@ export function Header() {
             </Link>
           ) : (
             <>
-              <nav className="hidden items-center justify-center gap-6 justify-self-center lg:flex">
+              <nav className="hidden items-center justify-center gap-5 justify-self-center lg:flex">
                 {nav.map((item) => (
                   <GuestNavLink
                     key={item.id}

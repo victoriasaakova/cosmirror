@@ -164,7 +164,7 @@ export function LandingChartBlock() {
   }
 
   return (
-    <section id="chart" className="relative overflow-hidden bg-[#050d4a] pb-16 pt-10 md:pb-24 md:pt-12">
+    <section id="chart" className="relative scroll-mt-28 overflow-hidden bg-[#050d4a] pb-16 pt-10 md:pb-24 md:pt-12">
       <div className="relative z-10 mx-auto max-w-6xl px-5 md:px-8">
         <div className="mx-auto max-w-3xl text-center">
           <h2 className="text-3xl font-normal leading-tight tracking-tight text-white md:text-5xl lg:text-6xl">
