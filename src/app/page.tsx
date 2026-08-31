@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { Header, JourneyCta } from "@/components/Header";
 import { FallingPills } from "@/components/FallingPills";
+import { LandingChartBlock } from "@/components/LandingChartBlock";
 import { PrefetchOnboarding } from "@/components/PrefetchOnboarding";
 import { WhatYouGet } from "@/components/WhatYouGet";
 import { SiteFooter } from "@/components/SiteFooter";
@@ -252,7 +253,7 @@ export default function Home() {
           </h1>
 
           <p className="reveal reveal-delay-1 mt-5 w-[min(100%,26rem)] font-grotesk text-base font-normal leading-relaxed text-white/80 sm:mt-6 sm:w-[34rem] sm:text-lg md:w-[38rem] md:text-xl drop-shadow-[0_2px_12px_rgba(0,0,0,0.9)]">
-            Соединяем точность астрологии с&nbsp;твоим реальным опытом
+            Соединяем астрологию с&nbsp;твоим реальным опытом
             в&nbsp;историю, которая меняется вместе с&nbsp;тобой.
           </p>
 
@@ -363,6 +364,8 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      <LandingChartBlock />
 
       {/* ── How it works / Report Cards ── */}
       <section id="how" className="relative overflow-hidden bg-[#050d4a] pb-24 pt-10 md:pb-32 md:pt-12">

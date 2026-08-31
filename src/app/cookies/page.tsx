@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function CookiesPage() {
   return (
-    <LegalDocument title="Политика использования файлов cookie" updatedAt="27 августа 2026 г.">
+    <LegalDocument title="Политика использования файлов cookie" updatedAt="31 августа 2026 г.">
       <p>
         Настоящая Политика описывает, какие файлы cookie и аналогичные технологии использует сервис
         Cosmirror (далее — «Сервис»), доступный по адресу{" "}
@@ -67,7 +67,9 @@ export default function CookiesPage() {
         <p>
           <span className="text-white/85">Функциональные</span> — помогают сохранять выбор
           Пользователя и состояние интерфейса (например, прогресс форм) в рамках использования
-          Сервиса.
+          Сервиса. Cookie <span className="text-white/85">cosmirror.chart</span> хранит идентификатор
+          сессии, если Пользователь посчитал натальное колесо на главной странице (срок — 2 дня).
+          В самой cookie нет даты, времени или места рождения.
         </p>
         <p>
           <span className="text-white/85">Аналитические</span> — используются для статистики и

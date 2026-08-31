@@ -43,6 +43,11 @@ export function freshOnboardingHref(): string {
   return `${stepHref(FIRST_STEP_SLUG)}?new=1`;
 }
 
+/** Продолжить текущую сессию (карта с лендинга уже в cookie / localStorage). */
+export function continueOnboardingHref(): string {
+  return stepHref(FIRST_STEP_SLUG);
+}
+
 /** Normalize API url_path → app path (keeps trailing slash). */
 export function hrefFromUrlPath(urlPath: string): string {
   const trimmed = urlPath.trim();

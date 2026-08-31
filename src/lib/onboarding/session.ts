@@ -7,6 +7,9 @@ import {
 export const SESSION_KEY = "cosmirror.onboarding.token";
 export const DRAFT_KEY = "cosmirror.onboarding.draft";
 export const LAST_ORDER_KEY = "cosmirror.lastOrderId";
+export const LANDING_CHART_COOKIE = "cosmirror.chart";
+export const LANDING_CHART_MAX_AGE = 2 * 24 * 60 * 60;
+export const LANDING_CHART_EVENT = "cosmirror:landing-chart";
 const ORDER_IDEM_PREFIX = "cosmirror.order.idempotency.";
 
 export type OnboardingDraft = {
@@ -70,19 +73,43 @@ export function patchDraft(patch: Partial<OnboardingDraft> & {
 
 export async function ensureSessionToken(): Promise<string> {
   if (typeof window !== "undefined") {
-    const existing = localStorage.getItem(SESSION_KEY);
+    const existing = localStorage.getItem(SESSION_KEY) || readLandingChartToken();
     if (existing) {
       try {
         await fetchOnboardingSession(existing);
+        writeOnboardingSessionToken(existing);
         return existing;
       } catch {
         localStorage.removeItem(SESSION_KEY);
+        clearLandingChartCookie();
       }
     }
   }
   const session = await createOnboardingSession();
   writeOnboardingSessionToken(session.token);
   return session.token;
+}
+
+function cookieSecureSuffix() {
+  return window.location.protocol === "https:" ? "; Secure" : "";
+}
+
+export function readLandingChartToken(): string {
+  if (typeof document === "undefined") return "";
+  const match = document.cookie.match(/(?:^|; )cosmirror\.chart=([^;]*)/);
+  return match ? decodeURIComponent(match[1]) : "";
+}
+
+export function writeLandingChartToken(token: string) {
+  writeOnboardingSessionToken(token);
+  if (typeof document === "undefined" || !token) return;
+  document.cookie = `${LANDING_CHART_COOKIE}=${encodeURIComponent(token)}; Path=/; Max-Age=${LANDING_CHART_MAX_AGE}; SameSite=Lax${cookieSecureSuffix()}`;
+  window.dispatchEvent(new Event(LANDING_CHART_EVENT));
+}
+
+export function clearLandingChartCookie() {
+  if (typeof document === "undefined") return;
+  document.cookie = `${LANDING_CHART_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax${cookieSecureSuffix()}`;
 }
 
 export function writeOnboardingSessionToken(token: string) {
@@ -96,6 +123,7 @@ export function clearOnboardingClientState() {
   localStorage.removeItem(SESSION_KEY);
   localStorage.removeItem(LAST_ORDER_KEY);
   sessionStorage.removeItem(DRAFT_KEY);
+  clearLandingChartCookie();
   const prefix = ORDER_IDEM_PREFIX;
   const toRemove: string[] = [];
   for (let i = 0; i < sessionStorage.length; i += 1) {

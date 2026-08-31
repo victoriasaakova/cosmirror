@@ -276,6 +276,81 @@ export async function suggestPlaces(query: string): Promise<PlaceSuggestion[]> {
   return Array.isArray(record.results) ? record.results : [];
 }
 
+export type LandingChartWheel = {
+  ascendant_longitude: number;
+  mc_longitude?: number | null;
+  dsc_longitude?: number | null;
+  ic_longitude?: number | null;
+  has_birth_time?: boolean;
+  planets: Array<{
+    key: string;
+    name?: string;
+    glyph?: string;
+    longitude: number;
+    degree?: number;
+    minute?: number;
+    retrograde?: boolean;
+  }>;
+  houses?: Array<{ house: number; cusp: number }>;
+  aspects?: Array<{ a: string; b: string; kind?: string; aspect?: string; orb?: number }>;
+  signs?: Array<{ sign: string; sign_ru: string; start: number }>;
+};
+
+export type LandingChartResponse = {
+  token: string;
+  has_birth_time: boolean;
+  wheel: LandingChartWheel;
+  birth?: {
+    birth_date?: string | null;
+    birth_time?: string | null;
+    birth_place?: string;
+    birth_lat?: number | null;
+    birth_lng?: number | null;
+    timezone?: string;
+  };
+};
+
+export type LandingChartInput = {
+  token?: string;
+  birth_date: string;
+  birth_time?: string;
+  unknown_time?: boolean;
+  birth_place: string;
+  birth_lat?: number | null;
+  birth_lng?: number | null;
+  timezone?: string;
+};
+
+export async function calculateLandingChart(
+  payload: LandingChartInput,
+): Promise<LandingChartResponse> {
+  let res: Response;
+  try {
+    res = await fetchWithRetry(`${API_URL}/api/landing/chart/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+  } catch (err) {
+    throw new Error(networkErrorMessage(err, "Не получилось посчитать карту"));
+  }
+  const data = await parseJson(res);
+  if (!res.ok) throw new Error(errorMessage(data, "Не получилось посчитать карту"));
+  return data as LandingChartResponse;
+}
+
+export async function fetchLandingChart(token: string): Promise<LandingChartResponse> {
+  let res: Response;
+  try {
+    res = await fetchWithRetry(`${API_URL}/api/landing/chart/${token}/`, { cache: "no-store" });
+  } catch (err) {
+    throw new Error(networkErrorMessage(err, "Не получилось открыть карту"));
+  }
+  const data = await parseJson(res);
+  if (!res.ok) throw new Error(errorMessage(data, "Не получилось открыть карту"));
+  return data as LandingChartResponse;
+}
+
 export type OnboardingInsight = {
   status: string;
   has_birth_time: boolean;

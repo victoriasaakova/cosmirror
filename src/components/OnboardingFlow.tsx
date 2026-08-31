@@ -18,6 +18,7 @@ import {
   submitOnboardingStep,
   suggestPlaces,
   type OnboardingInsight,
+  type OnboardingSession,
   type OnboardingStep,
   type PlaceSuggestion,
 } from "@/lib/api";
@@ -268,6 +269,44 @@ function contactsFromPayload(payload: Record<string, unknown> | undefined): Cont
 
 function waitlistStepOf(steps: OnboardingStep[] | null | undefined): OnboardingStep | undefined {
   return steps?.find((step) => step.step_type === "waitlist");
+}
+
+function isoToDisplayDate(raw: string): string {
+  const iso = raw.slice(0, 10);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+    const [y, m, d] = iso.split("-");
+    return `${d}.${m}.${y}`;
+  }
+  return raw;
+}
+
+function withSessionBirth(
+  steps: OnboardingStep[],
+  byStep: Record<string, Record<string, unknown>>,
+  session: OnboardingSession,
+): Record<string, Record<string, unknown>> {
+  const birthStep = birthStepOf(steps);
+  if (!birthStep || !session.birth_date) return byStep;
+  const current = byStep[birthStep.slug] ?? {};
+  if (typeof current.birth_date === "string" && current.birth_date.trim()) return byStep;
+  const lat =
+    session.birth_lat != null && session.birth_lat !== "" ? Number(session.birth_lat) : null;
+  const lng =
+    session.birth_lng != null && session.birth_lng !== "" ? Number(session.birth_lng) : null;
+  return {
+    ...byStep,
+    [birthStep.slug]: {
+      ...current,
+      birth_date: session.birth_date,
+      birth_date_display: isoToDisplayDate(session.birth_date),
+      birth_time: (session.birth_time || "").slice(0, 5),
+      unknown_time: false,
+      birth_place: session.birth_place || "",
+      birth_lat: Number.isFinite(lat) ? lat : null,
+      birth_lng: Number.isFinite(lng) ? lng : null,
+      timezone: session.timezone || "",
+    },
+  };
 }
 
 function readYandexHash(): { auth: string; sessionToken: string } {
@@ -528,11 +567,12 @@ export function OnboardingFlow({
           byStep[answer.step_slug] = { ...(byStep[answer.step_slug] ?? {}), ...payload };
         }
         const remapped = remapLegacyPayloads(byStep);
-        applyPayload(remapped);
-        patchDraft({ byStep: remapped });
+        const withBirth = withSessionBirth(fetchedSteps, remapped, session);
+        applyPayload(withBirth);
+        patchDraft({ byStep: withBirth });
         if (session.user_email) {
           setAuthedEmail(session.user_email);
-          const withEmail = withAuthedEmail(fetchedSteps, remapped, session.user_email);
+          const withEmail = withAuthedEmail(fetchedSteps, withBirth, session.user_email);
           applyPayload(withEmail);
           patchDraft({ byStep: withEmail });
         }
@@ -599,7 +639,7 @@ export function OnboardingFlow({
                   : {};
               next[answer.step_slug] = { ...(next[answer.step_slug] ?? {}), ...payload };
             }
-            applyPayload(next);
+            applyPayload(withSessionBirth(apiSteps ?? [], next, session));
           })
           .catch(() => {
             /* ignore soft refresh errors */

@@ -6,7 +6,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { CircleUser } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
-import { freshOnboardingHref } from "@/lib/onboarding/paths";
+import { continueOnboardingHref, freshOnboardingHref } from "@/lib/onboarding/paths";
+import { LANDING_CHART_EVENT, readLandingChartToken } from "@/lib/onboarding/session";
 
 const GUEST_NAV = [
   { id: "how", hash: "#how-it-works", path: "/#how-it-works", label: "Как это работает" },
@@ -19,6 +20,19 @@ const headerBtnBase =
 const headerBtnDesktop = "h-8 min-w-[4.75rem] shrink-0 px-4 text-sm";
 const headerBtnMobile = "h-11 w-full px-4 text-base";
 
+function useStartHref() {
+  const [href, setHref] = useState(freshOnboardingHref());
+  useEffect(() => {
+    function sync() {
+      setHref(readLandingChartToken() ? continueOnboardingHref() : freshOnboardingHref());
+    }
+    sync();
+    window.addEventListener(LANDING_CHART_EVENT, sync);
+    return () => window.removeEventListener(LANDING_CHART_EVENT, sync);
+  }, []);
+  return href;
+}
+
 export function Header() {
   const [isOpen, setIsOpen] = useState(false);
   const [loginBusy, setLoginBusy] = useState(false);
@@ -26,7 +40,7 @@ export function Header() {
   const { user, hasPaidReport, startLogin } = useAuth();
   const onHome = pathname === "/" || pathname === "";
   const signedIn = Boolean(user);
-  const startHref = freshOnboardingHref();
+  const startHref = useStartHref();
   const homeHref = signedIn ? "/account/" : onHome ? "#top" : "/";
   const ctaHref = hasPaidReport ? "/account/" : startHref;
   const ctaLabel = hasPaidReport ? "Моя карта" : "Начать путешествие";
@@ -285,7 +299,8 @@ export function JourneyCta({
   className: string;
 }) {
   const { hasPaidReport } = useAuth();
-  const href = hasPaidReport ? "/account/" : freshOnboardingHref();
+  const startHref = useStartHref();
+  const href = hasPaidReport ? "/account/" : startHref;
   const text = hasPaidReport ? paidLabel : label;
   return (
     <a href={href} className={className}>

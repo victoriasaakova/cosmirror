@@ -1,254 +1,456 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
+import { aspectGlyph, planetGlyph, signGlyph } from "@/lib/astro-glyphs";
+import {
+  DEMO_ASPECTS,
+  DEMO_CYCLES,
+  DEMO_NATAL_GROUPS,
+  DEMO_PRACTICE,
+} from "@/lib/landing-demo";
 
-const ITEMS = [
-  {
-    title: "Первый персональный портрет",
-    text: "Краткое описание твоих сильных сторон, внутренних противоречий и одного паттерна, который стоит понаблюдать в своей жизни.",
-  },
-  {
-    title: "Новый взгляд на себя",
-    text: "Не набор общих характеристик, а персональные гипотезы, которые можно соотнести со своим опытом.",
-  },
-  {
-    title: "Ранний доступ к Cosmirror",
-    text: "Ты одна из первых получишь доступ к продукту, который помогает соединять натальную карту с твоими наблюдениями и постепенно открывать новые закономерности о себе.",
-  },
-];
-
-const ZODIAC_PATHS = [
-  "M4 12C4 6 8 4 12 10C16 4 20 6 20 12M12 10V21",
-  "M5 4C6 8 9 9 12 9C15 9 18 8 19 4M12 9A7 7 0 1 1 11.99 9",
-  "M7 4C10 5 14 5 17 4M7 20C10 19 14 19 17 20M9 5V19M15 5V19",
-  "M5 9C8 5 15 5 18 8C20 10 18 13 15 12C13 11 14 8 17 8M19 15C16 19 9 19 6 16C4 14 6 11 9 12C11 13 10 16 7 16",
-  "M6 17C2 12 6 8 10 11C13 14 11 19 8 19C5 19 4 16 6 14M10 11C11 5 18 4 19 9C20 13 16 15 15 20",
-  "M4 5V16M4 8C6 4 9 5 9 9V16M9 8C11 4 14 5 14 9V16C14 20 19 20 20 16M14 12C17 12 19 14 19 17",
-  "M5 14H19M4 18H20M8 14C8 8 16 8 16 14",
-  "M4 5V16M4 8C6 4 9 5 9 9V16M9 8C11 4 14 5 14 9V16H20M17 13L20 16L17 19",
-  "M5 19L19 5M12 5H19V12M6 8L16 18",
-  "M4 5V16M4 9C7 5 11 6 11 10V17C11 21 17 21 19 17C21 13 16 12 14 15",
-  "M3 9C6 6 9 12 12 9C15 6 18 12 21 9M3 15C6 12 9 18 12 15C15 12 18 18 21 15",
-  "M7 4C13 8 13 16 7 20M17 4C11 8 11 16 17 20M4 12H20",
-];
-
-const PLANETS = [
-  { glyph: "☉", x: 100, y: 48 },
-  { glyph: "☽", x: 58, y: 76 },
-  { glyph: "☿", x: 126, y: 90 },
-  { glyph: "♀", x: 72, y: 126 },
-  { glyph: "♂", x: 137, y: 126 },
-  { glyph: "♃", x: 46, y: 111 },
-  { glyph: "♄", x: 109, y: 142 },
-];
-
-function roundCoordinate(value: number) {
-  return Number(value.toFixed(3));
+/** В демо открыта только одна карточка: новая раскрывается, предыдущая закрывается. */
+function useDemoExclusiveOpen(defaultKey: string) {
+  const [openKey, setOpenKey] = useState(defaultKey);
+  return [openKey, setOpenKey] as const;
 }
 
-const ZODIAC_SEGMENTS = ZODIAC_PATHS.map((path, index) => {
-  const dividerAngle = index * 30 - 90;
-  const iconAngle = dividerAngle + 15;
-  const dividerRadians = (dividerAngle * Math.PI) / 180;
-  const iconRadians = (iconAngle * Math.PI) / 180;
-  const x = roundCoordinate(100 + Math.cos(iconRadians) * 81);
-  const y = roundCoordinate(100 + Math.sin(iconRadians) * 81);
-
-  return {
-    path,
-    x,
-    y,
-    innerX: roundCoordinate(100 + Math.cos(dividerRadians) * 72),
-    innerY: roundCoordinate(100 + Math.sin(dividerRadians) * 72),
-    outerX: roundCoordinate(100 + Math.cos(dividerRadians) * 91),
-    outerY: roundCoordinate(100 + Math.sin(dividerRadians) * 91),
-    transform: `translate(${roundCoordinate(x - 6)} ${roundCoordinate(y - 6)}) scale(0.5)`,
-  };
-});
-
-function BirthChart() {
+function DemoChevron({ open }: { open: boolean }) {
   return (
     <svg
-      viewBox="0 0 200 200"
-      className="h-[92%] w-[92%] text-[#F6E7A1]"
-      role="img"
-      aria-label="Пример натальной карты"
+      viewBox="0 0 20 20"
+      className={`mt-0.5 h-4 w-4 shrink-0 text-[#F6E7A1] transition-transform duration-200 ease-out ${
+        open ? "rotate-180" : ""
+      }`}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      aria-hidden
     >
-      <circle cx="100" cy="100" r="91" fill="#071240" stroke="currentColor" strokeOpacity="0.55" />
-      <circle cx="100" cy="100" r="72" fill="none" stroke="currentColor" strokeOpacity="0.35" />
-      <circle cx="100" cy="100" r="52" fill="none" stroke="currentColor" strokeOpacity="0.16" />
-
-      {ZODIAC_SEGMENTS.map((segment) => (
-        <g key={segment.path}>
-          <line
-            x1={segment.innerX}
-            y1={segment.innerY}
-            x2={segment.outerX}
-            y2={segment.outerY}
-            stroke="currentColor"
-            strokeOpacity="0.3"
-          />
-          <path
-            d={segment.path}
-            transform={segment.transform}
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.7"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </g>
-      ))}
-
-      <g fill="none" strokeLinecap="round">
-        <path d="M100 48 L72 126 L137 126 L58 76 L109 142 Z" stroke="#F6E7A1" strokeOpacity="0.48" />
-        <path d="M46 111 L126 90 L72 126 M58 76 L137 126" stroke="#F6E7A1" strokeOpacity="0.32" />
-        <path d="M100 48 L46 111 L109 142 M126 90 L109 142" stroke="#fff" strokeOpacity="0.16" strokeDasharray="3 3" />
-      </g>
-
-      {PLANETS.map((planet) => (
-        <g key={planet.glyph}>
-          <circle cx={planet.x} cy={planet.y} r="8" fill="#0a1856" stroke="#F6E7A1" strokeOpacity="0.55" />
-          <text
-            x={planet.x}
-            y={planet.y + 0.5}
-            fill="#f4efe8"
-            fontSize="9"
-            textAnchor="middle"
-            dominantBaseline="middle"
-          >
-            {planet.glyph}
-          </text>
-        </g>
-      ))}
-      <circle cx="100" cy="100" r="2.5" fill="#F6E7A1" />
+      <path
+        d="M5 7.5 10 12.5 15 7.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
 
-function PortraitPreview() {
+function DemoAccordionCard({
+  open,
+  onOpen,
+  header,
+  children,
+  className = "",
+}: {
+  open: boolean;
+  onOpen: () => void;
+  header: ReactNode;
+  children: ReactNode;
+  className?: string;
+}) {
   return (
-    <div className="flex h-full min-h-[20rem] flex-col bg-[#050d4a] p-4 sm:p-5">
-      <div className="flex items-center justify-between border-b border-[#F6E7A1]/20 pb-4">
-        <span className="text-lg text-white">Твой портрет</span>
-        <span className="rounded-full border border-[#F6E7A1]/40 bg-[#F6E7A1]/12 px-3 py-1 text-[10px] text-[#F6E7A1]">
-          Натальная карта
+    <article
+      className={`rounded-2xl border border-white/10 bg-white/5 p-3.5 ${className}`}
+    >
+      <button
+        type="button"
+        onClick={onOpen}
+        aria-expanded={open}
+        className="flex w-full items-start justify-between gap-3 text-left active:scale-[0.98]"
+      >
+        <span className="min-w-0">{header}</span>
+        <DemoChevron open={open} />
+      </button>
+      {open ? <div className="mt-2.5 space-y-2">{children}</div> : null}
+    </article>
+  );
+}
+
+const ITEMS = [
+  {
+    title: "Расшифровка карты",
+    text: "Разбор основных положений в натальной карте: Солнца, Луны, Асцендента, планет и домов. Что они могут говорить о характере, привычных реакциях, потребностях, сильных сторонах и способах действовать.",
+  },
+  {
+    title: "Аспекты",
+    text: "Разбор связей между планетами в карте. Где качества усиливают друг друга, где возникает напряжение и как такие сочетания могут проявляться в поведении, отношениях и решениях.",
+  },
+  {
+    title: "Циклы",
+    text: "Текущие транзиты к натальной карте и периоды, которые сейчас наиболее заметны. В отчёте показано, какая тема активна, насколько точен аспект и как она может ощущаться в жизни.",
+  },
+  {
+    title: "Практика",
+    text: "Раздел для самостоятельной работы с темами из отчёта. Здесь собраны наблюдения, вопросы и небольшие эксперименты, связанные с твоими аспектами, циклами и запросом из онбординга.",
+  },
+];
+
+function FilterChips<T extends string>({
+  options,
+  value,
+  onChange,
+  className = "",
+}: {
+  options: readonly (readonly [T, string])[];
+  value: T;
+  onChange: (key: T) => void;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${className}`}
+    >
+      {options.map(([key, label]) => (
+        <button
+          key={key}
+          type="button"
+          onClick={() => onChange(key)}
+          className={`inline-flex shrink-0 items-center rounded-full px-2.5 py-1 text-[11px] leading-none ${
+            value === key
+              ? "bg-[#F6E7A1] text-[#0a1a3a]"
+              : "border border-white/15 text-white/55"
+          }`}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function PlacementMarks({
+  items,
+}: {
+  items: (typeof DEMO_NATAL_GROUPS)[number]["items"];
+}) {
+  return (
+    <span className="inline-flex flex-wrap items-baseline justify-end gap-x-2 gap-y-0.5 text-right">
+      {items.map((item) => (
+        <span key={item.key} className="inline-flex items-baseline gap-1">
+          <span className="natal-astro-glyph text-[13px] leading-none text-[#F6E7A1]">
+            {planetGlyph(item.key)}
+            {signGlyph(item.sign)}
+          </span>
+          <span className="text-[12px] text-white/70">
+            {item.name} {item.signRu}
+          </span>
+        </span>
+      ))}
+    </span>
+  );
+}
+
+function CoreCard({
+  item,
+  open,
+  onOpen,
+}: {
+  item: (typeof DEMO_NATAL_GROUPS)[number]["items"][number];
+  open: boolean;
+  onOpen: () => void;
+}) {
+  const glyph = signGlyph(item.sign);
+  return (
+    <DemoAccordionCard
+      open={open}
+      onOpen={onOpen}
+      header={
+        <span className="text-sm font-medium text-white">
+          <span className="mr-1.5 natal-astro-glyph text-[#F6E7A1]">
+            {planetGlyph(item.key)}
+          </span>
+          {item.name}
+          <span className="ml-2 inline-flex flex-wrap items-baseline gap-x-1.5 font-display italic text-[#F6E7A1]">
+            {glyph ? (
+              <span
+                className="natal-astro-glyph text-[13px] font-normal not-italic leading-none"
+                aria-hidden
+              >
+                {glyph}
+              </span>
+            ) : null}
+            <span>{item.signRu}</span>
+            {item.house ? <span>· дом {item.house}</span> : null}
+          </span>
+        </span>
+      }
+    >
+      {item.headline ? <p className="text-sm text-white">{item.headline}</p> : null}
+      {item.summary ? (
+        <p className="text-xs leading-relaxed text-white/60">{item.summary}</p>
+      ) : null}
+      {item.houseNote ? (
+        <p className="text-xs leading-relaxed text-white/45">{item.houseNote}</p>
+      ) : null}
+      {item.question ? (
+        <p className="text-xs leading-relaxed text-white/55">{item.question}</p>
+      ) : null}
+    </DemoAccordionCard>
+  );
+}
+
+function NatalPreview() {
+  const core = DEMO_NATAL_GROUPS[0];
+  const otherGroups = DEMO_NATAL_GROUPS.slice(1);
+  const [openKey, setOpenKey] = useState<string | null>(null);
+
+  return (
+    <div className="flex flex-col bg-[#050d4a] p-4 sm:p-5">
+      <div className="flex items-center justify-between gap-3 border-b border-[#F6E7A1]/20 pb-3">
+        <span className="text-lg text-white">Твоя карта</span>
+        <span className="shrink-0 text-[10px] uppercase tracking-[0.16em] text-white/40">
+          пример отчёта
         </span>
       </div>
-      <div className="grid flex-1 gap-3 pt-4 sm:grid-cols-[0.9fr_1.1fr]">
-        <div className="relative flex min-h-40 items-center justify-center overflow-hidden rounded-[1.4rem] border border-[#F6E7A1]/25 bg-[#071240]">
-          <BirthChart />
-        </div>
-        <div className="flex flex-col gap-3">
-          <div className="rounded-[1.25rem] border border-[#F6E7A1]/25 bg-white/[0.04] p-3.5">
-            <p className="text-[10px] uppercase tracking-[0.16em] text-white/45">Сильная сторона</p>
-            <p className="mt-2 text-base leading-tight text-white">
-              Ты видишь связи там, где другие замечают только детали.
+
+      <div className="mt-3 space-y-2">
+        {core.items.map((item) => (
+          <CoreCard
+            key={item.key}
+            item={item}
+            open={openKey === item.key}
+            onOpen={() =>
+              setOpenKey((current) => (current === item.key ? null : item.key))
+            }
+          />
+        ))}
+      </div>
+
+      <div className="mt-3 divide-y divide-white/10 border-y border-white/10">
+        {otherGroups.map((group) => (
+          <div
+            key={group.title}
+            className="flex items-center justify-between gap-3 py-2.5"
+          >
+            <p className="min-w-0 text-[12px] leading-snug text-white/45">
+              {group.title}
             </p>
+            <PlacementMarks items={group.items} />
           </div>
-          <div className="grid flex-1 grid-cols-2 gap-3">
-            <div className="rounded-[1.25rem] border border-[#F6E7A1]/25 bg-white/[0.04] p-3.5">
-              <p className="text-[9px] uppercase tracking-[0.14em] text-[#F6E7A1]">Текущий цикл</p>
-              <p className="mt-2 text-sm leading-tight text-white">Юпитер во Льве</p>
-              <p className="mt-2 text-[10px] leading-relaxed text-white/55">
-                Фокус на смелом самовыражении, творчестве и праве занимать больше места.
-              </p>
-            </div>
-            <div className="rounded-[1.25rem] border border-[#F6E7A1]/35 bg-[#F6E7A1]/08 p-3.5">
-              <p className="text-[9px] uppercase tracking-[0.14em] text-[#F6E7A1]">Паттерн</p>
-              <p className="mt-2 text-sm leading-tight text-white">Сначала уверенность, потом шаг</p>
-              <p className="mt-2 text-[10px] leading-relaxed text-white/55">
-                Перед важным выбором ты долго ищешь подтверждение, что всё получится.
-              </p>
-            </div>
-          </div>
-        </div>
+        ))}
       </div>
     </div>
   );
 }
 
-function PerspectivePreview() {
+function aspectKey(card: (typeof DEMO_ASPECTS)[number]) {
+  return `${card.a}-${card.aspect}-${card.b}`;
+}
+
+function visibleAspects(filter: "all" | "tension" | "resource") {
+  if (filter === "all") return DEMO_ASPECTS;
+  return DEMO_ASPECTS.filter((row) =>
+    filter === "tension" ? row.category === "напряжение" : row.category === "ресурс",
+  );
+}
+
+function visibleCycles(filter: "all" | "tension" | "support") {
+  if (filter === "all") return DEMO_CYCLES;
+  return DEMO_CYCLES.filter((row) =>
+    filter === "tension" ? row.category === "напряжение" : row.category === "ресурс",
+  );
+}
+
+function AspectsPreview() {
+  const [filter, setFilter] = useState<"all" | "tension" | "resource">("all");
+  const visible = visibleAspects(filter);
+  const [openKey, setOpenKey] = useDemoExclusiveOpen(aspectKey(DEMO_ASPECTS[0]));
+
   return (
-    <div className="flex h-full min-h-[20rem] flex-col bg-[#050d4a] p-4 sm:p-6">
-      <div className="flex items-center justify-between">
-        <span className="text-lg text-white">Кто я?</span>
-        <span className="text-xs text-white/40">02 августа</span>
+    <div className="flex flex-col bg-[#050d4a] p-4 sm:p-5">
+      <div className="flex items-center justify-between gap-3 border-b border-[#F6E7A1]/20 pb-3">
+        <span className="text-lg text-white">Аспекты</span>
+        <span className="shrink-0 text-[10px] uppercase tracking-[0.16em] text-white/40">
+          пример отчёта
+        </span>
       </div>
-      <div className="mt-5 rounded-[1.5rem] border border-[#F6E7A1]/30 bg-white/[0.04] p-5">
-        <p className="text-xs leading-relaxed text-white/50">Тема, которая возвращается</p>
-        <p className="mt-2 text-xl leading-snug text-white">
-          Ты ищешь определённость до того, как разрешаешь себе двигаться.
-        </p>
+      <FilterChips
+        className="mt-4"
+        options={
+          [
+            ["all", "все"],
+            ["tension", "напряжение"],
+            ["resource", "ресурс"],
+          ] as const
+        }
+        value={filter}
+        onChange={(next) => {
+          setFilter(next);
+          const first = visibleAspects(next)[0];
+          if (first) setOpenKey(aspectKey(first));
+        }}
+      />
+      <div className="mt-3 space-y-2">
+        {visible.map((card) => {
+          const key = aspectKey(card);
+          return (
+            <DemoAccordionCard
+              key={key}
+              open={openKey === key}
+              onOpen={() => setOpenKey(key)}
+              header={
+                <>
+                  <span className="block text-[10px] font-medium tracking-tight text-[#F6E7A1]">
+                    {card.category}
+                    <span className="ml-2 tracking-normal text-white/40">
+                      орб {card.orb}°
+                    </span>
+                  </span>
+                  <span className="mt-1.5 flex flex-wrap items-baseline gap-x-2 text-sm font-medium text-white">
+                    <span className="inline-flex items-baseline gap-1 natal-astro-glyph text-[#F6E7A1]">
+                      <span>{planetGlyph(card.a)}</span>
+                      <span>{aspectGlyph(card.aspect)}</span>
+                      <span>{planetGlyph(card.b)}</span>
+                    </span>
+                    <span>
+                      {card.aName} {card.aspectRu} {card.bName}
+                    </span>
+                  </span>
+                </>
+              }
+            >
+              <p className="text-sm text-white">{card.headline}</p>
+              <p className="text-xs leading-relaxed text-white/60">{card.summary}</p>
+              {"resource" in card && card.resource ? (
+                <p className="text-xs leading-relaxed text-white/45">{card.resource}</p>
+              ) : null}
+              {"question" in card && card.question ? (
+                <p className="text-xs leading-relaxed text-white/55">{card.question}</p>
+              ) : null}
+            </DemoAccordionCard>
+          );
+        })}
       </div>
-      <div className="mt-3 grid flex-1 gap-3 sm:grid-cols-2">
-        <div className="rounded-[1.4rem] border border-[#F6E7A1]/35 bg-[#F6E7A1]/08 p-4">
-          <p className="text-xs text-[#F6E7A1]">Что стоит проверить</p>
-          <p className="mt-5 text-sm leading-relaxed text-white/75">
-            Где осторожность действительно защищает тебя, а где становится способом отложить выбор?
+    </div>
+  );
+}
+
+function CyclesPreview() {
+  const [filter, setFilter] = useState<"all" | "tension" | "support">("all");
+  const visible = visibleCycles(filter);
+  const [openKey, setOpenKey] = useDemoExclusiveOpen(DEMO_CYCLES[0].pair);
+
+  return (
+    <div className="flex flex-col bg-[#050d4a] p-4 sm:p-5">
+      <div className="flex items-center justify-between border-b border-[#F6E7A1]/20 pb-3">
+        <span className="text-lg text-white">Циклы</span>
+        <span className="text-[10px] uppercase tracking-[0.16em] text-white/40">
+          что актуально сейчас
+        </span>
+      </div>
+      <FilterChips
+        className="mt-4"
+        options={
+          [
+            ["all", "все"],
+            ["tension", "напряжение"],
+            ["support", "ресурс"],
+          ] as const
+        }
+        value={filter}
+        onChange={(next) => {
+          setFilter(next);
+          const first = visibleCycles(next)[0];
+          if (first) setOpenKey(first.pair);
+        }}
+      />
+      <div className="mt-3 space-y-2">
+        {visible.map((card) => (
+          <DemoAccordionCard
+            key={card.pair}
+            open={openKey === card.pair}
+            onOpen={() => setOpenKey(card.pair)}
+            header={
+              <>
+                <span className="block text-[10px] font-medium tracking-tight text-[#F6E7A1]">
+                  {card.category}
+                  <span className="ml-2 tracking-normal text-white/40">
+                    орб {card.orb}°
+                  </span>
+                  <span className="ml-2 tracking-normal text-white/40">
+                    {card.phase}
+                  </span>
+                </span>
+                <span className="mt-1.5 flex flex-wrap items-baseline gap-x-2 text-sm font-medium text-white">
+                  <span className="inline-flex items-baseline gap-1 natal-astro-glyph text-[#F6E7A1]">
+                    <span>{planetGlyph(card.transit)}</span>
+                    <span>{aspectGlyph(card.aspect)}</span>
+                    <span>{planetGlyph(card.natal)}</span>
+                  </span>
+                  <span>{card.pair}</span>
+                </span>
+              </>
+            }
+          >
+            <p className="text-sm text-white">{card.theme}</p>
+            {card.summary ? (
+              <p className="text-xs leading-relaxed text-white/60">{card.summary}</p>
+            ) : null}
+            <p className="pt-1 text-[10px] uppercase tracking-[0.14em] text-[#F6E7A1]">
+              окно цикла
+            </p>
+            <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
+              <div
+                className="h-full rounded-full bg-[#F6E7A1]"
+                style={{ width: `${card.progress}%` }}
+              />
+            </div>
+            <p className="text-[11px] text-white/45">{card.window}</p>
+          </DemoAccordionCard>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PracticePreview() {
+  return (
+    <div className="flex flex-col bg-[#050d4a] p-4 sm:p-5">
+      <div className="flex items-center justify-between border-b border-[#F6E7A1]/20 pb-3">
+        <span className="text-lg text-white">Практика</span>
+        <span className="text-[10px] uppercase tracking-[0.16em] text-white/40">
+          рабочая тетрадь
+        </span>
+      </div>
+      <div className="mt-3 space-y-2">
+        <article className="rounded-2xl border border-[#F6E7A1]/20 bg-white/5 p-3.5">
+          <p className="text-[10px] uppercase tracking-[0.14em] text-[#F6E7A1]">
+            Паттерн
           </p>
-        </div>
-        <div className="flex flex-col justify-between rounded-[1.4rem] border border-[#F6E7A1]/25 bg-[#071240] p-4">
-          <div className="flex gap-2">
-            {["свобода", "отношения", "контроль"].map((tag) => (
-              <span
-                key={tag}
-                className="rounded-full border border-[#F6E7A1]/25 bg-[#F6E7A1]/10 px-2.5 py-1 text-[9px] text-[#F6E7A1]"
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
-          <div>
-            <p className="text-xs text-white/40">Новая гипотеза</p>
-            <p className="mt-2 text-sm leading-relaxed text-white/75">
-              Сравни её со своим опытом, а не принимай как готовый ответ.
+          <p className="mt-2 text-xs leading-relaxed text-white/70">
+            {DEMO_PRACTICE.patternText}
+          </p>
+        </article>
+        <div className="grid grid-cols-2 gap-2">
+          <article className="rounded-2xl border border-white/10 bg-white/[0.03] p-3.5">
+            <p className="text-[10px] uppercase tracking-[0.14em] text-[#F6E7A1]">
+              Как работать
             </p>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function AccessPreview() {
-  return (
-    <div className="flex h-full min-h-[20rem] bg-[#050d4a] p-3 sm:p-4">
-      <aside className="flex w-16 shrink-0 flex-col items-center rounded-[1.25rem] border border-[#F6E7A1]/25 bg-[#071240] py-4">
-        <span className="h-7 w-7 rounded-full bg-[#F6E7A1] shadow-[0_0_18px_rgba(246,231,161,0.45)]" />
-        <div className="mt-8 flex flex-col gap-4">
-          {[true, false, false, false].map((active, index) => (
-            <span
-              key={index}
-              className={`h-7 w-7 rounded-lg ${
-                active ? "bg-[#F6E7A1]/20 border border-[#F6E7A1]/45" : "border border-white/15"
-              }`}
-            />
-          ))}
-        </div>
-      </aside>
-      <div className="flex min-w-0 flex-1 flex-col p-2 pl-4 sm:p-3 sm:pl-5">
-        <div>
-          <p className="text-xs text-white/40">Сегодня</p>
-          <p className="mt-1 text-xl text-white">Что происходит сейчас?</p>
-        </div>
-        <div className="mt-4 grid flex-1 grid-cols-2 gap-3">
-          <div className="col-span-2 rounded-[1.35rem] border border-[#F6E7A1]/35 bg-[#F6E7A1]/08 p-4">
-            <p className="text-[10px] uppercase tracking-[0.15em] text-[#F6E7A1]">Текущий цикл</p>
-            <p className="mt-2 text-lg text-white">Время пересобрать привычный ритм</p>
-            <div className="mt-5 h-1.5 overflow-hidden rounded-full bg-white/10">
-              <div className="h-full w-2/3 rounded-full bg-[#F6E7A1]" />
-            </div>
-          </div>
-          <div className="rounded-[1.35rem] border border-[#F6E7A1]/25 bg-white/[0.04] p-4">
-            <p className="text-xs text-white/45">Энергия</p>
-            <p className="mt-4 text-2xl text-white">7.2</p>
-            <p className="mt-1 text-[10px] text-white/40">сегодня</p>
-          </div>
-          <div className="rounded-[1.35rem] border border-[#F6E7A1]/25 bg-white/[0.04] p-4">
-            <p className="text-xs text-white/45">Наблюдения</p>
-            <div className="mt-5 flex items-end gap-1.5">
-              {[35, 55, 42, 75, 62].map((height, index) => (
+            <p className="mt-2.5 text-sm leading-snug text-[#F6E7A1]">
+              {DEMO_PRACTICE.distinctionLeft} ≠ {DEMO_PRACTICE.distinctionRight}
+            </p>
+            <p className="mt-2 text-xs leading-relaxed text-white/55">
+              {DEMO_PRACTICE.distinctionNote}
+            </p>
+          </article>
+          <article className="rounded-2xl border border-[#F6E7A1]/25 bg-[#F6E7A1]/08 p-3.5">
+            <p className="text-[10px] uppercase tracking-[0.14em] text-[#F6E7A1]">
+              Эксперимент
+            </p>
+            <p className="mt-2.5 text-xs leading-relaxed text-white/80">
+              {DEMO_PRACTICE.experimentText}
+            </p>
+            {DEMO_PRACTICE.experimentDuration ? (
+              <p className="mt-2 text-[10px] text-white/45">
+                срок: {DEMO_PRACTICE.experimentDuration}
+              </p>
+            ) : null}
+            <p className="mt-3 text-[10px] uppercase tracking-[0.14em] text-[#F6E7A1]/70">
+              наблюдение по дням
+            </p>
+            <div className="mt-2 flex items-end gap-1.5" aria-hidden>
+              {[40, 58, 46, 78, 64].map((height, index) => (
                 <span
                   key={index}
                   className="w-2 rounded-full bg-[#F6E7A1]/70"
@@ -256,39 +458,56 @@ function AccessPreview() {
                 />
               ))}
             </div>
-          </div>
+          </article>
         </div>
       </div>
     </div>
   );
 }
 
-const PREVIEWS = [PortraitPreview, PerspectivePreview, AccessPreview];
+const PREVIEWS = [NatalPreview, AspectsPreview, CyclesPreview, PracticePreview];
 
 export function WhatYouGet() {
   const [activeIndex, setActiveIndex] = useState(0);
   const ActivePreview = PREVIEWS[activeIndex];
 
+  function onToggle(index: number) {
+    if (activeIndex === index) {
+      setActiveIndex((index + 1) % ITEMS.length);
+      return;
+    }
+    setActiveIndex(index);
+  }
+
   return (
     <section id="what-you-get" className="mt-28 scroll-mt-28">
       <h2 className="text-center text-3xl font-normal leading-tight tracking-tight text-white md:text-5xl lg:text-6xl">
-        Что ты <span className="font-display italic text-[#F6E7A1]">получишь</span>
+        Что ты{" "}
+        <span className="font-display italic text-[#F6E7A1]">получишь</span>
       </h2>
 
-      <div className="mt-14 grid items-stretch gap-8 lg:grid-cols-[0.86fr_1.14fr] lg:gap-14">
+      <div className="mt-14 grid items-start gap-8 lg:grid-cols-[0.86fr_1.14fr] lg:gap-14">
         <div className="divide-y divide-white/10 border-y border-white/10">
           {ITEMS.map((item, index) => {
             const isActive = activeIndex === index;
+            const Preview = PREVIEWS[index];
 
             return (
               <div key={item.title}>
                 <button
                   type="button"
-                  onClick={() => setActiveIndex(index)}
+                  onClick={() => onToggle(index)}
                   aria-expanded={isActive}
                   aria-controls={`what-you-get-panel-${index}`}
-                  className="flex min-h-20 w-full items-center gap-4 py-5 text-left focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#F6E7A1]"
+                  className="flex min-h-16 w-full items-center justify-between gap-4 py-5 text-left focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#F6E7A1] md:min-h-20"
                 >
+                  <span
+                    className={`min-w-0 text-left text-xl font-normal leading-tight transition-colors md:text-2xl ${
+                      isActive ? "text-white" : "text-white/55 hover:text-white"
+                    }`}
+                  >
+                    {item.title}
+                  </span>
                   <span
                     aria-hidden
                     className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-lg transition-all duration-300 ${
@@ -299,24 +518,24 @@ export function WhatYouGet() {
                   >
                     +
                   </span>
-                  <span
-                    className={`text-xl font-normal leading-tight transition-colors md:text-2xl ${
-                      isActive ? "text-white" : "text-white/55 hover:text-white"
-                    }`}
-                  >
-                    {item.title}
-                  </span>
                 </button>
                 <div
                   id={`what-you-get-panel-${index}`}
                   className={`grid transition-[grid-template-rows,opacity] duration-500 ease-out ${
-                    isActive ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+                    isActive
+                      ? "grid-rows-[1fr] opacity-100"
+                      : "grid-rows-[0fr] opacity-0"
                   }`}
                 >
                   <div className="overflow-hidden">
-                    <p className="pb-6 pl-12 text-sm font-normal leading-relaxed text-white/80 md:text-base">
+                    <p className="pb-5 text-sm font-normal leading-relaxed text-white/80 md:pb-6 md:text-base">
                       {item.text}
                     </p>
+                    {isActive ? (
+                      <div className="mb-5 overflow-hidden rounded-2xl border border-[#F6E7A1]/55 bg-[#050d4a] lg:hidden">
+                        <Preview />
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               </div>
@@ -324,10 +543,10 @@ export function WhatYouGet() {
           })}
         </div>
 
-        <div className="relative min-h-[20rem] overflow-hidden rounded-2xl border border-[#F6E7A1]/55 bg-[#050d4a] sm:aspect-[4/3]">
+        <div className="relative hidden overflow-hidden rounded-2xl border border-[#F6E7A1]/55 bg-[#050d4a] lg:block">
           <div
             key={activeIndex}
-            className="h-full animate-[fade-up_0.55s_cubic-bezier(0.22,1,0.36,1)_both]"
+            className="animate-[fade-up_0.55s_cubic-bezier(0.22,1,0.36,1)_both]"
           >
             <ActivePreview />
           </div>
