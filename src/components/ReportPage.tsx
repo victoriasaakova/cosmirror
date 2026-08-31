@@ -15,12 +15,10 @@ import {
   checkoutReturnParamsFromSearch,
   downloadMyReportPdf,
   fetchMyOrder,
-  reportGeneratingLayer,
+  reportJobRunning,
   reportLayersPending,
-  reportLlmLayerIds,
   reportReadyToOpen,
   type Order,
-  type PaidReportLayerId,
 } from "@/lib/api";
 import { writeAuthToken } from "@/lib/auth";
 import { captureEvent } from "@/lib/posthog-client";
@@ -157,10 +155,15 @@ function ReportInner({ initialSection }: { initialSection?: "account" }) {
     const startedAt = Date.now();
     let timer = 0;
 
-    function delayFor(errored: boolean) {
+    function delayFor(errored: boolean, hasShell = false) {
       const elapsed = Date.now() - startedAt;
       if (errored) return elapsed > 60_000 ? 10_000 : 4_000;
-      // Paid generating used to stay at 2s forever — that is the Network "infinite report/" loop.
+      // Overlay poll: the GET body is ~0.5MB (wheel + sections). Don't refetch every 2s.
+      if (hasShell) {
+        if (elapsed > 12 * 60_000) return 30_000;
+        if (elapsed > 180_000) return 15_000;
+        return 8_000;
+      }
       if (elapsed > 12 * 60_000) return 30_000;
       if (elapsed > 180_000) return 15_000;
       if (elapsed > 90_000) return 8_000;
@@ -198,16 +201,17 @@ function ReportInner({ initialSection }: { initialSection?: "account" }) {
         if (next.status === "canceled" || next.status === "denied") {
           return;
         }
-        const awaitingLlm =
+        const awaitingCore =
           next.status === "paid" &&
           Boolean(next.report) &&
           reportLayersPending(next.report);
-        if (next.status === "paid" && next.report && !awaitingLlm) {
+        const jobRunning = reportJobRunning(next.report);
+        if (next.status === "paid" && next.report && !awaitingCore && !jobRunning) {
           return;
         }
         timer = window.setTimeout(() => {
           void poll();
-        }, delayFor(false));
+        }, delayFor(false, reportReadyToOpen(next.report)));
       } catch (err) {
         if (cancelled) return;
         const message = err instanceof Error ? err.message : "Не удалось проверить оплату";
@@ -356,9 +360,6 @@ function ReportInner({ initialSection }: { initialSection?: "account" }) {
   const generating =
     preview === "report" ||
     (!preview && !needsAuth && !failed && confirmed && !showReport);
-  const generatingLayer: PaidReportLayerId | "" =
-    preview === "report" ? "natal" : reportGeneratingLayer(report);
-  const generatingDone = preview === "report" ? [] : reportLlmLayerIds(report);
   const waitingPayment =
     preview === "pay" ||
     (!preview && Boolean(order) && !failed && !confirmed && !checkoutReturned);
@@ -461,12 +462,7 @@ function ReportInner({ initialSection }: { initialSection?: "account" }) {
           </StatusScreen>
         ) : generating ? (
           <StatusScreen titleBefore="отчёт" titleAccent="формируется" showEye>
-            <p className={PRELOADER_LEDE}>
-              {GENERATING_COPY[generatingLayer || "natal"]}
-              <br />
-              не закрывай страницу — разбор откроется здесь, как только тексты будут готовы.
-            </p>
-            <GeneratingSteps current={generatingLayer || "natal"} done={generatingDone} />
+            <GeneratingCopy />
           </StatusScreen>
         ) : waitingPayment ? (
           <StatusScreen titleBefore="остался один" titleAccent="шаг">
@@ -527,50 +523,29 @@ function ReportInner({ initialSection }: { initialSection?: "account" }) {
   );
 }
 
-const GENERATING_STEPS: { id: PaidReportLayerId; label: string }[] = [
-  { id: "natal", label: "карта" },
-  { id: "aspects", label: "аспекты" },
-  { id: "cycles", label: "циклы" },
-  { id: "request", label: "запрос" },
-  { id: "practice", label: "практика" },
+const GENERATING_STATUS = [
+  "интерпретирую карту...",
+  "смотрю аспекты...",
+  "считаю циклы...",
+  "нахожу связь с запросом...",
+  "формирую шаги для практики...",
 ];
 
-const GENERATING_COPY: Record<PaidReportLayerId, string> = {
-  natal: "читаю твою карту — как устроен характер и на чём ты опираешься.",
-  aspects: "собираю аспекты — как планеты в карте связаны друг с другом.",
-  cycles: "смотрю текущие циклы — что сейчас давит и что поддерживает.",
-  request: "связываю карту с тем, с чем ты пришла.",
-  practice: "собираю практику — с чего начать в ближайшие дни.",
-};
-
-function GeneratingSteps({
-  current,
-  done,
-}: {
-  current: PaidReportLayerId;
-  done: PaidReportLayerId[];
-}) {
+function GeneratingCopy() {
+  const [index, setIndex] = useState(0);
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setIndex((current) => (current + 1) % GENERATING_STATUS.length);
+    }, 2800);
+    return () => window.clearInterval(timer);
+  }, []);
   return (
-    <ol className="mt-8 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-sm tracking-wide">
-      {GENERATING_STEPS.map((step) => {
-        const isCurrent = step.id === current;
-        const isDone = done.includes(step.id);
-        return (
-          <li
-            key={step.id}
-            className={
-              isCurrent
-                ? "text-[#F6E7A1]"
-                : isDone
-                  ? "text-white"
-                  : "text-white/35"
-            }
-          >
-            {step.label}
-          </li>
-        );
-      })}
-    </ol>
+    <>
+      <p className={PRELOADER_LEDE}>не закрывай страницу, отчёт откроется здесь</p>
+      <p className={`${PRELOADER_LEDE} mt-3 text-[#F6E7A1]`} aria-live="polite">
+        {GENERATING_STATUS[index]}
+      </p>
+    </>
   );
 }
 

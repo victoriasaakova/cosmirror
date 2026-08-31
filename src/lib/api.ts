@@ -839,40 +839,42 @@ export const PAID_REPORT_LAYERS = [
   "practice",
 ] as const;
 
+export const PAID_REPORT_OPEN_LAYERS = ["natal", "aspects", "cycles"] as const;
+
 export type PaidReportLayerId = (typeof PAID_REPORT_LAYERS)[number];
+
+function layerWaitingForLlm(layer?: { source?: string; can_generate?: boolean }): boolean {
+  return Boolean(layer?.can_generate && layer.source !== "llm");
+}
 
 export function reportLayersPending(report?: PaidReport | null): boolean {
   if (!report?.document?.interpretive) return false;
   const interpretive = report.document.interpretive;
   if (interpretive.generation?.status === "done") return false;
-  const waiting = (layer?: { source?: string; can_generate?: boolean }) =>
-    Boolean(layer?.can_generate && layer.source !== "llm");
   return (
-    waiting(interpretive.natal) ||
-    waiting(interpretive.aspects) ||
-    waiting(interpretive.cycles) ||
-    waiting(interpretive.request) ||
-    waiting(interpretive.practice)
+    layerWaitingForLlm(interpretive.natal) ||
+    layerWaitingForLlm(interpretive.aspects) ||
+    layerWaitingForLlm(interpretive.cycles)
   );
 }
 
+export function reportJobRunning(report?: PaidReport | null): boolean {
+  return report?.document?.interpretive?.generation?.status === "running";
+}
+
 export function reportReadyToOpen(report?: PaidReport | null): boolean {
-  if (!report?.document && !(report?.sections && report.sections.length > 0)) {
-    return false;
-  }
-  return !reportLayersPending(report);
+  // GET already returns the fallback shell. LLM overlays in the background —
+  // blocking the cabinet until natal/aspects/cycles are source=llm leaves
+  // localhost stuck on «формируется» while /api/me/report/ 200s a 500KB payload.
+  return Boolean(report?.document || (report?.sections && report.sections.length > 0));
 }
 
 export function reportGeneratingLayer(report?: PaidReport | null): PaidReportLayerId | "" {
   const interpretive = report?.document?.interpretive;
-  const fromJob = String(interpretive?.generation?.current_section || "").trim();
-  if (PAID_REPORT_LAYERS.includes(fromJob as PaidReportLayerId)) {
-    return fromJob as PaidReportLayerId;
-  }
   if (!interpretive) return "natal";
-  for (const key of PAID_REPORT_LAYERS) {
+  for (const key of PAID_REPORT_OPEN_LAYERS) {
     const layer = interpretive[key];
-    if (layer?.can_generate && layer.source !== "llm") return key;
+    if (layerWaitingForLlm(layer)) return key;
   }
   return "";
 }

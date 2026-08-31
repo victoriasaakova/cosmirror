@@ -74,3 +74,115 @@ export function aspectGlyph(aspect?: string): string {
   if (!aspect) return "";
   return textGlyph(ASPECT_GLYPH[aspect] || "");
 }
+
+export const PLANET_RU: Record<string, string> = {
+  sun: "Солнце",
+  moon: "Луна",
+  mercury: "Меркурий",
+  venus: "Венера",
+  mars: "Марс",
+  jupiter: "Юпитер",
+  saturn: "Сатурн",
+  uranus: "Уран",
+  neptune: "Нептун",
+  pluto: "Плутон",
+  north_node: "Северный узел",
+  south_node: "Южный узел",
+  chiron: "Хирон",
+  vesta: "Веста",
+  ascendant: "Асцендент",
+  midheaven: "Середина неба",
+  descendant: "Десцендент",
+  ic: "Надир",
+};
+
+export const ASPECT_RU: Record<string, string> = {
+  conjunction: "соединение",
+  opposition: "оппозиция",
+  square: "квадрат",
+  trine: "тригон",
+  sextile: "секстиль",
+  quincunx: "квинконс",
+};
+
+export type AstroPair = {
+  left: string;
+  aspect: string;
+  right: string;
+};
+
+const BODY_KEYS = [
+  "north_node",
+  "south_node",
+  "midheaven",
+  "ascendant",
+  "descendant",
+  "mercury",
+  "jupiter",
+  "neptune",
+  "saturn",
+  "uranus",
+  "chiron",
+  "vesta",
+  "pluto",
+  "venus",
+  "mars",
+  "moon",
+  "sun",
+  "ic",
+];
+
+const ASPECT_KEYS = ["conjunction", "opposition", "quincunx", "sextile", "square", "trine"];
+
+function aliasBody(token?: string): string {
+  if (token === "asc") return "ascendant";
+  if (token === "mc") return "midheaven";
+  if (token === "ds") return "descendant";
+  return token || "";
+}
+
+function takeKeyed(parts: string[], keys: string[], alias?: (token: string) => string): [string, string[]] {
+  if (!parts.length) return ["", parts];
+  const first = alias ? alias(parts[0]) : parts[0];
+  const shifted = first !== parts[0] ? [first, ...parts.slice(1)] : parts;
+  for (const key of keys) {
+    const tokens = key.split("_");
+    if (shifted.slice(0, tokens.length).join("_") === key) {
+      return [key, shifted.slice(tokens.length)];
+    }
+  }
+  return ["", parts];
+}
+
+export function parseAstroPairId(raw?: string): AstroPair | null {
+  if (!raw) return null;
+  let parts = raw.toLowerCase().replace(/-/g, "_").split("_").filter(Boolean);
+  if (parts[0] === "t" || parts[0] === "natal") parts = parts.slice(1);
+  const [left, rest] = takeKeyed(parts, BODY_KEYS, aliasBody);
+  if (!left) return null;
+  const [aspect, tail] = takeKeyed(rest, ASPECT_KEYS);
+  if (!aspect) return null;
+  const [right] = takeKeyed(tail, BODY_KEYS, aliasBody);
+  if (!right) return null;
+  return { left, aspect, right };
+}
+
+export function planetRu(key?: string): string {
+  if (!key) return "";
+  return PLANET_RU[key] || "";
+}
+
+export function aspectRu(key?: string): string {
+  if (!key) return "";
+  return ASPECT_RU[key] || "";
+}
+
+export function astroPairLabel(pair: AstroPair, names?: { left?: string; aspect?: string; right?: string }): string {
+  return [
+    names?.left || planetRu(pair.left),
+    names?.aspect || aspectRu(pair.aspect),
+    names?.right || planetRu(pair.right),
+  ]
+    .filter(Boolean)
+    .join(" ");
+}

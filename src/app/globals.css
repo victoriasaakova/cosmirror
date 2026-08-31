@@ -211,8 +211,10 @@ body {
   max-width: var(--measure);
   border-left: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
   padding-left: 1rem;
+  font-family: var(--font-grotesk), system-ui, sans-serif;
   font-size: var(--text-body);
-  font-style: italic;
+  font-style: normal;
+  font-weight: 400;
   line-height: var(--leading-body);
   color: color-mix(in srgb, var(--foreground) 80%, transparent);
 }
@@ -234,17 +236,18 @@ body {
 }
 
 .report-theme-title {
-  font-family: var(--font-display), Georgia, serif;
-  font-size: 1.35rem;
-  font-style: italic;
+  font-family: var(--font-grotesk), system-ui, sans-serif;
+  font-size: 1.25rem;
+  font-style: normal;
   font-weight: 400;
-  line-height: 1.2;
-  color: #f6e7a1;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  color: #fff;
 }
 
 @media (min-width: 640px) {
   .report-theme-title {
-    font-size: 1.5rem;
+    font-size: 1.375rem;
   }
 }
 

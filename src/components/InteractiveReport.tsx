@@ -2,7 +2,15 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { ReportOpening } from "@/components/ReportOpening";
-import { aspectGlyph, formatDms, planetGlyph, signGlyph } from "@/lib/astro-glyphs";
+import {
+  aspectGlyph,
+  astroPairLabel,
+  formatDms,
+  parseAstroPairId,
+  planetGlyph,
+  signGlyph,
+  type AstroPair,
+} from "@/lib/astro-glyphs";
 import {
   type CycleCard,
   type NatalAspectCard,
@@ -291,17 +299,17 @@ export function InteractiveReport({
 
         {tab !== "home" ? (
           <div>
-            {tab === "natal" && !generatingNatal ? (
+            {tab === "natal" ? (
               <NatalTab document={document} focusKey={focusKey} />
             ) : null}
-            {tab === "aspects" && !generatingAspects ? (
+            {tab === "aspects" ? (
               <AspectsTab document={document} focusKey={focusKey} initialFilter={categoryFilter} />
             ) : null}
-            {tab === "cycles" && !generatingCycles ? (
+            {tab === "cycles" ? (
               <CyclesTab document={document} focusKey={focusKey} initialFilter={categoryFilter} />
             ) : null}
-            {tab === "request" && !generatingRequest ? <RequestTab document={document} /> : null}
-            {tab === "practice" && !generatingPractice ? <PracticeTab document={document} /> : null}
+            {tab === "request" ? <RequestTab document={document} /> : null}
+            {tab === "practice" ? <PracticeTab document={document} /> : null}
           </div>
         ) : null}
 
@@ -1563,6 +1571,74 @@ function CycleRow({
   );
 }
 
+function glyphMap(document: ReportDocument): Map<string, string> {
+  return new Map(
+    (document.factual?.natal?.points ?? []).map((point) => [point.key, point.glyph || ""]),
+  );
+}
+
+function resolveAstroPair(
+  document: ReportDocument,
+  sourceId?: string,
+  sourceType?: string,
+): (AstroPair & { label: string }) | null {
+  const id = (sourceId || "").trim();
+  if (!id) return null;
+  const type = (sourceType || "").trim();
+  if (type === "cycle" || !type) {
+    const cards = [
+      ...(document.interpretive?.cycles?.payload?.primary_cycles ?? []),
+      ...(document.interpretive?.cycles?.payload?.secondary_cycles ?? []),
+    ];
+    const card = cards.find((row) => row.cycle_id === id || row.unit_key === id);
+    if (card?.transit && card?.natal) {
+      const pair = { left: card.transit, aspect: card.aspect || "", right: card.natal };
+      const label =
+        card.technical_title ||
+        [card.transit_name, card.aspect_ru, card.natal_name].filter(Boolean).join(" ") ||
+        astroPairLabel(pair);
+      return { ...pair, label };
+    }
+  }
+  if (type === "aspect" || !type) {
+    const cards = document.interpretive?.aspects?.payload?.aspects ?? [];
+    const card = cards.find((row) => row.aspect_id === id || row.unit_key === id);
+    if (card?.a && card?.b) {
+      const pair = { left: card.a, aspect: card.aspect || "", right: card.b };
+      const label =
+        [card.a_name, card.aspect_ru, card.b_name].filter(Boolean).join(" ") || astroPairLabel(pair);
+      return { ...pair, label };
+    }
+  }
+  const parsed = parseAstroPairId(id);
+  if (!parsed) return null;
+  return { ...parsed, label: astroPairLabel(parsed) };
+}
+
+function AstroPairCaption({
+  pair,
+  glyphByKey,
+}: {
+  pair: AstroPair & { label?: string };
+  glyphByKey: Map<string, string>;
+}) {
+  const left = planetGlyph(pair.left, glyphByKey.get(pair.left || ""));
+  const right = planetGlyph(pair.right, glyphByKey.get(pair.right || ""));
+  const aspect = aspectGlyph(pair.aspect);
+  const label = pair.label || astroPairLabel(pair);
+  if (!left && !aspect && !right && !label) return null;
+  return (
+    <p className="mt-2 text-sm text-[color:var(--muted)]">
+      <span className="inline-flex items-baseline gap-1 natal-astro-glyph text-base leading-none text-[#F6E7A1]">
+        {left ? <span>{left}</span> : null}
+        {aspect ? <span>{aspect}</span> : null}
+        {right ? <span>{right}</span> : null}
+      </span>
+      {label ? <span className="ml-2 align-baseline">{label}</span> : null}
+    </p>
+  );
+}
+
 function RequestTab({ document }: { document: ReportDocument }) {
   const payload = document.interpretive?.request?.payload;
   const section = document.sections?.request;
@@ -1571,11 +1647,17 @@ function RequestTab({ document }: { document: ReportDocument }) {
     return <p className="report-lede">запрос появится, когда слой соберётся.</p>;
   }
 
+  const glyphByKey = glyphMap(document);
   const request = payload?.request;
   const connections = payload?.connections ?? [];
   const distinction = payload?.core_distinction ?? payload?.core_pattern;
   const resource = payload?.resource;
   const takeaway = payload?.takeaway;
+  const resourcePair = resolveAstroPair(
+    document,
+    resource?.source_id || resource?.source,
+    resource?.source_type,
+  );
 
   if (!payload) {
     return (
@@ -1604,18 +1686,14 @@ function RequestTab({ document }: { document: ReportDocument }) {
       ) : null}
 
       {connections.map((row) => {
-        const sourceLabel = [row.source_type, row.source_id || row.source]
-          .filter(Boolean)
-          .join(" · ");
+        const pair = resolveAstroPair(document, row.source_id || row.source, row.source_type);
         return (
           <article
             key={`${row.title}-${row.source_id || row.source}`}
             className="rounded-2xl border border-white/10 bg-white/[0.03] p-5"
           >
             <h3 className="report-theme-title pb-1">{row.title}</h3>
-            {sourceLabel ? (
-              <p className="mt-2 text-sm text-[color:var(--muted)]">{sourceLabel}</p>
-            ) : null}
+            {pair ? <AstroPairCaption pair={pair} glyphByKey={glyphByKey} /> : null}
             {row.text ? <p className="mt-3 report-prose">{row.text}</p> : null}
           </article>
         );
@@ -1627,6 +1705,7 @@ function RequestTab({ document }: { document: ReportDocument }) {
             {distinction.title || "Главное различение"}
           </h3>
           {distinction.text ? <p className="mt-3 report-prose">{distinction.text}</p> : null}
+          {sourceCaptions(document, payload.core_distinction?.provenance, glyphByKey)}
         </article>
       ) : null}
 
@@ -1635,11 +1714,7 @@ function RequestTab({ document }: { document: ReportDocument }) {
           <h3 className="report-theme-title pb-1">
             {resource.title || "На что можно опереться"}
           </h3>
-          {resource.source_id || resource.source ? (
-            <p className="mt-2 text-sm text-[color:var(--muted)]">
-              {resource.source_id || resource.source}
-            </p>
-          ) : null}
+          {resourcePair ? <AstroPairCaption pair={resourcePair} glyphByKey={glyphByKey} /> : null}
           {resource.text ? <p className="mt-3 report-prose">{resource.text}</p> : null}
         </article>
       ) : null}
@@ -1650,6 +1725,24 @@ function RequestTab({ document }: { document: ReportDocument }) {
           <p className="mt-3 report-prose">{takeaway}</p>
         </article>
       ) : null}
+    </div>
+  );
+}
+
+function sourceCaptions(
+  document: ReportDocument,
+  ids: string[] | undefined,
+  glyphByKey: Map<string, string>,
+) {
+  const rows = (ids ?? [])
+    .map((id) => ({ id, pair: resolveAstroPair(document, id) }))
+    .filter((row): row is { id: string; pair: AstroPair & { label: string } } => Boolean(row.pair));
+  if (!rows.length) return null;
+  return (
+    <div>
+      {rows.map((row) => (
+        <AstroPairCaption key={row.id} pair={row.pair} glyphByKey={glyphByKey} />
+      ))}
     </div>
   );
 }
@@ -1699,6 +1792,7 @@ function PracticeTab({ document }: { document: ReportDocument }) {
   const distinctions = payload.key_distinctions ?? [];
   const observe = payload.observe_over_time ?? [];
   const takeawayPrompt = payload.user_takeaway_prompt;
+  const glyphByKey = glyphMap(document);
 
   return (
     <div className="space-y-5">
@@ -1709,11 +1803,22 @@ function PracticeTab({ document }: { document: ReportDocument }) {
               {start.headline}
             </h3>
           ) : null}
+          {sourceCaptions(document, start.provenance ?? payload.provenance, glyphByKey)}
           {start.text ? <p className="mt-3 report-prose">{start.text}</p> : null}
         </article>
       ) : null}
 
-      {[pattern, protective, cost, values].map((row) =>
+      {pattern?.title || pattern?.text ? (
+        <article className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+          <h3 className="report-theme-title pb-1">
+            {pattern.title}
+          </h3>
+          {sourceCaptions(document, pattern.source_ids, glyphByKey)}
+          {pattern.text ? <p className="mt-3 report-prose">{pattern.text}</p> : null}
+        </article>
+      ) : null}
+
+      {[protective, cost, values].map((row) =>
         row?.title || row?.text ? (
           <article
             key={row.title || row.text}
