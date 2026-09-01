@@ -172,10 +172,16 @@ export function ReportOpening({
           <div className="-mx-4 overflow-x-clip sm:mx-0">
             <NatalWheel wheel={wheel} />
           </div>
-          <p className="mt-3 text-center text-sm leading-relaxed text-[color:var(--muted)] sm:mt-4 sm:text-base">
-            <span className="text-[#c45c5c]">Красная</span>: напряжение.{" "}
-            <span className="text-[#7eafd6]">Синяя пунктир</span>: поддержка.
-          </p>
+          <ul className="mt-3 flex flex-col items-center gap-1.5 text-[0.75rem] leading-snug text-white/65 sm:mt-4 sm:flex-row sm:justify-center sm:gap-6">
+            <li className="inline-flex items-center gap-2">
+              <AspectSwatch kind="hard" />
+              напряжение: квадрат и оппозиция
+            </li>
+            <li className="inline-flex items-center gap-2">
+              <AspectSwatch kind="soft" />
+              поддержка: тригон и секстиль
+            </li>
+          </ul>
         </div>
       ) : null}
 
@@ -184,46 +190,71 @@ export function ReportOpening({
       {paid ? (
         <section className="mt-10 overflow-hidden rounded-2xl border border-white/12 bg-white/[0.04]">
           <div className="flex flex-col md:flex-row md:items-stretch">
-            <div className="relative aspect-[16/10] w-full shrink-0 md:aspect-auto md:w-1/3 md:min-h-[13.75rem]">
+            <div className="relative aspect-[16/10] w-full shrink-0 md:aspect-auto md:w-[13.5rem] md:min-h-[11.5rem] lg:w-60">
               <Image
                 src="/images/report.webp"
                 alt=""
                 fill
                 className="object-cover object-center"
-                sizes="(max-width: 768px) 100vw, 14rem"
+                sizes="(max-width: 768px) 100vw, 15rem"
               />
             </div>
-            <div className="flex min-w-0 flex-1 flex-col justify-center p-5 sm:p-6">
+            <div className="flex min-w-0 flex-1 flex-col justify-center gap-5 p-5 sm:p-6">
               <h2 className="text-2xl font-normal leading-[1.15] tracking-tight text-white sm:text-3xl">
                 Твой персональный{" "}
                 <span className="font-display inline-block pb-1 italic leading-[1.15] text-[#F6E7A1]">
                   отчёт
                 </span>
               </h2>
+              <div className="report-cta-row flex flex-col gap-2 md:flex-row">
+                <button
+                  type="button"
+                  onClick={onDownloadPdf}
+                  disabled={downloading}
+                  className="cabinet-cta"
+                >
+                  {downloading ? "Готовим PDF…" : "Скачать PDF"}
+                </button>
+                <button type="button" onClick={() => void onShare()} className="cabinet-cta-ghost">
+                  {copied ? "Ссылка скопирована" : "Поделиться ссылкой"}
+                </button>
+              </div>
+              {shareHint ? (
+                <p className="break-all text-base text-[color:var(--muted)]">{shareHint}</p>
+              ) : null}
+              {actionNote ? (
+                <p className="text-base text-[color:var(--muted)]">{actionNote}</p>
+              ) : null}
             </div>
           </div>
-          <div className="report-cta-row flex flex-col gap-2 border-t border-white/10 px-5 py-4 md:flex-row md:px-6">
-            <button
-              type="button"
-              onClick={onDownloadPdf}
-              disabled={downloading}
-              className="cabinet-cta"
-            >
-              {downloading ? "Готовим PDF…" : "Скачать PDF"}
-            </button>
-            <button type="button" onClick={() => void onShare()} className="cabinet-cta-ghost">
-              {copied ? "Ссылка скопирована" : "Поделиться ссылкой"}
-            </button>
-          </div>
-          {shareHint ? (
-            <p className="break-all px-5 pb-4 text-base text-[color:var(--muted)] sm:px-6">{shareHint}</p>
-          ) : null}
-          {actionNote ? (
-            <p className="px-5 pb-4 text-base text-[color:var(--muted)] sm:px-6">{actionNote}</p>
-          ) : null}
         </section>
       ) : null}
     </header>
+  );
+}
+
+function AspectSwatch({ kind }: { kind: "hard" | "soft" }) {
+  const hard = kind === "hard";
+  return (
+    <svg
+      width="28"
+      height="10"
+      viewBox="0 0 28 10"
+      aria-hidden
+      className="shrink-0"
+    >
+      <line
+        x1="1"
+        y1="5"
+        x2="27"
+        y2="5"
+        stroke={hard ? "#c45c5c" : "#7eafd6"}
+        strokeOpacity={hard ? 0.78 : 0.7}
+        strokeWidth={hard ? 1.6 : 1.35}
+        strokeLinecap="round"
+        strokeDasharray={hard ? undefined : "4.5 3.5"}
+      />
+    </svg>
   );
 }
 

@@ -948,6 +948,17 @@ function deepReadParagraphs(deep: string | string[] | undefined): string[] {
   return deep?.trim() ? [deep.trim()] : [];
 }
 
+function sameCopy(a: string, b: string): boolean {
+  return a.trim().replace(/\s+/g, " ").toLowerCase() === b.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+function withoutContained(body: string, fragment: string): string {
+  const fragmentText = fragment.trim();
+  if (!fragmentText || !body) return body;
+  if (!body.includes(fragmentText)) return body;
+  return body.replace(fragmentText, "").replace(/\s{2,}/g, " ").trim();
+}
+
 function visibleManifestations(
   items: string[] | undefined,
   deepRead: string | string[] | undefined,
@@ -1005,6 +1016,8 @@ function AspectRow({
   );
   const questions = card.reflection_questions ?? [];
   const pairLabel = `${card.a_name} ${card.aspect_ru} ${card.b_name}`;
+  const headline = (card.headline || "").trim();
+  const showHeadline = Boolean(headline && !sameCopy(headline, pairLabel));
 
   return (
     <article className="select-text rounded-2xl border border-white/10 bg-white/5 p-5">
@@ -1016,20 +1029,16 @@ function AspectRow({
               <span className="ml-2 tracking-normal text-[color:var(--muted)]">орб {card.orb_deg}°</span>
             ) : null}
           </p>
-          <h3 className="mt-2 break-words text-lg font-medium text-white">
+          <h3 className="mt-2 break-words text-base font-normal leading-snug text-white">
             <span className="inline-flex items-baseline gap-1 natal-astro-glyph text-[#F6E7A1]">
               {aGlyph ? <span>{aGlyph}</span> : null}
               {aspect ? <span>{aspect}</span> : null}
               {bGlyph ? <span>{bGlyph}</span> : null}
             </span>
-            <span className="ml-2">
-              {card.a_name} {card.aspect_ru} {card.b_name}
-            </span>
+            <span className="ml-2">{pairLabel}</span>
           </h3>
-          {card.headline ? (
-            <p className="mt-2 report-theme-title">
-              {card.headline}
-            </p>
+          {showHeadline ? (
+            <p className="mt-2 text-base font-normal leading-snug text-white">{headline}</p>
           ) : null}
         </div>
         <ChevronToggle open={open} onToggle={onToggle} />
@@ -1073,9 +1082,7 @@ function AspectRow({
             </span>
           </div>
         </div>
-      ) : (
-        <p className="mt-2 text-base text-[color:var(--muted)]">{card.headline || pairLabel}</p>
-      )}
+      ) : null}
     </article>
   );
 }
@@ -1227,10 +1234,15 @@ function CycleRow({
   const nGlyph = planetGlyph(card.natal, glyphByKey.get(card.natal || ""));
   const aspect = aspectGlyph(card.aspect);
   const pairLabel = card.technical_title || `${card.transit_name} ${card.aspect_ru} ${card.natal_name}`;
-  const theme = card.human_theme || card.headline || "";
+  const theme = (card.human_theme || card.headline || "").trim();
+  const showTheme = Boolean(theme && !sameCopy(theme, pairLabel));
   const orb = card.timing?.orb_deg;
   const phase = card.timing?.phase;
-  const explanation = card.short_explanation || card.summary || "";
+  const windowText = (card.timing?.active_window_text || "").trim();
+  const explanation = withoutContained(
+    card.short_explanation || card.summary || "",
+    windowText,
+  );
   const fallbackQuestion = card.reflection_question || card.reflection_questions?.[0] || "";
 
   const deep = deepReadParagraphs(card.deep_read);
@@ -1263,7 +1275,7 @@ function CycleRow({
             ) : null}
             {phase ? <span className="ml-2 tracking-normal text-[color:var(--muted)]">{phase}</span> : null}
           </p>
-          <h3 className="mt-2 break-words text-lg font-medium text-white">
+          <h3 className="mt-2 break-words text-base font-normal leading-snug text-white">
             <span className="inline-flex items-baseline gap-1 natal-astro-glyph text-[#F6E7A1]">
               {tGlyph ? <span>{tGlyph}</span> : null}
               {aspect ? <span>{aspect}</span> : null}
@@ -1271,10 +1283,8 @@ function CycleRow({
             </span>
             <span className="ml-2">{pairLabel}</span>
           </h3>
-          {theme ? (
-            <p className="mt-2 report-theme-title">
-              {theme}
-            </p>
+          {showTheme ? (
+            <p className="mt-2 text-base font-normal leading-snug text-white">{theme}</p>
           ) : null}
         </div>
         <ChevronToggle open={open} onToggle={onToggle} />
@@ -1282,8 +1292,8 @@ function CycleRow({
       {open ? (
         compact ? (
           <div className="mt-4 space-y-3">
-            {card.timing?.active_window_text ? (
-              <p className="report-lede">{card.timing.active_window_text}</p>
+            {windowText ? (
+              <p className="report-lede">{windowText}</p>
             ) : null}
             {explanation ? (
               <p className="report-prose">{explanation}</p>
@@ -1310,14 +1320,18 @@ function CycleRow({
           </div>
         ) : (
           <div className="mt-4 space-y-3">
-            {card.timing?.active_window_text ? (
-              <p className="report-lede">{card.timing.active_window_text}</p>
+            {windowText ? (
+              <p className="report-lede">{windowText}</p>
             ) : null}
-            {lead.map((paragraph) => (
-              <p key={paragraph.slice(0, 80)} className="report-prose">
-                {paragraph}
-              </p>
-            ))}
+            {lead.map((paragraph) => {
+              const text = withoutContained(paragraph, windowText);
+              if (!text) return null;
+              return (
+                <p key={paragraph.slice(0, 80)} className="report-prose">
+                  {text}
+                </p>
+              );
+            })}
             <ManifestationsBlock items={manifestations} />
             {rest.map((paragraph) => (
               <p key={paragraph.slice(0, 80)} className="report-prose">
@@ -1349,9 +1363,7 @@ function CycleRow({
             </div>
           </div>
         )
-      ) : (
-        <p className="mt-2 text-base text-[color:var(--muted)]">{theme || pairLabel}</p>
-      )}
+      ) : null}
     </article>
   );
 }

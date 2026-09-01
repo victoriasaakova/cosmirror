@@ -4,6 +4,7 @@ import {
   PLANET_RU,
   SIGN_KEYS,
   planetGlyph,
+  signGlyph,
 } from "@/lib/astro-glyphs";
 
 export type SignsTablePoint = {
@@ -52,68 +53,99 @@ export function SignsTable({
   const groups = groupBySign(points ?? [], hasBirthTime);
   if (groups.length === 0) return null;
 
+  const lastCol = hasBirthTime ? 2 : 1;
+  const headerClass = (col: number) =>
+    `px-2 py-1.5 text-[0.8125rem] font-normal leading-snug text-white/55 sm:px-2.5 sm:text-sm${gridBorders({ col, lastCol, rowEnd: false })}`;
+
   return (
-    <div className="mt-6">
-      <div className="flex items-stretch gap-1.5">
-        <p
-          className="w-3 shrink-0 self-stretch text-center text-[0.55rem] uppercase leading-none tracking-[0.22em] text-white/40 [writing-mode:vertical-rl] rotate-180"
-          aria-hidden
-        >
-          Знаки
-        </p>
-        <table className="min-w-0 flex-1 border-collapse text-left">
-          <caption className="sr-only">Положения планет в знаках и домах</caption>
-          <tbody>
-            {groups.map((group) =>
-              group.rows.map((point, index) => (
-                <tr key={`${group.sign}-${point.key}`}>
-                  {index === 0 ? (
-                    <th
-                      scope="row"
-                      rowSpan={group.rows.length}
-                      className="border border-white/25 px-2 py-1 align-middle font-display text-[0.8125rem] italic font-normal leading-tight text-white sm:px-2.5 sm:text-sm"
-                    >
-                      {group.signRu}
-                    </th>
-                  ) : null}
-                  <td className="border border-white/25 px-2 py-1 align-middle sm:px-2.5">
+    <div className="mt-6 rounded-xl border border-white/25">
+      <table className="w-full min-w-0 border-collapse text-left">
+        <caption className="sr-only">Положения планет в знаках и домах</caption>
+        <thead>
+          <tr>
+            <th scope="col" className={headerClass(0)}>
+              Знаки
+            </th>
+            <th scope="col" className={headerClass(1)}>
+              Планеты
+            </th>
+            {hasBirthTime ? (
+              <th scope="col" className={`${headerClass(2)} w-11 px-1.5 text-center sm:w-12`}>
+                Дома
+              </th>
+            ) : null}
+          </tr>
+        </thead>
+        <tbody>
+          {groups.map((group, groupIndex) => {
+            const lastGroup = groupIndex === groups.length - 1;
+            return group.rows.map((point, index) => (
+              <tr key={`${group.sign}-${point.key}`}>
+                {index === 0 ? (
+                  <th
+                    scope="row"
+                    rowSpan={group.rows.length}
+                    className={`px-2 py-1 align-middle font-normal sm:px-2.5${gridBorders({ col: 0, lastCol, rowEnd: lastGroup })}`}
+                  >
                     <span className="flex items-center gap-1.5 text-[0.8125rem] leading-snug text-white sm:text-sm">
                       <span className="natal-astro-glyph text-[0.95rem] text-[#F6E7A1]" aria-hidden>
-                        {planetGlyph(point.key, point.glyph)}
+                        {signGlyph(group.sign)}
                       </span>
-                      {planetName(point)}
+                      {group.signRu}
                     </span>
+                  </th>
+                ) : null}
+                <td
+                  className={`px-2 py-1 align-middle sm:px-2.5${gridBorders({
+                    col: 1,
+                    lastCol,
+                    rowEnd: lastGroup && index === group.rows.length - 1,
+                  })}`}
+                >
+                  <span className="flex items-center gap-1.5 text-[0.8125rem] leading-snug text-white sm:text-sm">
+                    <span className="natal-astro-glyph text-[0.95rem] text-[#F6E7A1]" aria-hidden>
+                      {planetGlyph(point.key, point.glyph)}
+                    </span>
+                    {planetName(point)}
+                  </span>
+                </td>
+                {hasBirthTime && (!group.sharedHouse || index === 0) ? (
+                  <td
+                    rowSpan={group.sharedHouse ? group.rows.length : 1}
+                    className={`w-11 px-1.5 py-1 text-center align-middle sm:w-12${gridBorders({
+                      col: 2,
+                      lastCol,
+                      rowEnd: group.sharedHouse ? lastGroup : lastGroup && index === group.rows.length - 1,
+                    })}`}
+                  >
+                    {point.house ? (
+                      <span className="font-display text-[0.8125rem] italic font-normal tabular-nums leading-none text-[#F6E7A1] sm:text-sm">
+                        {point.house}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-white/40">—</span>
+                    )}
                   </td>
-                  {hasBirthTime && (!group.sharedHouse || index === 0) ? (
-                    <td
-                      rowSpan={group.sharedHouse ? group.rows.length : 1}
-                      className="w-8 border border-white/25 px-1.5 py-1 text-center align-middle sm:w-9"
-                    >
-                      {point.house ? (
-                        <span className="text-[0.8125rem] tabular-nums leading-none text-white/80 sm:text-sm">
-                          {point.house}
-                        </span>
-                      ) : (
-                        <span className="text-xs text-white/40">—</span>
-                      )}
-                    </td>
-                  ) : null}
-                </tr>
-              )),
-            )}
-          </tbody>
-        </table>
-        {hasBirthTime ? (
-          <p
-            className="w-3 shrink-0 self-stretch text-center text-[0.55rem] uppercase leading-none tracking-[0.22em] text-white/40 [writing-mode:vertical-rl] rotate-180"
-            aria-hidden
-          >
-            Дома
-          </p>
-        ) : null}
-      </div>
+                ) : null}
+              </tr>
+            ));
+          })}
+        </tbody>
+      </table>
     </div>
   );
+}
+
+function gridBorders({
+  col,
+  lastCol,
+  rowEnd,
+}: {
+  col: number;
+  lastCol: number;
+  rowEnd: boolean;
+}): string {
+  return `${col < lastCol ? " border-r border-white/25" : ""}${rowEnd ? "" : " border-b border-white/25"}`;
 }
 
 function planetName(point: SignsTablePoint): string {
