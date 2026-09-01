@@ -63,6 +63,8 @@
 html {
   scroll-behavior: smooth;
   overflow-x: clip;
+  overflow-y: scroll;
+  scrollbar-gutter: stable;
 }
 
 body {
@@ -72,6 +74,46 @@ body {
   font-size: var(--text-body);
   line-height: var(--leading-body);
   overflow-x: clip;
+}
+
+html.report-lock-scroll,
+html.report-lock-scroll body {
+  height: 100dvh;
+  overscroll-behavior: none;
+}
+
+html.report-lock-scroll {
+  overflow-x: clip;
+  overflow-y: scroll;
+}
+
+html.report-lock-scroll body {
+  overflow: hidden;
+}
+
+html.report-lock-scroll .site-footer,
+html.report-lock-scroll .cookie-banner {
+  display: none;
+}
+
+html.report-lock-scroll .cabinet-shell {
+  padding-bottom: 0;
+  overflow: hidden;
+  min-height: 0;
+}
+
+html.report-lock-scroll main {
+  overflow: hidden;
+}
+
+html.report-lock-scroll .cabinet-shell article {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: calc(100dvh - var(--cabinet-header-offset));
+  flex-direction: column;
+  overflow: hidden;
+  padding-bottom: 0;
 }
 
 ::selection {

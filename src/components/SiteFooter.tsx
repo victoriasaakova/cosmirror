@@ -6,7 +6,7 @@ import { CosmirrorMark } from "@/components/CosmirrorMark";
 export function SiteFooter() {
   return (
     <footer
-      className="relative z-10 mt-auto border-t border-white/10 bg-[#050d4a] pt-10"
+      className="site-footer relative z-10 mt-auto border-t border-white/10 bg-[#050d4a] pt-10"
       style={{ paddingBottom: "calc(2.5rem + var(--cookie-banner-clearance, 0px))" }}
     >
       <div className="mx-auto flex w-full max-w-6xl flex-col items-start gap-6 px-5 md:px-8">

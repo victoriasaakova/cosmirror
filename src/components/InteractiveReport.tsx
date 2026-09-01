@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { ArrowLeft } from "lucide-react";
 import { ReportOpening } from "@/components/ReportOpening";
+import { SectionFeedbackCard } from "@/components/SectionFeedbackCard";
+import { LockedReportSection } from "@/components/LockedReportSection";
+import { ReportSectionPreloader } from "@/components/StarCheckPreloader";
 import {
   aspectGlyph,
   astroPairLabel,
@@ -12,20 +16,28 @@ import {
   type AstroPair,
 } from "@/lib/astro-glyphs";
 import {
+  isReportFeedbackSection,
+  reportReadyToOpen,
   type CycleCard,
   type NatalAspectCard,
   type NatalFallbackTheme,
   type NatalInterpretationPayload,
   type NatalThemeSection,
   type PaidReport,
+  type ReportBlock,
   type ReportDocument,
   type ReportTransitHit,
+  type SectionFeedback,
 } from "@/lib/api";
 
 type AspectCategoryFilter = "all" | "tension" | "resource" | "mixed";
 type CycleCategoryFilter = "all" | "tension" | "support" | "mixed";
 
 const CORE = ["sun", "moon", "ascendant"] as const;
+
+const FREE_LOCKED_SECTIONS = ["natal", "aspects", "cycles", "request", "practice"] as const;
+
+function noopUnlock() {}
 
 const REPORT_NAV = [
   { id: "home", label: "Главная", subtitle: "твоя натальная карта" },
@@ -96,7 +108,15 @@ type Props = {
   downloading: boolean;
   onDownloadPdf: () => void;
   actionNote?: string;
+  sectionFeedback?: SectionFeedback[];
+  access?: "free" | "paid";
+  lockedSections?: string[];
+  onUnlock?: () => void;
 };
+
+function isTakeawayBlock(block: ReportBlock): boolean {
+  return block.kind === "user_takeaway" || block.title.trim() === "Твой вывод";
+}
 
 function scrollReportTop() {
   const reduce =
@@ -152,13 +172,14 @@ function keepLlmLayers(prev: PaidReport | undefined, next: PaidReport): PaidRepo
   };
 }
 
-function layerCollecting(
+function layerAwaitingLlm(
   layer?: { source?: string; can_generate?: boolean; payload?: unknown },
   generationStatus?: string,
 ): boolean {
   if (layer?.source === "llm") return false;
   if (!layer?.can_generate) return false;
-  return generationStatus === "running";
+  if (generationStatus === "done") return false;
+  return true;
 }
 
 export function InteractiveReport({
@@ -168,19 +189,49 @@ export function InteractiveReport({
   downloading,
   onDownloadPdf,
   actionNote,
+  sectionFeedback,
+  access = "paid",
+  lockedSections = [],
+  onUnlock,
 }: Props) {
   const [live, setLive] = useState(report);
   const [tab, setTab] = useState("home");
   const [focusKey, setFocusKey] = useState<string | null>(null);
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const [feedbackRows, setFeedbackRows] = useState<SectionFeedback[]>(sectionFeedback ?? []);
 
   useEffect(() => {
     setLive((prev) => keepLlmLayers(prev, report));
   }, [report]);
 
+  useEffect(() => {
+    setFeedbackRows((prev) => {
+      const bySection = new Map(prev.map((row) => [row.section, row]));
+      for (const row of sectionFeedback ?? []) {
+        if (!bySection.has(row.section)) bySection.set(row.section, row);
+      }
+      return [...bySection.values()];
+    });
+  }, [sectionFeedback]);
+
   const document = live.document;
   const sectionTabs = document?.presentation?.web?.tabs ?? [];
   const tabs = REPORT_NAV.map((item) => ({ ...item }));
+
+  const isFree = access === "free";
+  const locked = new Set<string>(
+    isFree ? FREE_LOCKED_SECTIONS : lockedSections,
+  );
+  const unlock = onUnlock ?? noopUnlock;
+  const lockedTab = tab !== "home" && locked.has(tab);
+
+  useEffect(() => {
+    if (!lockedTab) return;
+    window.document.documentElement.classList.add("report-lock-scroll");
+    return () => {
+      window.document.documentElement.classList.remove("report-lock-scroll");
+    };
+  }, [lockedTab]);
 
   function openSection(id: string, itemKey?: string) {
     setTab(id);
@@ -195,11 +246,18 @@ export function InteractiveReport({
     scrollReportTop();
   }
   const generationStatus = document?.interpretive?.generation?.status;
-  const generatingNatal = layerCollecting(document?.interpretive?.natal, generationStatus);
-  const generatingAspects = layerCollecting(document?.interpretive?.aspects, generationStatus);
-  const generatingCycles = layerCollecting(document?.interpretive?.cycles, generationStatus);
-  const generatingRequest = layerCollecting(document?.interpretive?.request, generationStatus);
-  const generatingPractice = layerCollecting(document?.interpretive?.practice, generationStatus);
+  const generatingNatal = layerAwaitingLlm(document?.interpretive?.natal, generationStatus);
+  const generatingAspects = layerAwaitingLlm(document?.interpretive?.aspects, generationStatus);
+  const generatingCycles = layerAwaitingLlm(document?.interpretive?.cycles, generationStatus);
+  const generatingRequest = layerAwaitingLlm(document?.interpretive?.request, generationStatus);
+  const generatingPractice = layerAwaitingLlm(document?.interpretive?.practice, generationStatus);
+  const tabGenerating =
+    !isFree &&
+    ((tab === "natal" && generatingNatal) ||
+      (tab === "aspects" && generatingAspects) ||
+      (tab === "cycles" && generatingCycles) ||
+      (tab === "request" && generatingRequest) ||
+      (tab === "practice" && generatingPractice));
 
   const opening = (
     <ReportOpening
@@ -209,10 +267,11 @@ export function InteractiveReport({
       downloading={downloading}
       onDownloadPdf={onDownloadPdf}
       actionNote={actionNote}
+      hideShareActions={isFree || !reportReadyToOpen(live)}
     />
   );
 
-  if (!document || sectionTabs.length === 0) {
+  if (!document || (sectionTabs.length === 0 && !isFree)) {
     return (
       <div className="min-w-0 pb-8 lg:pb-16">
         {opening}
@@ -224,10 +283,20 @@ export function InteractiveReport({
   const activeNav = tabs.find((item) => item.id === tab);
 
   return (
-    <div className="min-w-0 pb-8 lg:grid lg:grid-cols-[15.5rem_minmax(0,45rem)] lg:items-start lg:gap-10 lg:pb-16 xl:gap-14">
+    <div
+      className={
+        lockedTab
+          ? "min-w-0 pb-8 lg:grid lg:grid-cols-[15.5rem_minmax(0,45rem)] lg:items-stretch lg:gap-10 lg:pb-16 xl:gap-14"
+          : "min-w-0 pb-8 lg:grid lg:grid-cols-[15.5rem_minmax(0,45rem)] lg:items-start lg:gap-10 lg:pb-16 xl:gap-14"
+      }
+    >
       <nav
         aria-label="Разделы отчёта"
-        className="hidden lg:sticky lg:top-28 lg:flex lg:max-h-[calc(100dvh-7.5rem)] lg:flex-col lg:gap-1.5 lg:self-start"
+        className={
+          lockedTab
+            ? "hidden lg:flex lg:flex-col lg:gap-1.5 lg:self-stretch"
+            : "hidden lg:sticky lg:top-28 lg:flex lg:max-h-[calc(100dvh-7.5rem)] lg:flex-col lg:gap-1.5 lg:self-start"
+        }
       >
         {tabs.map((item) => {
           const active = tab === item.id;
@@ -258,62 +327,65 @@ export function InteractiveReport({
         })}
       </nav>
 
-      <div className="min-w-0">
+      <div className={lockedTab ? "flex min-h-0 min-w-0 flex-col lg:h-full" : "min-w-0"}>
         {tab === "home" ? (
           <>
             {opening}
-            {document ? (
-              <MobileSectionCatalog document={document} onOpen={openSection} />
-            ) : null}
+            <MobileSectionCatalog onOpen={openSection} />
           </>
         ) : null}
 
         {tab !== "home" && activeNav ? (
-          <div className="mb-8 lg:mb-6">
+          <div className={lockedTab ? "mb-3 lg:mb-3" : "mb-8 lg:mb-6"}>
             <button
               type="button"
               onClick={() => openSection("home")}
-              className="mb-4 inline-flex min-h-11 items-center text-base text-[#F6E7A1] lg:hidden"
+              className="mb-4 inline-flex min-h-11 items-center gap-2 text-base text-[#F6E7A1] lg:hidden"
             >
-              Все разделы
+              <ArrowLeft className="h-4 w-4" strokeWidth={1.75} aria-hidden />
+              К разделам
             </button>
             <h1 className="report-section-title pb-1">{activeNav.label}</h1>
           </div>
         ) : null}
 
-        {tab === "natal" && generatingNatal ? (
-          <p className="mt-2 text-base text-[#F6E7A1]/80">собираем подробный слой по карте…</p>
-        ) : null}
-        {tab === "aspects" && generatingAspects ? (
-          <p className="mt-2 text-base text-[#F6E7A1]/80">собираем разбор связей внутри карты…</p>
-        ) : null}
-        {tab === "cycles" && generatingCycles ? (
-          <p className="mt-2 text-base text-[#F6E7A1]/80">собираем карту текущего периода…</p>
-        ) : null}
-        {tab === "request" && generatingRequest ? (
-          <p className="mt-2 text-base text-[#F6E7A1]/80">собираем пересечение с твоим запросом…</p>
-        ) : null}
-        {tab === "practice" && generatingPractice ? (
-          <p className="mt-2 text-base text-[#F6E7A1]/80">собираем практику для самостоятельной работы…</p>
-        ) : null}
-
         {tab !== "home" ? (
-          <div>
-            {tab === "natal" ? (
-              <NatalTab document={document} focusKey={focusKey} />
-            ) : null}
-            {tab === "aspects" ? (
-              <AspectsTab document={document} focusKey={focusKey} initialFilter={categoryFilter} />
-            ) : null}
-            {tab === "cycles" ? (
-              <CyclesTab document={document} focusKey={focusKey} initialFilter={categoryFilter} />
-            ) : null}
-            {tab === "request" ? <RequestTab document={document} /> : null}
-            {tab === "practice" ? <PracticeTab document={document} /> : null}
+          <div className={locked.has(tab) ? "flex min-h-0 flex-1 flex-col" : undefined}>
+            {locked.has(tab) ? (
+              <LockedReportSection section={tab} onUnlock={unlock} />
+            ) : tabGenerating ? (
+              <ReportSectionPreloader />
+            ) : (
+              <>
+                {tab === "natal" ? (
+                  <NatalTab document={document} focusKey={focusKey} />
+                ) : null}
+                {tab === "aspects" ? (
+                  <AspectsTab document={document} focusKey={focusKey} initialFilter={categoryFilter} />
+                ) : null}
+                {tab === "cycles" ? (
+                  <CyclesTab document={document} focusKey={focusKey} initialFilter={categoryFilter} />
+                ) : null}
+                {tab === "request" ? <RequestTab document={document} /> : null}
+                {tab === "practice" ? <PracticeTab document={document} /> : null}
+                {isReportFeedbackSection(tab) ? (
+                  <SectionFeedbackCard
+                    section={tab}
+                    initial={feedbackRows.find((row) => row.section === tab) ?? null}
+                    onSaved={(saved) => {
+                      setFeedbackRows((prev) => [
+                        ...prev.filter((row) => row.section !== saved.section),
+                        saved,
+                      ]);
+                    }}
+                  />
+                ) : null}
+              </>
+            )}
           </div>
         ) : null}
 
-        {live.disclaimer ? (
+        {live.disclaimer && !lockedTab && !tabGenerating ? (
           <p className="report-lede mt-14">{live.disclaimer}</p>
         ) : null}
       </div>
@@ -321,321 +393,34 @@ export function InteractiveReport({
   );
 }
 
-type RailCard = {
-  key: string;
-  name: string;
-  caption?: string;
-  captionGlyph?: string;
-  meta?: string;
-  badge?: string[];
-};
-
-type RailSection = {
-  id: string;
-  tab: string;
-  title: string;
-  subtitle: string;
-  cards: RailCard[];
-};
-
-function pointLookup(document: ReportDocument) {
-  return new Map((document.factual?.natal?.points ?? []).map((point) => [point.key, point]));
-}
-
-function groupCaption(points: NatalPoint[]): string {
-  return points
-    .map((point) => {
-      const house = point.house ? `дом ${point.house}` : "";
-      return [point.sign_ru, house].filter(Boolean).join(" · ");
-    })
-    .filter(Boolean)
-    .join(", ");
-}
-
-function natalGroupCards(document: ReportDocument): RailCard[] {
-  const byKey = pointLookup(document);
-  const grouped = NATAL_GROUPS.map((group) => ({
-    ...group,
-    items: group.keys.map((key) => byKey.get(key)).filter((point): point is NatalPoint => Boolean(point)),
-  })).filter((group) => group.items.length > 0);
-  const groupedKeys = new Set(NATAL_GROUPS.flatMap((group) => group.keys));
-  const leftover = (document.factual?.natal?.points ?? []).filter(
-    (point) => !CORE.includes(point.key as (typeof CORE)[number]) && !groupedKeys.has(point.key),
-  );
-  const cards = grouped.map((group) => ({
-    key: group.items[0]?.key || group.keys[0],
-    name: group.title,
-    caption: groupCaption(group.items),
-    badge: group.items.flatMap((point) =>
-      [planetGlyph(point.key, point.glyph), signGlyph(point.sign)].filter(Boolean),
-    ),
-  }));
-  if (leftover.length) {
-    cards.push({
-      key: leftover[0].key,
-      name: "Что ещё звучит в карте",
-      caption: groupCaption(leftover),
-      badge: leftover.flatMap((point) =>
-        [planetGlyph(point.key, point.glyph), signGlyph(point.sign)].filter(Boolean),
-      ),
-    });
-  }
-  return cards;
-}
-
-function aspectCategoryCards(document: ReportDocument): RailCard[] {
-  const points = pointLookup(document);
-  const list = document.interpretive?.aspects?.payload?.aspects ?? [];
-  const buckets: { filter: string; name: string; match: (card: NatalAspectCard) => boolean }[] = [
-    { filter: "tension", name: "Напряженные", match: (card) => card.category === "tension" },
-    { filter: "resource", name: "Ресурсные", match: (card) => card.category === "resource" },
-    { filter: "mixed", name: "Смешанные", match: (card) => card.category === "mixed" },
-    { filter: "all", name: "Все", match: () => true },
-  ];
-  return buckets.map((bucket) => {
-    const matched = list.filter(bucket.match);
-    const sample = matched.slice(0, 2);
-    return {
-      key: `filter:${bucket.filter}`,
-      name: bucket.name,
-      caption:
-        bucket.filter === "all"
-          ? list.length
-            ? `${list.length} связей в карте`
-            : "все связи в карте"
-          : sample
-              .map((card) => captionForPair(card.a, card.b, points) || `${card.a_name} ${card.aspect_ru} ${card.b_name}`)
-              .filter(Boolean)
-              .join(", ") || bucket.name.toLowerCase(),
-      badge: sample
-        .flatMap((card) => [planetGlyph(card.a, ""), aspectGlyph(card.aspect), planetGlyph(card.b, "")])
-        .filter(Boolean)
-        .slice(0, 6),
-    };
-  });
-}
-
-function cycleCategoryCards(document: ReportDocument): RailCard[] {
-  const points = pointLookup(document);
-  const payload = document.interpretive?.cycles?.payload;
-  const list = [...(payload?.primary_cycles ?? []), ...(payload?.secondary_cycles ?? [])];
-  const buckets: { filter: string; name: string; match: (card: CycleCard) => boolean }[] = [
-    { filter: "tension", name: "Напряженные", match: (card) => card.category === "tension" },
-    { filter: "support", name: "Ресурсные", match: (card) => card.category === "support" },
-    { filter: "mixed", name: "Смешанные", match: (card) => card.category === "mixed" },
-    { filter: "all", name: "Все", match: () => true },
-  ];
-  return buckets.map((bucket) => {
-    const matched = list.filter(bucket.match);
-    const sample = matched.slice(0, 2);
-    return {
-      key: `filter:${bucket.filter}`,
-      name: bucket.name,
-      caption:
-        bucket.filter === "all"
-          ? list.length
-            ? `${list.length} циклов сейчас`
-            : "все текущие циклы"
-          : sample
-              .map((card) => {
-                const natal = card.natal ? points.get(card.natal) : undefined;
-                const house = natal?.house ? `дом ${natal.house}` : "";
-                return [natal?.sign_ru || card.natal_name, house].filter(Boolean).join(" · ");
-              })
-              .filter(Boolean)
-              .join(", ") || bucket.name.toLowerCase(),
-      badge: sample
-        .flatMap((card) => {
-          const natal = card.natal ? points.get(card.natal) : undefined;
-          return [
-            planetGlyph(card.transit, ""),
-            aspectGlyph(card.aspect),
-            planetGlyph(card.natal, natal?.glyph),
-            signGlyph(natal?.sign),
-          ];
-        })
-        .filter(Boolean)
-        .slice(0, 6),
-    };
-  });
-}
-
-function captionForPair(a?: string, b?: string, points?: Map<string, NatalPoint>): string {
-  if (!points) return "";
-  return [a, b]
-    .map((key) => {
-      const point = key ? points.get(key) : undefined;
-      if (!point) return "";
-      const house = point.house ? `дом ${point.house}` : "";
-      return [point.sign_ru, house].filter(Boolean).join(" · ");
-    })
-    .filter(Boolean)
-    .join("  ·  ");
-}
-
-function textCards(items: { key: string; name: string; caption?: string }[]): RailCard[] {
-  return items.map((item) => ({ key: item.key, name: item.name, caption: item.caption }));
-}
-
 function MobileSectionCatalog({
-  document,
   onOpen,
 }: {
-  document: ReportDocument;
-  onOpen: (id: string, itemKey?: string) => void;
+  onOpen: (id: string) => void;
 }) {
-  const quiz = document.quiz;
-  const requestPayload = document.interpretive?.request?.payload;
-  const requestItems = (requestPayload?.connections ?? []).map((row, index) => ({
-    key: `request-conn-${index}`,
-    name: row.title || "Пересечение",
-    caption: firstLine(row.text),
-  }));
-  if (!requestItems.length) {
-    for (const [index, block] of (document.sections?.request?.blocks ?? []).entries()) {
-      requestItems.push({
-        key: `request-${index}`,
-        name: block.title,
-        caption: firstLine(block.text),
-      });
-    }
-  }
-  if (!requestItems.length && quiz?.intent_label) {
-    requestItems.push({
-      key: "request-intent",
-      name: quiz.intent_label,
-      caption: quiz.focus_labels?.join(", ") || "",
-    });
-  }
-
-  const practicePayload = document.interpretive?.practice?.payload;
-  const practiceItems: { key: string; name: string; caption?: string }[] = [];
-  if (practicePayload?.start_here?.headline) {
-    practiceItems.push({
-      key: "practice-start",
-      name: practicePayload.start_here.headline,
-      caption: firstLine(practicePayload.start_here.text),
-    });
-  }
-  if (practicePayload?.experiment?.title || practicePayload?.experiment?.text) {
-    practiceItems.push({
-      key: "practice-experiment",
-      name: practicePayload.experiment.title || "Попробуй проверить",
-      caption: firstLine(practicePayload.experiment.text),
-    });
-  }
-  if (!practiceItems.length) {
-    for (const [index, block] of (document.sections?.practice?.blocks ?? []).entries()) {
-      practiceItems.push({
-        key: `practice-${index}`,
-        name: block.title,
-        caption: firstLine(block.text),
-      });
-    }
-  }
-
-  const byId = Object.fromEntries(REPORT_NAV.map((item) => [item.id, item]));
-  const rows: RailSection[] = [
-    {
-      id: "natal",
-      tab: "natal",
-      title: byId.natal.label,
-      subtitle: byId.natal.subtitle,
-      cards: natalGroupCards(document),
-    },
-    {
-      id: "aspects",
-      tab: "aspects",
-      title: byId.aspects.label,
-      subtitle: byId.aspects.subtitle,
-      cards: aspectCategoryCards(document),
-    },
-    {
-      id: "cycles",
-      tab: "cycles",
-      title: byId.cycles.label,
-      subtitle: byId.cycles.subtitle,
-      cards: cycleCategoryCards(document),
-    },
-    {
-      id: "request",
-      tab: "request",
-      title: byId.request.label,
-      subtitle: byId.request.subtitle,
-      cards: textCards(requestItems),
-    },
-    {
-      id: "practice",
-      tab: "practice",
-      title: byId.practice.label,
-      subtitle: byId.practice.subtitle,
-      cards: textCards(practiceItems),
-    },
-  ].filter((row) => (row.id === "request" || row.id === "practice" ? true : row.cards.length > 0));
-
+  const rows = REPORT_NAV.filter((item) => item.id !== "home");
   return (
-    <div className="mt-12 space-y-12 lg:hidden">
+    <nav aria-label="Разделы отчёта" className="mt-12 space-y-3 lg:hidden">
       {rows.map((row) => (
-        <RailRow key={row.id} row={row} onOpen={onOpen} />
-      ))}
-    </div>
-  );
-}
-
-function RailRow({
-  row,
-  onOpen,
-}: {
-  row: RailSection;
-  onOpen: (id: string, itemKey?: string) => void;
-}) {
-  return (
-    <section>
-      <h2>
         <button
+          key={row.id}
           type="button"
-          onClick={() => onOpen(row.tab)}
-          className="flex min-h-11 w-full items-baseline gap-2 text-left"
+          onClick={() => onOpen(row.id)}
+          className="flex min-h-11 w-full items-center justify-between gap-4 rounded-2xl border border-white/12 bg-white/[0.04] px-5 py-4 text-left transition active:scale-[0.99]"
         >
-          <span className="min-w-0 text-[1.65rem] leading-[1.15] tracking-tight text-white">{row.title}</span>
+          <span className="min-w-0">
+            <span className="block text-[1.45rem] leading-[1.15] tracking-tight text-white">{row.label}</span>
+            <span className="mt-1 block text-sm font-normal leading-snug text-[color:var(--muted)]">
+              {row.subtitle}
+            </span>
+          </span>
           <span className="shrink-0 font-display text-2xl italic leading-none text-[#F6E7A1]" aria-hidden>
             ›
           </span>
         </button>
-      </h2>
-      <p className="mt-1.5 max-w-[34ch] text-sm font-normal leading-snug text-[color:var(--muted)]">{row.subtitle}</p>
-      <div className="-mx-5 mt-4 flex gap-3 overflow-x-auto overscroll-x-contain px-5 pb-1 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {row.cards.map((card) => (
-          <button
-            key={card.key}
-            type="button"
-            onClick={() => onOpen(row.tab, card.key)}
-            className="relative min-h-[7.5rem] w-[min(15.75rem,calc(100vw-4.5rem))] shrink-0 snap-start rounded-2xl border border-white/12 bg-white/[0.04] px-5 py-5 text-left transition active:scale-[0.99]"
-          >
-            {card.badge?.length ? (
-              <span className="natal-astro-glyph absolute right-4 top-4 text-[1.05rem] leading-none text-[#F6E7A1]">
-                {card.badge.join("")}
-              </span>
-            ) : null}
-            <span className="block pr-10 text-lg font-medium leading-snug text-white">{card.name}</span>
-            {card.caption ? (
-              <span className="mt-2 block pr-6 font-display text-[1.05rem] italic leading-snug text-[#F6E7A1]">
-                {card.caption}
-              </span>
-            ) : null}
-            {card.meta ? <span className="mt-2 block text-base text-[color:var(--muted)]">{card.meta}</span> : null}
-          </button>
-        ))}
-      </div>
-    </section>
+      ))}
+    </nav>
   );
-}
-
-function firstLine(text?: string): string {
-  if (!text) return "";
-  const cut = text.search(/[.!?]/);
-  const raw = (cut >= 0 ? text.slice(0, cut + 1) : text).trim();
-  return raw.length > 108 ? `${raw.slice(0, 105).trim()}…` : raw;
 }
 
 function NatalTab({ document, focusKey }: { document: ReportDocument; focusKey?: string | null }) {
@@ -1662,7 +1447,7 @@ function RequestTab({ document }: { document: ReportDocument }) {
   if (!payload) {
     return (
       <div className="space-y-5">
-        {(section?.blocks ?? []).map((block) => (
+        {(section?.blocks ?? []).filter((block) => !isTakeawayBlock(block)).map((block) => (
           <article key={block.title} className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
             <h3 className="report-theme-title pb-1">{block.title}</h3>
             <p className="mt-3 report-prose whitespace-pre-line">{block.text}</p>
@@ -1759,7 +1544,7 @@ function PracticeTab({ document }: { document: ReportDocument }) {
   if (!payload) {
     return (
       <div className="space-y-5">
-        {(section?.blocks ?? []).map((block) => (
+        {(section?.blocks ?? []).filter((block) => !isTakeawayBlock(block)).map((block) => (
           <article key={block.title} className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
             <h3 className="report-theme-title pb-1">{block.title}</h3>
             <p className="mt-3 report-prose whitespace-pre-line">{block.text}</p>
@@ -1791,7 +1576,6 @@ function PracticeTab({ document }: { document: ReportDocument }) {
   const experiment = payload.experiment;
   const distinctions = payload.key_distinctions ?? [];
   const observe = payload.observe_over_time ?? [];
-  const takeawayPrompt = payload.user_takeaway_prompt;
   const glyphByKey = glyphMap(document);
 
   return (
@@ -1889,13 +1673,6 @@ function PracticeTab({ document }: { document: ReportDocument }) {
           </ul>
         </article>
       ) : null}
-
-      {takeawayPrompt ? (
-        <article className="rounded-2xl border border-[#F6E7A1]/20 bg-white/5 p-5">
-          <h3 className="report-theme-title pb-1">Твой вывод</h3>
-          <p className="mt-3 report-prose text-[color:var(--muted)]">{takeawayPrompt}</p>
-        </article>
-      ) : null}
     </div>
   );
 }
@@ -1983,7 +1760,7 @@ function LinearSections({ report }: { report: PaidReport }) {
         <section key={section.id} id={`report-${section.id}`} className="scroll-mt-28">
           <h2 className="report-group-title pb-1">{section.title}</h2>
           <div className="mt-5 space-y-6">
-            {section.blocks.map((block) => (
+            {section.blocks.filter((block) => !isTakeawayBlock(block)).map((block) => (
               <div key={`${section.id}-${block.title}`}>
                 <h3 className="text-lg font-medium leading-snug">{block.title}</h3>
                 <p className="mt-2 report-prose">{block.text}</p>

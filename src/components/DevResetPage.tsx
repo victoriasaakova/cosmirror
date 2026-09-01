@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Header } from "@/components/Header";
 import { resetOnboardingFlowCache } from "@/components/OnboardingFlow";
 import {
+  devLoginCabinet,
   devLoginEmpty,
   devLoginInsight,
   devLoginReport,
@@ -29,9 +30,9 @@ const PAGES = [
 ];
 
 export function DevResetPage() {
-  const [busy, setBusy] = useState<"reset" | "login" | "flow" | "report" | "insight" | null>(
-    null,
-  );
+  const [busy, setBusy] = useState<
+    "reset" | "login" | "flow" | "report" | "insight" | "cabinet" | null
+  >(null);
   const [note, setNote] = useState("");
 
   async function onReset() {
@@ -72,6 +73,20 @@ export function DevResetPage() {
     } catch (err) {
       setBusy(null);
       setNote(err instanceof Error ? err.message : "Не получилось начать квиз");
+    }
+  }
+
+  async function onCabinetLogin() {
+    if (busy) return;
+    setBusy("cabinet");
+    setNote("");
+    try {
+      await resetLocalDevFlow();
+      await devLoginCabinet();
+      window.location.assign("/account/");
+    } catch (err) {
+      setBusy(null);
+      setNote(err instanceof Error ? err.message : "Не получилось открыть кабинет");
     }
   }
 
@@ -119,14 +134,25 @@ export function DevResetPage() {
         <div className="mt-8 flex flex-col gap-2">
           <button
             type="button"
-            onClick={() => void onReportLogin()}
+            onClick={() => void onCabinetLogin()}
             disabled={Boolean(busy)}
             className="inline-flex h-11 w-full items-center justify-center rounded-full bg-[#F6E7A1] px-4 font-grotesk text-base font-medium text-[#0a1a3a] transition hover:bg-[#f0dc82] disabled:opacity-50"
           >
-            {busy === "report" ? "Собираем отчёт…" : "Открыть мой отчёт"}
+            {busy === "cabinet" ? "Собираем карту…" : "Некупленный кабинет"}
           </button>
           <p className="mb-2 px-1 font-grotesk text-sm leading-relaxed text-white/45">
-            Готовый кабинет по твоей карте: 26 мая 1995, 19:25, Гдыня. Без квиза и оплаты.
+            Колесо и знаки открыты. Чтение карты, аспекты, циклы, запрос и практика закрыты. Без оплаты.
+          </p>
+          <button
+            type="button"
+            onClick={() => void onReportLogin()}
+            disabled={Boolean(busy)}
+            className="inline-flex h-11 w-full items-center justify-center rounded-full border border-[#F6E7A1]/40 px-4 font-grotesk text-base font-medium text-[#F6E7A1] transition hover:bg-[#F6E7A1]/10 disabled:opacity-50"
+          >
+            {busy === "report" ? "Собираем отчёт…" : "Купленный отчёт"}
+          </button>
+          <p className="mb-2 px-1 font-grotesk text-sm leading-relaxed text-white/45">
+            Готовый кабинет по твоей карте: 26 мая 1995, 19:25, Гдыня. Все разделы открыты.
           </p>
           <button
             type="button"

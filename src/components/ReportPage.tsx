@@ -14,17 +14,23 @@ import {
   confirmMyPayment,
   checkoutReturnParamsFromSearch,
   downloadMyReportPdf,
+  fetchMyCabinet,
   fetchMyOrder,
+  fetchOnboardingSteps,
   reportJobRunning,
   reportLayersPending,
   reportReadyToOpen,
+  type CabinetPayload,
+  type OnboardingStep,
   type Order,
 } from "@/lib/api";
 import { writeAuthToken } from "@/lib/auth";
+import { writeOnboardingSessionToken } from "@/lib/onboarding/session";
 import { captureEvent } from "@/lib/posthog-client";
 import { freshOnboardingHref } from "@/lib/onboarding/paths";
 import { greetingName } from "@/lib/user-name";
-import { PRELOADER_LEDE, StarCheckPreloader, StarCheckPreloaderPage } from "@/components/StarCheckPreloader";
+import { PRELOADER_LEDE, ReportSectionPreloader, StarCheckPreloader, StarCheckPreloaderPage } from "@/components/StarCheckPreloader";
+import { ReportPaywall } from "@/components/ReportPaywall";
 
 function orderChannel(): BroadcastChannel | null {
   try {
@@ -71,6 +77,9 @@ function ReportInner({ initialSection }: { initialSection?: "account" }) {
     pathname === "/account/settings/" ||
     searchParams.get("s") === "account";
   const [order, setOrder] = useState<Order | null>(null);
+  const [cabinet, setCabinet] = useState<CabinetPayload | null | undefined>(undefined);
+  const [paywallOpen, setPaywallOpen] = useState(false);
+  const [onboardingSteps, setOnboardingSteps] = useState<OnboardingStep[]>([]);
   const [error, setError] = useState("");
   const [needsAuth, setNeedsAuth] = useState(false);
   const [cabinetEmpty, setCabinetEmpty] = useState(false);
@@ -81,21 +90,17 @@ function ReportInner({ initialSection }: { initialSection?: "account" }) {
   const [paymentSlow, setPaymentSlow] = useState(false);
   const paidCaptured = useRef(false);
   const isLocalDemo = process.env.NODE_ENV === "development";
-  const unpaidLocal =
-    isLocalDemo &&
-    Boolean(order) &&
-    order?.status !== "paid" &&
-    order?.status !== "canceled" &&
-    order?.status !== "denied";
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.hash.replace(/^#/, ""));
     const auth = params.get("auth") || "";
+    const sessionToken = params.get("session_token") || "";
     if (!auth) {
       setBootstrapped(true);
       return;
     }
     writeAuthToken(auth);
+    if (sessionToken) writeOnboardingSessionToken(sessionToken);
     window.history.replaceState(
       null,
       "",
@@ -114,10 +119,10 @@ function ReportInner({ initialSection }: { initialSection?: "account" }) {
     if (preview || fromProdamus) return;
     if (!bootstrapped || !ready) return;
     if (accountOpen && user) return;
-    if (!user || cabinetEmpty) {
+    if (!user) {
       window.location.replace("/");
     }
-  }, [accountOpen, bootstrapped, cabinetEmpty, fromProdamus, preview, ready, user]);
+  }, [accountOpen, bootstrapped, fromProdamus, preview, ready, user]);
 
   useEffect(() => {
     if (preview) return;
@@ -187,7 +192,6 @@ function ReportInner({ initialSection }: { initialSection?: "account" }) {
             return;
           }
           setOrder(null);
-          setCabinetEmpty(true);
           return;
         }
         setOrder(next);
@@ -231,6 +235,56 @@ function ReportInner({ initialSection }: { initialSection?: "account" }) {
       cancelled = true;
       window.clearTimeout(timer);
       channel?.close();
+    };
+  }, [bootstrapped, checkoutReturned, fromProdamus, preview, ready, user]);
+
+  useEffect(() => {
+    if (preview) return;
+    if (!bootstrapped || !ready || !user) return;
+    if (fromProdamus || checkoutReturned) return;
+    if (user.has_paid_report) {
+      setCabinet(null);
+      return;
+    }
+    let cancelled = false;
+    async function loadCabinet(attempt = 0) {
+      try {
+        const [payload, steps] = await Promise.all([
+          fetchMyCabinet(),
+          fetchOnboardingSteps(),
+        ]);
+        if (cancelled) return;
+        setOnboardingSteps(steps);
+        if (payload?.report) {
+          setCabinet(payload);
+          setCabinetEmpty(false);
+          setError("");
+          return;
+        }
+        if (attempt < 4) {
+          window.setTimeout(() => {
+            void loadCabinet(attempt + 1);
+          }, 700 * (attempt + 1));
+          return;
+        }
+        setCabinet(null);
+        setCabinetEmpty(true);
+      } catch (err) {
+        if (cancelled) return;
+        if (attempt < 4) {
+          window.setTimeout(() => {
+            void loadCabinet(attempt + 1);
+          }, 700 * (attempt + 1));
+          return;
+        }
+        setCabinet(null);
+        setCabinetEmpty(true);
+        setError(err instanceof Error ? err.message : "Не удалось открыть кабинет");
+      }
+    }
+    void loadCabinet();
+    return () => {
+      cancelled = true;
     };
   }, [bootstrapped, checkoutReturned, fromProdamus, preview, ready, user]);
 
@@ -289,39 +343,6 @@ function ReportInner({ initialSection }: { initialSection?: "account" }) {
     };
   }, [isLocalDemo, preview, fromProdamus, checkoutReturned]);
 
-  useEffect(() => {
-    if (!unpaidLocal || preview) return;
-    let cancelled = false;
-    let hiddenOnce = false;
-
-    const fulfill = () => {
-      if (cancelled) return;
-      void completeMyDemoOrder()
-        .then((next) => {
-          if (cancelled) return;
-          setOrder(next);
-          setCabinetEmpty(false);
-          setCheckoutReturned(true);
-        })
-        .catch(() => {
-          /* webhook на localhost не доходит */
-        });
-    };
-
-    const onVisibility = () => {
-      if (document.visibilityState === "hidden") hiddenOnce = true;
-      if (document.visibilityState === "visible" && hiddenOnce) fulfill();
-    };
-
-    document.addEventListener("visibilitychange", onVisibility);
-    const fallback = window.setTimeout(fulfill, 12_000);
-    return () => {
-      cancelled = true;
-      document.removeEventListener("visibilitychange", onVisibility);
-      window.clearTimeout(fallback);
-    };
-  }, [unpaidLocal, preview]);
-
   async function onDownloadPdf() {
     if (downloading) return;
     setDownloading(true);
@@ -347,7 +368,7 @@ function ReportInner({ initialSection }: { initialSection?: "account" }) {
     preview === "failed" || order?.status === "canceled" || order?.status === "denied";
   const confirmed = order?.status === "paid";
   const report = confirmed ? order?.report : null;
-  const showReport = Boolean(report && reportReadyToOpen(report));
+  const showReport = Boolean(report?.document);
   const waitingAuth = !preview && (!bootstrapped || !ready);
   const waitingBank =
     preview === "bank" ||
@@ -357,26 +378,46 @@ function ReportInner({ initialSection }: { initialSection?: "account" }) {
       !confirmed &&
       !cabinetEmpty &&
       checkoutReturned);
-  const generating =
-    preview === "report" ||
-    (!preview && !needsAuth && !failed && confirmed && !showReport);
+  const generating = preview === "report";
+  const showNeedsAuth = preview === "auth" || (!preview && needsAuth);
+  const freeReport = !preview ? cabinet?.report ?? null : null;
+  const showFreeCabinet =
+    Boolean(freeReport) &&
+    !showReport &&
+    !waitingBank &&
+    !generating &&
+    !showNeedsAuth &&
+    !accountOpen &&
+    !waitingAuth &&
+    !(checkoutReturned && !confirmed);
   const waitingPayment =
     preview === "pay" ||
-    (!preview && Boolean(order) && !failed && !confirmed && !checkoutReturned);
+    (!preview &&
+      Boolean(order) &&
+      !failed &&
+      !confirmed &&
+      !checkoutReturned &&
+      !showFreeCabinet);
   const emptyCabinet =
     preview === "empty" ||
-    (!preview && !needsAuth && !waitingAuth && cabinetEmpty && !fromProdamus);
-  const showNeedsAuth = preview === "auth" || (!preview && needsAuth);
+    (!preview &&
+      !needsAuth &&
+      !waitingAuth &&
+      cabinetEmpty &&
+      !fromProdamus &&
+      !showFreeCabinet);
   const loading =
     !preview &&
     !needsAuth &&
     !order &&
+    !showFreeCabinet &&
     !error &&
     !cabinetEmpty &&
     !checkoutReturned &&
     (waitingAuth || Boolean(user));
   const isStatus =
     !accountOpen &&
+    !showFreeCabinet &&
     (waitingAuth ||
       loading ||
       waitingBank ||
@@ -391,9 +432,34 @@ function ReportInner({ initialSection }: { initialSection?: "account" }) {
     try {
       const next = await fetchMyOrder();
       setOrder(next);
-      setCabinetEmpty(!next);
+      if (next) {
+        setCabinetEmpty(false);
+        if (next.status === "paid") {
+          setCabinet(null);
+          return;
+        }
+      }
+      const payload = await fetchMyCabinet();
+      setCabinet(payload);
+      setCabinetEmpty(!payload?.report);
     } catch {
       /* keep current order on screen */
+    }
+  }
+
+  async function reloadCabinet() {
+    setError("");
+    setCabinetEmpty(false);
+    try {
+      const payload = await fetchMyCabinet();
+      setCabinet(payload);
+      setCabinetEmpty(!payload?.report);
+      if (!payload?.report) {
+        setError("Карта ещё не собралась. Нажми ещё раз через секунду.");
+      }
+    } catch (err) {
+      setCabinetEmpty(true);
+      setError(err instanceof Error ? err.message : "Не удалось открыть кабинет");
     }
   }
 
@@ -422,7 +488,7 @@ function ReportInner({ initialSection }: { initialSection?: "account" }) {
       ) : null}
 
       <div
-        className="relative z-10 mx-auto flex w-full max-w-[720px] flex-1 flex-col px-5 pt-[var(--cabinet-header-offset)] pb-[max(2.5rem,env(safe-area-inset-bottom))] lg:max-w-[68rem] lg:px-8"
+        className="cabinet-shell relative z-10 mx-auto flex w-full max-w-[720px] flex-1 flex-col px-5 pt-[var(--cabinet-header-offset)] pb-[max(2.5rem,env(safe-area-inset-bottom))] lg:max-w-[68rem] lg:px-8"
       >
         {showNeedsAuth ? (
           <StatusScreen titleBefore="открой" titleAccent="кабинет">
@@ -444,14 +510,29 @@ function ReportInner({ initialSection }: { initialSection?: "account" }) {
         ) : waitingAuth || loading ? (
           <StarCheckPreloader />
         ) : emptyCabinet ? (
-          <StatusScreen titleBefore="здесь будет" titleAccent="твоя карта">
-            <p className="report-lede mt-4">
-              пройди короткий путь — соберём персональный разбор и сохраним его в кабинете.
-            </p>
-            <Link href={freshOnboardingHref()} className="cabinet-cta mt-10">
-              Начать путешествие
-            </Link>
-          </StatusScreen>
+          user ? (
+            <StatusScreen titleBefore="открываем" titleAccent="твою карту">
+              <p className="report-lede mt-4">
+                {error || "карта должна открыться здесь. нажми ещё раз — подтянем натал."}
+              </p>
+              <button
+                type="button"
+                className="cabinet-cta mt-10"
+                onClick={() => void reloadCabinet()}
+              >
+                Показать карту
+              </button>
+            </StatusScreen>
+          ) : (
+            <StatusScreen titleBefore="здесь будет" titleAccent="твоя карта">
+              <p className="report-lede mt-4">
+                пройди короткий путь — соберём персональный разбор и сохраним его в кабинете.
+              </p>
+              <Link href={freshOnboardingHref()} className="cabinet-cta mt-10">
+                Начать путешествие
+              </Link>
+            </StatusScreen>
+          )
         ) : waitingBank ? (
           <StatusScreen titleBefore="ожидаем оплату" titleAccent="от банка" showEye>
             <p className={PRELOADER_LEDE}>
@@ -461,9 +542,7 @@ function ReportInner({ initialSection }: { initialSection?: "account" }) {
             </p>
           </StatusScreen>
         ) : generating ? (
-          <StatusScreen titleBefore="отчёт" titleAccent="формируется" showEye>
-            <GeneratingCopy />
-          </StatusScreen>
+          <ReportSectionPreloader />
         ) : waitingPayment ? (
           <StatusScreen titleBefore="остался один" titleAccent="шаг">
             <p className="report-lede mt-4">
@@ -487,7 +566,7 @@ function ReportInner({ initialSection }: { initialSection?: "account" }) {
               </p>
             ) : null}
           </StatusScreen>
-        ) : failed ? (
+        ) : failed && !showFreeCabinet ? (
           <StatusScreen titleBefore="оплата не" titleAccent="прошла">
             <p className="report-lede mt-4">
               Платёж отменили или банк его отклонил. Вернись к разбору и нажми оплату ещё раз.
@@ -505,47 +584,54 @@ function ReportInner({ initialSection }: { initialSection?: "account" }) {
               downloading={downloading}
               onDownloadPdf={() => void onDownloadPdf()}
               actionNote={downloadNote}
+              sectionFeedback={order?.section_feedback}
             />
           </article>
+        ) : showFreeCabinet && freeReport ? (
+          <>
+            <article className="mt-4 min-w-0 pb-8 sm:mt-6 lg:pb-16">
+              <InteractiveReport
+                report={freeReport}
+                displayName={greetingName(user)}
+                downloading={false}
+                onDownloadPdf={() => undefined}
+                access="free"
+                lockedSections={cabinet?.locked_sections ?? []}
+                onUnlock={() => setPaywallOpen(true)}
+              />
+            </article>
+            <ReportPaywall
+              open={paywallOpen}
+              onClose={() => setPaywallOpen(false)}
+              quiz={cabinet?.quiz}
+              contacts={cabinet?.contacts}
+              waitlistSlug={onboardingSteps.find((step) => step.step_type === "waitlist")?.slug}
+              steps={onboardingSteps}
+            />
+          </>
         ) : (
-          <StatusScreen titleBefore="здесь будет" titleAccent="твоя карта">
+          <StatusScreen titleBefore="открываем" titleAccent="твою карту">
             <p className="report-lede mt-4">
-              {error || "пройди короткий путь — соберём персональный разбор и сохраним его в кабинете."}
+              {error || "карта должна открыться здесь. нажми ещё раз — подтянем натал."}
             </p>
-            <Link href={freshOnboardingHref()} className="cabinet-cta mt-10">
-              Начать путешествие
-            </Link>
+            {user ? (
+              <button
+                type="button"
+                className="cabinet-cta mt-10"
+                onClick={() => void reloadCabinet()}
+              >
+                Показать карту
+              </button>
+            ) : (
+              <Link href={freshOnboardingHref()} className="cabinet-cta mt-10">
+                Начать путешествие
+              </Link>
+            )}
           </StatusScreen>
         )}
       </div>
       <SiteFooter />
     </main>
-  );
-}
-
-const GENERATING_STATUS = [
-  "интерпретирую карту...",
-  "смотрю аспекты...",
-  "считаю циклы...",
-  "нахожу связь с запросом...",
-  "формирую шаги для практики...",
-];
-
-function GeneratingCopy() {
-  const [index, setIndex] = useState(0);
-  useEffect(() => {
-    const timer = window.setInterval(() => {
-      setIndex((current) => (current + 1) % GENERATING_STATUS.length);
-    }, 2800);
-    return () => window.clearInterval(timer);
-  }, []);
-  return (
-    <>
-      <p className={PRELOADER_LEDE}>не закрывай страницу, отчёт откроется здесь</p>
-      <p className={`${PRELOADER_LEDE} mt-3 text-[#F6E7A1]`} aria-live="polite">
-        {GENERATING_STATUS[index]}
-      </p>
-    </>
   );
 }
 

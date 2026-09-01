@@ -22,10 +22,15 @@ import {
   type OnboardingStep,
   type PlaceSuggestion,
 } from "@/lib/api";
-import { writeAuthToken, readAuthToken, clearAuthNext } from "@/lib/auth";
+import { writeAuthToken, readAuthToken, clearAuthNext, rememberAuthNext } from "@/lib/auth";
 import { captureEvent } from "@/lib/posthog-client";
 import { destinationAfterYandexLogin } from "@/lib/yandex-login";
 import { useAuth } from "@/components/AuthProvider";
+import { useOnboardingPurchaseFlow } from "@/hooks/useOnboardingPurchaseFlow";
+import {
+  isCabinetOnboardingPurchase,
+  isImmediateOnboardingPurchase,
+} from "@/lib/flags/onboarding-purchase-flow";
 import {
   adjacentStep,
   buildProgressModel,
@@ -48,12 +53,12 @@ import {
   type TitlePart,
 } from "@/lib/onboarding/screens";
 import { sanitizePersonName, sanitizePersonNameInput } from "@/lib/person-name";
+import { ImmediateOnboardingPurchase } from "@/components/onboarding/ImmediateOnboardingPurchase";
+import { CabinetInsightPurchase } from "@/components/onboarding/CabinetInsightPurchase";
 import {
   INSIGHT_CONFIRM_INDEX,
   INSIGHT_OFFER_INDEX,
   INSIGHT_SCREEN_COUNT,
-  InsightFunnel,
-  insightCtaLabel,
 } from "@/components/InsightFunnel";
 import {
   clearOnboardingClientState,
@@ -460,15 +465,20 @@ export function OnboardingFlow({
   oauthCode = "",
   oauthState = "",
   oauthError = "",
+  purchaseFlowOverride = "",
 }: {
   slug: string;
   forceNew?: boolean;
   oauthCode?: string;
   oauthState?: string;
   oauthError?: string;
+  purchaseFlowOverride?: string;
 }) {
   const router = useRouter();
   const { user, ready: authReady, hasPaidReport, refresh: refreshAuth } = useAuth();
+  const { flow: purchaseFlow } = useOnboardingPurchaseFlow(purchaseFlowOverride);
+  const isImmediatePurchase = isImmediateOnboardingPurchase(purchaseFlow);
+  const isCabinetPurchase = isCabinetOnboardingPurchase(purchaseFlow);
   const [showPaidMapCta, setShowPaidMapCta] = useState(false);
   const oauthHandledRef = useRef(false);
   const [steps, setSteps] = useState<OnboardingStep[] | null>(() => flowCache.steps);
@@ -504,14 +514,20 @@ export function OnboardingFlow({
   const progress = useMemo(() => {
     if (!steps) return { total: 0, index: 0 };
     if (isReservedSlug(slug)) {
+      if (isCabinetPurchase) {
+        return { total: 2, index: 0 };
+      }
       return { total: INSIGHT_SCREEN_COUNT, index: screenIndex };
+    }
+    if (isCabinetPurchase && currentStep?.step_type === "waitlist") {
+      return { total: 2, index: 1 };
     }
     const model = buildProgressModel(steps);
     return {
       total: model.total,
       index: progressIndexFor(steps, slug, screenIndex),
     };
-  }, [steps, slug, screenIndex]);
+  }, [currentStep?.step_type, isCabinetPurchase, steps, slug, screenIndex]);
 
   const applySteps = useCallback((apiSteps: OnboardingStep[]) => {
     flowCache.steps = apiSteps;
@@ -758,7 +774,7 @@ export function OnboardingFlow({
           applyPayload(withEmail);
           patchDraft({ byStep: withEmail });
         }
-        const dest = destinationAfterYandexLogin(Boolean(me.has_paid_report));
+        const dest = destinationAfterYandexLogin(Boolean(me.has_paid_report), purchaseFlow);
         if (!dest) {
           setShowPaidMapCta(true);
           setOauthBusy(false);
@@ -777,7 +793,7 @@ export function OnboardingFlow({
     return () => {
       cancelled = true;
     };
-  }, [applyPayload, applyToken, refreshAuth, router, steps]);
+  }, [applyPayload, applyToken, purchaseFlow, refreshAuth, router, steps]);
 
   useEffect(() => {
     if (!oauthCode || !oauthState || !sessionToken || !steps) return;
@@ -809,7 +825,7 @@ export function OnboardingFlow({
         applyPayload(withEmail);
         patchDraft({ byStep: withEmail });
         void refreshAuth();
-        const dest = destinationAfterYandexLogin(Boolean(result.user.has_paid_report));
+        const dest = destinationAfterYandexLogin(Boolean(result.user.has_paid_report), purchaseFlow);
         if (!dest) {
           setShowPaidMapCta(true);
           setOauthBusy(false);
@@ -833,6 +849,7 @@ export function OnboardingFlow({
     applyToken,
     oauthCode,
     oauthState,
+    purchaseFlow,
     refreshAuth,
     router,
     sessionToken,
@@ -869,6 +886,24 @@ export function OnboardingFlow({
     router.replace(birth ? stepHref(birth.slug) : stepHref(steps[0]?.slug ?? "welcome"));
   }, [slug, steps, insightStatus, router]);
 
+  useEffect(() => {
+    if (isImmediatePurchase || !steps) return;
+    if (oauthBusy || oauthCode || oauthState || oauthError) return;
+    if (readYandexHash().auth) return;
+    if (isReservedSlug(slug) && slug !== INSIGHT_SLUG) {
+      router.replace(stepHref(INSIGHT_SLUG));
+    }
+  }, [
+    isImmediatePurchase,
+    oauthBusy,
+    oauthCode,
+    oauthError,
+    oauthState,
+    router,
+    slug,
+    steps,
+  ]);
+
   function updateStepPayload(stepSlug: string, patch: Record<string, unknown>) {
     setPayloadByStep((prev) => {
       const next = {
@@ -893,6 +928,17 @@ export function OnboardingFlow({
   function goBack() {
     setError("");
     if (isReservedSlug(slug)) {
+      if (isCabinetPurchase) {
+        const birth = birthStepOf(steps);
+        if (birth) {
+          void goTo(stepHref(birth.slug));
+          return;
+        }
+        if (steps?.length) {
+          void goTo(stepHref(steps[steps.length - 1].slug));
+        }
+        return;
+      }
       if (screenIndex >= INSIGHT_CONFIRM_INDEX) {
         setScreen(INSIGHT_OFFER_INDEX);
         return;
@@ -905,6 +951,10 @@ export function OnboardingFlow({
       if (steps?.length) {
         void goTo(stepHref(steps[steps.length - 1].slug));
       }
+      return;
+    }
+    if (isCabinetPurchase && currentStep?.step_type === "waitlist") {
+      void goTo(stepHref(INSIGHT_SLUG));
       return;
     }
     if (
@@ -953,7 +1003,11 @@ export function OnboardingFlow({
     setSubmitting(true);
     setError("");
     try {
-      clearAuthNext();
+      if (isCabinetPurchase) {
+        rememberAuthNext("/account/");
+      } else {
+        clearAuthNext();
+      }
       const token = await persistStep(
         currentStep.slug,
         {
@@ -964,7 +1018,11 @@ export function OnboardingFlow({
         false,
       );
       const redirectUri = `${window.location.origin}${window.location.pathname.replace(/\/+$/, "")}`;
-      const { url } = await startYandexAuth(token, redirectUri);
+      const { url } = await startYandexAuth(
+        token,
+        redirectUri,
+        isCabinetPurchase ? "account" : undefined,
+      );
       window.location.assign(url);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Не удалось начать вход через Яндекс ID");
@@ -991,6 +1049,10 @@ export function OnboardingFlow({
           .catch(() => {
             // Подтянем на contacts / insight.
           });
+        if (isCabinetPurchase) {
+          await goTo(stepHref(INSIGHT_SLUG));
+          return;
+        }
       }
 
       if (currentStep.step_type === "waitlist") {
@@ -1015,8 +1077,15 @@ export function OnboardingFlow({
           .catch(() => {
             /* warm() на insight-странице повторит запрос */
           });
-        await goTo(stepHref(INSIGHT_SLUG));
-        return;
+        // immediate: after Yandex/contacts go to the insight funnel, then pay in onboarding.
+        if (isImmediatePurchase) {
+          await goTo(stepHref(INSIGHT_SLUG));
+          return;
+        }
+        if (isCabinetPurchase) {
+          router.replace("/account/");
+          return;
+        }
       }
 
       await goTo(nextStepHref(steps, currentStep.slug));
@@ -1110,7 +1179,7 @@ export function OnboardingFlow({
         return;
       }
       if (alreadyIn) {
-        if (hasPaidReport || showPaidMapCta) {
+        if (hasPaidReport || showPaidMapCta || isCabinetPurchase) {
           router.replace("/account/");
           return;
         }
@@ -1127,8 +1196,23 @@ export function OnboardingFlow({
     }
   }
 
+  async function continueFromCabinetInsight() {
+    if (submitting || !isCabinetPurchase) return;
+    if (user || authedEmail || readAuthToken()) {
+      router.replace("/account/");
+      return;
+    }
+    const waitlist = waitlistStepOf(steps);
+    if (!waitlist) {
+      setError("Не удалось открыть вход");
+      return;
+    }
+    setError("");
+    await goTo(stepHref(waitlist.slug));
+  }
+
   async function startCheckout() {
-    if (submitting) return;
+    if (!isImmediatePurchase || submitting) return;
 
     const waitlist = waitlistStepOf(steps);
     const contacts = contactsFromPayload(
@@ -1165,6 +1249,7 @@ export function OnboardingFlow({
         captureEvent("checkout_started", {
           order_id: order.id,
           order_status: order.status,
+          onboarding_purchase_flow: purchaseFlow,
         });
         if (payWindow && !payWindow.closed) payWindow.close();
         window.location.assign("/account/");
@@ -1178,6 +1263,7 @@ export function OnboardingFlow({
       captureEvent("checkout_started", {
         order_id: order.id,
         order_status: order.status,
+        onboarding_purchase_flow: purchaseFlow,
       });
       if (order.payment_url) {
         goToPayment(order.payment_url, payWindow);
@@ -1347,84 +1433,49 @@ export function OnboardingFlow({
 
         {mapLoading ? (
           <StarCheckPreloader />
-        ) : isReservedSlug(slug) && insight ? (
-          <form
-            noValidate
-            onSubmit={(event) => {
-              event.preventDefault();
-              if (isInsightConfirm) {
-                if (!confirmReady || submitting) return;
-                void startCheckout();
-                return;
-              }
+        ) : isImmediatePurchase && isReservedSlug(slug) && insight ? (
+          <ImmediateOnboardingPurchase
+            screenIndex={screenIndex}
+            insight={insight}
+            steps={steps}
+            payloadByStep={payloadByStep}
+            error={error}
+            submitting={submitting}
+            sessionToken={sessionToken}
+            confirmReady={confirmReady}
+            isInsightConfirm={isInsightConfirm}
+            onCheckout={() => void startCheckout()}
+            onAdvance={() => {
               if (screenIndex >= INSIGHT_OFFER_INDEX) {
                 setScreen(INSIGHT_CONFIRM_INDEX);
                 return;
               }
               void goTo(insightHrefForScreen(screenIndex + 1));
             }}
-            className="mx-auto flex w-full max-w-lg min-h-0 flex-1 flex-col pt-2 md:pt-4"
-          >
-            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-4 [-webkit-overflow-scrolling:touch]">
-              {isInsightConfirm ? (
-                <ConfirmContactsStep
-                  value={waitlistContacts}
-                  onChange={(next) => {
-                    if (!waitlistStep) return;
-                    setError("");
-                    updateStepPayload(waitlistStep.slug, next);
-                  }}
-                  error={error}
-                  submitting={submitting}
-                  emailFromYandex={Boolean(authedEmail)}
-                />
-              ) : insight ? (
-                <InsightFunnel
-                  screenIndex={screenIndex}
-                  insight={insight}
-                  steps={steps}
-                  payloadByStep={payloadByStep}
-                />
-              ) : null}
-            </div>
-            <div className="shrink-0 pt-3">
-              {error &&
-              !(
-                isInsightConfirm &&
-                (error === CONTACTS_SUPPORT ||
-                  error.toLowerCase().includes("telegram") ||
-                  error.toLowerCase().includes("email") ||
-                  error.toLowerCase().includes("реальн"))
-              ) ? (
-                <p
-                  className={`mb-2 text-sm ${
-                    error.toLowerCase().includes("оферт") || error.toLowerCase().includes("соглас")
-                      ? "text-[#F6E7A1]"
-                      : "text-red-300"
-                  }`}
-                  role="alert"
-                >
-                  {error}
-                </p>
-              ) : null}
-              {screenIndex >= INSIGHT_SCREEN_COUNT - 1 ? (
-                <button
-                  type="submit"
-                  disabled={submitting || !sessionToken || !confirmReady}
-                  className="inline-flex w-full items-center justify-center rounded-full bg-[#F6E7A1] px-10 py-2.5 font-grotesk text-lg font-medium text-[#0a1a3a] transition-all hover:scale-[1.02] hover:bg-[#f0dc82] active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-white/12 disabled:text-white/35 disabled:hover:scale-100 disabled:hover:bg-white/12 md:text-xl"
-                >
-                  {submitting ? "Открываем оплату…" : insightCtaLabel(screenIndex, insight)}
-                </button>
-              ) : (
-                <button
-                  type="submit"
-                  className="inline-flex w-full items-center justify-center rounded-full bg-[#F6E7A1] px-10 py-2.5 font-grotesk text-lg font-medium text-[#0a1a3a] transition-all hover:scale-[1.02] hover:bg-[#f0dc82] active:scale-[0.98] md:text-xl"
-                >
-                  {insightCtaLabel(screenIndex, insight)}
-                </button>
-              )}
-            </div>
-          </form>
+            confirmStep={
+              <ConfirmContactsStep
+                value={waitlistContacts}
+                onChange={(next) => {
+                  if (!waitlistStep) return;
+                  setError("");
+                  updateStepPayload(waitlistStep.slug, next);
+                }}
+                error={error}
+                submitting={submitting}
+                emailFromYandex={Boolean(authedEmail)}
+              />
+            }
+          />
+        ) : isCabinetPurchase && isReservedSlug(slug) && insight ? (
+          <CabinetInsightPurchase
+            insight={insight}
+            steps={steps}
+            payloadByStep={payloadByStep}
+            error={error}
+            submitting={submitting}
+            signedIn={signedIn}
+            onContinue={() => void continueFromCabinetInsight()}
+          />
         ) : currentStep ? (
           <form
             noValidate
@@ -1443,6 +1494,7 @@ export function OnboardingFlow({
                 authedEmail={authedEmail}
                 hasPaidMap={hasPaidMap}
                 yandexReady={ready}
+                authMode={isCabinetPurchase ? "cabinet" : "immediate"}
                 onYandex={() => void startYandexLogin()}
                 onPayload={(patch) => {
                   setError("");
@@ -1476,7 +1528,11 @@ export function OnboardingFlow({
                   disabled={!ready}
                   className="inline-flex w-full items-center justify-center rounded-full bg-[#F6E7A1] px-10 py-2.5 font-grotesk text-lg font-medium text-[#0a1a3a] transition-all hover:scale-[1.02] hover:bg-[#f0dc82] active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-white/12 disabled:text-white/35 disabled:hover:scale-100 disabled:hover:bg-white/12 md:text-xl"
                 >
-                  {ctaLabel(currentStep, submitting)}
+                  {currentStep.step_type === "waitlist" && isCabinetPurchase
+                    ? submitting
+                      ? "Открываем…"
+                      : "Открыть кабинет"
+                    : ctaLabel(currentStep, submitting)}
                 </button>
               )}
             </div>
@@ -1500,6 +1556,7 @@ function StepBody({
   authedEmail,
   hasPaidMap,
   yandexReady,
+  authMode = "immediate",
   onYandex,
   onPayload,
 }: {
@@ -1513,6 +1570,7 @@ function StepBody({
   authedEmail: string;
   hasPaidMap: boolean;
   yandexReady: boolean;
+  authMode?: "cabinet" | "immediate";
   onYandex: () => void;
   onPayload: (patch: Record<string, unknown>) => void;
 }) {
@@ -1543,6 +1601,7 @@ function StepBody({
         authedEmail={authedEmail}
         hasPaidMap={hasPaidMap}
         yandexReady={yandexReady}
+        authMode={authMode}
         onYandex={onYandex}
       />
     );
@@ -1876,6 +1935,7 @@ function ContactsStep({
   hasPaidMap = false,
   yandexReady,
   onYandex,
+  authMode = "immediate",
 }: {
   value: ContactsAnswers;
   onChange: (value: ContactsAnswers) => void;
@@ -1886,6 +1946,7 @@ function ContactsStep({
   hasPaidMap?: boolean;
   yandexReady: boolean;
   onYandex: () => void;
+  authMode?: "cabinet" | "immediate";
 }) {
   const email = value.email || authedEmail;
   const showConsentError =
@@ -1918,8 +1979,10 @@ function ContactsStep({
       </h1>
       <p className="mt-5 text-base font-normal leading-relaxed text-white/75 sm:text-lg">
         {signedIn
-          ? `Вошли как ${email || "Яндекс ID"}. Откроем персональный разбор.`
-          : "Войди через Яндекс ID — откроем персональный разбор и сохраним его в твоём кабинете."}
+          ? `Вошли как ${email || "Яндекс ID"}. Откроем твою карту.`
+          : authMode === "cabinet"
+            ? "Авторизуйся, чтобы её открыть."
+            : "Войди через Яндекс ID — откроем персональный разбор и сохраним его в твоём кабинете."}
       </p>
 
       <div className="mt-10 flex flex-col gap-8">

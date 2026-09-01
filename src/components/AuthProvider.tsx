@@ -55,7 +55,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [refresh]);
 
   const startLogin = useCallback(async (nextPath = "/account/") => {
-    await beginYandexLogin(nextPath);
+    await beginYandexLogin(
+      nextPath,
+      nextPath.startsWith("/account") ? "account" : undefined,
+    );
   }, []);
 
   const logout = useCallback(() => {

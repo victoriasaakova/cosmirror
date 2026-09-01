@@ -33,8 +33,12 @@ function asStringList(value: unknown): string[] {
 function quizContext(
   steps: OnboardingStep[],
   payloadByStep: Record<string, Record<string, unknown>>,
+  extraPayload?: Record<string, unknown>,
 ) {
-  const contentPayload = mergeContentPayloads(steps, payloadByStep);
+  const contentPayload = {
+    ...mergeContentPayloads(steps, payloadByStep),
+    ...(extraPayload ?? {}),
+  };
   const allScreens = [
     ...steps.flatMap((step) => screensForStep(step)),
     ...CONTENT_UIS.profile_quiz,
@@ -178,13 +182,21 @@ export function InsightFunnel({
   insight,
   steps,
   payloadByStep,
+  extraPayload,
+  className = "pt-6 pb-2 md:pt-8",
 }: {
   screenIndex: number;
   insight: OnboardingInsight;
   steps: OnboardingStep[];
   payloadByStep: Record<string, Record<string, unknown>>;
+  extraPayload?: Record<string, unknown>;
+  className?: string;
 }) {
-  const { name, focusLabels, intentLabel, lifeStageLabel } = quizContext(steps, payloadByStep);
+  const { name, focusLabels, intentLabel, lifeStageLabel } = quizContext(
+    steps,
+    payloadByStep,
+    extraPayload,
+  );
   const influences = insight.insight.influences ?? [];
   const offerCards = fallbackOfferCards(focusLabels, intentLabel);
 
@@ -202,7 +214,7 @@ export function InsightFunnel({
 
   if (screenIndex === 0) {
     return (
-      <div className="reveal mx-auto flex w-full max-w-lg min-h-0 flex-1 flex-col justify-center pt-6 pb-2 md:pt-8">
+      <div className={`reveal mx-auto flex w-full max-w-lg min-h-0 flex-1 flex-col justify-center ${className}`}>
         <h1 className="text-3xl font-normal leading-tight tracking-tight text-white sm:text-4xl">
           {name ? (
             <>
@@ -222,7 +234,7 @@ export function InsightFunnel({
 
   if (screenIndex === 1) {
     return (
-      <div className="reveal mx-auto flex w-full max-w-lg min-h-0 flex-1 flex-col justify-start pt-6 pb-2 md:justify-center md:pt-8">
+      <div className={`reveal mx-auto flex w-full max-w-lg min-h-0 flex-1 flex-col justify-start md:justify-center ${className}`}>
         <h1 className="text-balance text-3xl font-normal leading-[1.15] tracking-tight text-white sm:text-[2rem]">
           {renderAccentTitle(METHOD_TITLE, ["истинному я"])}
         </h1>
@@ -252,7 +264,7 @@ export function InsightFunnel({
   if (screenIndex !== INSIGHT_OFFER_INDEX) return null;
 
   return (
-    <div className="reveal mx-auto flex w-full max-w-lg min-h-0 flex-1 flex-col justify-center pt-6 pb-2 md:pt-8">
+    <div className={`reveal mx-auto flex w-full max-w-lg min-h-0 flex-1 flex-col justify-center ${className}`}>
       <h1 className="text-balance text-3xl font-normal leading-[1.15] tracking-tight text-white sm:text-[2rem]">
         Что ты поймёшь{" "}
         <span className="font-display italic text-[#F6E7A1]">после разбора</span>

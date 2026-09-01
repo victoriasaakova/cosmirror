@@ -3,28 +3,11 @@
 import { FormEvent, Fragment, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { NatalWheel } from "@/components/NatalWheel";
-import { formatDms, planetGlyph, signGlyph } from "@/lib/astro-glyphs";
+import { SignsTable } from "@/components/SignsTable";
+import { formatDms, signGlyph } from "@/lib/astro-glyphs";
 import type { PaidReport } from "@/lib/api";
 
 const CORE = ["sun", "moon", "ascendant"] as const;
-
-const HOUSE_GROUPS: { title: string; keys: string[] }[] = [
-  { title: "Солнце, Луна, Асцендент", keys: ["sun", "moon", "ascendant"] },
-  { title: "Как работает ум", keys: ["mercury"] },
-  { title: "Близость и отношения", keys: ["venus"] },
-  { title: "Воля и действие", keys: ["mars"] },
-  { title: "Работа и вклад", keys: ["jupiter", "saturn", "midheaven"] },
-  { title: "Глубина и сдвиг", keys: ["uranus", "neptune", "pluto"] },
-];
-
-type NatalOccupant = {
-  key: string;
-  name?: string;
-  sign?: string;
-  sign_ru?: string;
-  house?: number | null;
-  glyph?: string;
-};
 
 type CoreKey = (typeof CORE)[number];
 
@@ -44,6 +27,7 @@ type Props = {
   downloading: boolean;
   onDownloadPdf: () => void;
   actionNote?: string;
+  hideShareActions?: boolean;
 };
 
 export function ReportOpening({
@@ -53,6 +37,7 @@ export function ReportOpening({
   downloading,
   onDownloadPdf,
   actionNote,
+  hideShareActions = false,
 }: Props) {
   const natal = report.document?.factual?.natal;
   const wheel = natal?.wheel;
@@ -107,6 +92,8 @@ export function ReportOpening({
     birth.place || "место не указано",
   ].filter(Boolean);
 
+  const paid = !hideShareActions;
+
   return (
     <header className="reveal">
       <h1 className="text-3xl font-normal leading-[1.15] tracking-tight text-white sm:text-4xl">
@@ -120,205 +107,123 @@ export function ReportOpening({
           </>
         ) : null}
       </h1>
-      <section className="mt-8 overflow-hidden rounded-2xl border border-white/12 bg-white/[0.04]">
-        <div className="flex flex-col md:flex-row md:items-stretch">
-          <div className="relative aspect-[16/10] w-full shrink-0 md:aspect-auto md:w-1/3 md:min-h-[13.75rem]">
-            <Image
-              src="/images/report.webp"
-              alt=""
-              fill
-              className="object-cover object-center"
-              sizes="(max-width: 768px) 100vw, 14rem"
+
+      <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2">
+        <p className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-base leading-snug text-white/80">
+          {birthParts.map((part, index) => (
+            <Fragment key={`${index}-${part}`}>
+              {index > 0 ? (
+                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#F6E7A1]" aria-hidden />
+              ) : null}
+              <span>{part}</span>
+            </Fragment>
+          ))}
+        </p>
+        {canEditTime ? (
+          <button
+            type="button"
+            onClick={() => setTimeOpen((open) => !open)}
+            className="inline-flex min-h-11 items-center text-base text-[#F6E7A1] underline-offset-4 transition hover:underline"
+          >
+            {timeOpen ? "Закрыть" : timeSaved ? "Изменить время" : "Указать время"}
+          </button>
+        ) : null}
+      </div>
+      {!hasBirthTime ? (
+        <p className="report-lede mt-2">Асцендент и дома не считаем.</p>
+      ) : null}
+      {canEditTime && timeOpen ? (
+        <form
+          onSubmit={onSaveTime}
+          className="mt-3 flex w-full flex-col gap-3 scroll-mb-32 sm:flex-row sm:items-end"
+        >
+          <label className="w-full min-w-0 sm:min-w-[10rem] sm:flex-1">
+            <span className="sr-only">Время рождения</span>
+            <input
+              type="time"
+              name="birth_time"
+              value={draftTime}
+              onChange={(event) => setDraftTime(event.target.value)}
+              className="min-h-11 w-full border-b border-white/20 bg-transparent text-base text-white outline-none [color-scheme:dark] focus:border-[#F6E7A1]"
             />
-          </div>
-          <div className="flex min-w-0 flex-1 flex-col justify-center p-5 sm:p-6">
-            <h2 className="text-2xl font-normal leading-[1.15] tracking-tight text-white sm:text-3xl">
-              Твой персональный{" "}
-              <span className="font-display inline-block pb-1 italic leading-[1.15] text-[#F6E7A1]">отчёт</span>
-            </h2>
-          </div>
-        </div>
-        <div className="report-cta-row flex flex-col gap-2 border-t border-white/10 px-5 py-4 md:flex-row md:px-6">
-          <button
-            type="button"
-            onClick={onDownloadPdf}
-            disabled={downloading}
-            className="cabinet-cta"
-          >
-            {downloading ? "Готовим PDF…" : "Скачать PDF"}
+          </label>
+          <button type="submit" disabled={!draftTime} className="cabinet-cta sm:w-auto sm:px-6">
+            Сохранить
           </button>
-          <button
-            type="button"
-            onClick={() => void onShare()}
-            className="cabinet-cta-ghost"
-          >
-            {copied ? "Ссылка скопирована" : "Поделиться ссылкой"}
-          </button>
-        </div>
-        {shareHint ? <p className="break-all px-5 pb-4 text-base text-[color:var(--muted)] sm:px-6">{shareHint}</p> : null}
-        {actionNote ? <p className="px-5 pb-4 text-base text-[color:var(--muted)] sm:px-6">{actionNote}</p> : null}
-      </section>
+        </form>
+      ) : null}
+      {canEditTime && timeSaved ? (
+        <p className="report-lede mt-2">
+          Время запомнили здесь. Карту пока не пересчитываем, асцендент и дома не считаем.
+        </p>
+      ) : null}
 
-      <hr className="mt-12 border-0 border-t border-white/10" />
+      <ul className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-white/10">
+        {core.map((item) => (
+          <li key={item.key} className="min-w-0 sm:px-5 sm:first:pl-0 sm:last:pr-0">
+            <p className="text-sm text-white/45">{item.label}</p>
+            <CoreValue point={item.point} missing={item.key === "ascendant" && !hasBirthTime} />
+          </li>
+        ))}
+      </ul>
 
-      <section className="mt-10">
-        <h2 className="text-3xl font-normal leading-[1.15] tracking-tight text-white sm:text-[2rem]">
-          Твой{" "}
-          <span className="font-display inline-block pb-1 italic leading-[1.15] text-[#F6E7A1]">
-            космопортрет
-          </span>
-        </h2>
-
-        <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2">
-          <p className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-base leading-snug text-white/80">
-            {birthParts.map((part, index) => (
-              <Fragment key={`${index}-${part}`}>
-                {index > 0 ? (
-                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#F6E7A1]" aria-hidden />
-                ) : null}
-                <span>{part}</span>
-              </Fragment>
-            ))}
+      {wheel?.planets?.length ? (
+        <div className="mt-8 sm:mt-10">
+          <div className="-mx-4 overflow-x-clip sm:mx-0">
+            <NatalWheel wheel={wheel} />
+          </div>
+          <p className="mt-3 text-center text-sm leading-relaxed text-[color:var(--muted)] sm:mt-4 sm:text-base">
+            <span className="text-[#c45c5c]">Красная</span>: напряжение.{" "}
+            <span className="text-[#7eafd6]">Синяя пунктир</span>: поддержка.
           </p>
-          {canEditTime ? (
+        </div>
+      ) : null}
+
+      <SignsTable points={natal?.points} hasBirthTime={hasBirthTime} />
+
+      {paid ? (
+        <section className="mt-10 overflow-hidden rounded-2xl border border-white/12 bg-white/[0.04]">
+          <div className="flex flex-col md:flex-row md:items-stretch">
+            <div className="relative aspect-[16/10] w-full shrink-0 md:aspect-auto md:w-1/3 md:min-h-[13.75rem]">
+              <Image
+                src="/images/report.webp"
+                alt=""
+                fill
+                className="object-cover object-center"
+                sizes="(max-width: 768px) 100vw, 14rem"
+              />
+            </div>
+            <div className="flex min-w-0 flex-1 flex-col justify-center p-5 sm:p-6">
+              <h2 className="text-2xl font-normal leading-[1.15] tracking-tight text-white sm:text-3xl">
+                Твой персональный{" "}
+                <span className="font-display inline-block pb-1 italic leading-[1.15] text-[#F6E7A1]">
+                  отчёт
+                </span>
+              </h2>
+            </div>
+          </div>
+          <div className="report-cta-row flex flex-col gap-2 border-t border-white/10 px-5 py-4 md:flex-row md:px-6">
             <button
               type="button"
-              onClick={() => setTimeOpen((open) => !open)}
-              className="inline-flex min-h-11 items-center text-base text-[#F6E7A1] underline-offset-4 transition hover:underline"
+              onClick={onDownloadPdf}
+              disabled={downloading}
+              className="cabinet-cta"
             >
-              {timeOpen ? "Закрыть" : timeSaved ? "Изменить время" : "Указать время"}
+              {downloading ? "Готовим PDF…" : "Скачать PDF"}
             </button>
-          ) : null}
-        </div>
-        {!hasBirthTime ? (
-          <p className="report-lede mt-2">
-            Асцендент и дома не считаем.
-          </p>
-        ) : null}
-        {canEditTime && timeOpen ? (
-          <form
-            onSubmit={onSaveTime}
-            className="mt-3 flex w-full flex-col gap-3 scroll-mb-32 sm:flex-row sm:items-end"
-          >
-            <label className="w-full min-w-0 sm:min-w-[10rem] sm:flex-1">
-              <span className="sr-only">Время рождения</span>
-              <input
-                type="time"
-                name="birth_time"
-                value={draftTime}
-                onChange={(event) => setDraftTime(event.target.value)}
-                className="min-h-11 w-full border-b border-white/20 bg-transparent text-base text-white outline-none [color-scheme:dark] focus:border-[#F6E7A1]"
-              />
-            </label>
-            <button type="submit" disabled={!draftTime} className="cabinet-cta sm:w-auto sm:px-6">
-              Сохранить
+            <button type="button" onClick={() => void onShare()} className="cabinet-cta-ghost">
+              {copied ? "Ссылка скопирована" : "Поделиться ссылкой"}
             </button>
-          </form>
-        ) : null}
-        {canEditTime && timeSaved ? (
-          <p className="report-lede mt-2">
-            Время запомнили здесь. Карту пока не пересчитываем, асцендент и дома не считаем.
-          </p>
-        ) : null}
-
-        <ul className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-white/10">
-          {core.map((item) => (
-            <li key={item.key} className="min-w-0 sm:px-5 sm:first:pl-0 sm:last:pr-0">
-              <p className="text-sm text-white/45">{item.label}</p>
-              <CoreValue
-                point={item.point}
-                missing={item.key === "ascendant" && !hasBirthTime}
-              />
-            </li>
-          ))}
-        </ul>
-
-        {wheel?.planets?.length ? (
-          <div className="mt-12 overflow-x-clip">
-            <NatalWheel wheel={wheel} />
-            <p className="mt-4 text-center text-base leading-relaxed text-[color:var(--muted)]">
-              <span className="text-[#c45c5c]">Красная</span>: напряжение.{" "}
-              <span className="text-[#7eafd6]">Синяя пунктир</span>: поддержка.
-            </p>
-            <HouseOccupancy points={natal?.points} hasBirthTime={hasBirthTime} />
           </div>
-        ) : natal?.points?.length ? (
-          <HouseOccupancy points={natal.points} hasBirthTime={hasBirthTime} />
-        ) : null}
-      </section>
+          {shareHint ? (
+            <p className="break-all px-5 pb-4 text-base text-[color:var(--muted)] sm:px-6">{shareHint}</p>
+          ) : null}
+          {actionNote ? (
+            <p className="px-5 pb-4 text-base text-[color:var(--muted)] sm:px-6">{actionNote}</p>
+          ) : null}
+        </section>
+      ) : null}
     </header>
-  );
-}
-
-function HouseOccupancy({
-  points,
-  hasBirthTime,
-}: {
-  points?: NatalOccupant[];
-  hasBirthTime: boolean;
-}) {
-  if (!points?.length) return null;
-  const byKey = new Map(points.map((point) => [point.key, point]));
-  const groupedKeys = new Set(HOUSE_GROUPS.flatMap((group) => group.keys));
-  const leftover = points.filter((point) => !groupedKeys.has(point.key) && point.house);
-  const groups = HOUSE_GROUPS.map((group) => ({
-    title: group.title,
-    items: group.keys.map((key) => byKey.get(key)).filter((point): point is NatalOccupant => Boolean(point)),
-  })).filter((group) => group.items.length > 0);
-
-  if (groups.length === 0 && leftover.length === 0) return null;
-
-  return (
-    <div className="mt-10 space-y-5 text-left">
-      {groups.map((group) => (
-        <div key={group.title}>
-          <p className="report-group-title pb-1">{group.title}</p>
-          <ul className="mt-1.5 space-y-1">
-            {group.items.map((point) => (
-              <li key={point.key} className="text-base leading-snug text-white/80">
-                <OccupantLine point={point} hasBirthTime={hasBirthTime} />
-              </li>
-            ))}
-          </ul>
-        </div>
-      ))}
-      {leftover.length > 0 ? (
-        <div>
-          <p className="report-group-title pb-1">Другие точки</p>
-          <ul className="mt-1.5 space-y-1">
-            {leftover.map((point) => (
-              <li key={point.key} className="text-base leading-snug text-white/80">
-                <OccupantLine point={point} hasBirthTime={hasBirthTime} />
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function OccupantLine({ point, hasBirthTime }: { point: NatalOccupant; hasBirthTime: boolean }) {
-  const planet = planetGlyph(point.key, point.glyph);
-  const sign = signGlyph(point.sign);
-  const house =
-    hasBirthTime && point.house ? `дом ${point.house}` : point.key === "ascendant" && !hasBirthTime ? "дом не считаем" : "";
-  return (
-    <>
-      {planet ? (
-        <span className="natal-astro-glyph mr-1.5 text-[#F6E7A1]" aria-hidden>
-          {planet}
-        </span>
-      ) : null}
-      <span>{point.name || point.key}</span>
-      {sign ? (
-        <span className="natal-astro-glyph mx-1.5 text-[#F6E7A1]" aria-hidden>
-          {sign}
-        </span>
-      ) : null}
-      {point.sign_ru ? <span>{point.sign_ru}</span> : null}
-      {house ? <span className="text-white/50"> · {house}</span> : null}
-    </>
   );
 }
 

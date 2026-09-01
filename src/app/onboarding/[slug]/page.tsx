@@ -3,7 +3,13 @@ import { OnboardingFlow } from "@/components/OnboardingFlow";
 
 type Props = {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ new?: string; code?: string; state?: string; error?: string }>;
+  searchParams: Promise<{
+    new?: string;
+    code?: string;
+    state?: string;
+    error?: string;
+    onboarding_purchase_flow?: string;
+  }>;
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -26,6 +32,7 @@ export default async function OnboardingStepPage({ params, searchParams }: Props
         oauthCode={query.code ?? ""}
         oauthState={query.state ?? ""}
         oauthError={query.error ?? ""}
+        purchaseFlowOverride={query.onboarding_purchase_flow ?? ""}
       />
     </div>
   );

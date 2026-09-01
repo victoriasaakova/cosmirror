@@ -38,13 +38,14 @@ export function Header() {
   const [isOpen, setIsOpen] = useState(false);
   const [loginBusy, setLoginBusy] = useState(false);
   const pathname = usePathname();
-  const { user, hasPaidReport, startLogin } = useAuth();
+  const { user, startLogin } = useAuth();
   const onHome = pathname === "/" || pathname === "";
   const signedIn = Boolean(user);
   const startHref = useStartHref();
   const homeHref = signedIn ? "/account/" : onHome ? "#top" : "/";
-  const ctaHref = hasPaidReport ? "/account/" : startHref;
-  const ctaLabel = hasPaidReport ? "Моя карта" : "Начать путешествие";
+  const showCabinetCta = signedIn;
+  const ctaHref = showCabinetCta ? "/account/" : startHref;
+  const ctaLabel = showCabinetCta ? "Моя карта" : "Начать путешествие";
   const onAccountSettings = pathname === "/account/settings" || pathname === "/account/settings/";
   const onBlog = isBlogPath(pathname);
   const nav = GUEST_NAV.map((item) => ({
@@ -77,7 +78,7 @@ export function Header() {
     if (loginBusy) return;
     setLoginBusy(true);
     try {
-      await startLogin(hasPaidReport ? "/account/" : "/");
+      await startLogin("/account/");
     } catch {
       setLoginBusy(false);
     }
@@ -299,10 +300,11 @@ export function JourneyCta({
   paidLabel?: string;
   className: string;
 }) {
-  const { hasPaidReport } = useAuth();
+  const { user } = useAuth();
   const startHref = useStartHref();
-  const href = hasPaidReport ? "/account/" : startHref;
-  const text = hasPaidReport ? paidLabel : label;
+  const showCabinetCta = Boolean(user);
+  const href = showCabinetCta ? "/account/" : startHref;
+  const text = showCabinetCta ? paidLabel : label;
   return (
     <a href={href} className={className}>
       {text}

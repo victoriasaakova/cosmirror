@@ -30,7 +30,7 @@ export async function resetLocalDevFlow(): Promise<void> {
   clearOnboardingClientState();
 }
 
-async function devLogin(persona: "empty" | "report" | "insight"): Promise<{
+async function devLogin(persona: "empty" | "report" | "insight" | "cabinet"): Promise<{
   sessionToken: string;
 }> {
   let res: Response;
@@ -53,6 +53,10 @@ async function devLogin(persona: "empty" | "report" | "insight"): Promise<{
   }
   writeAuthToken(data.token);
   return { sessionToken: data.session_token || "" };
+}
+
+export async function devLoginCabinet(): Promise<void> {
+  await devLogin("cabinet");
 }
 
 export async function devLoginEmpty(): Promise<void> {

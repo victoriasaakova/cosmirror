@@ -435,6 +435,7 @@ export async function fetchOnboardingInsightReady(
 export type ReportBlock = {
   title: string;
   text: string;
+  kind?: string;
 };
 
 export type ReportSection = {
@@ -902,9 +903,34 @@ export type Order = {
   fulfillment_error?: string;
   report?: PaidReport | null;
   report_pdf_url?: string;
+  section_feedback?: SectionFeedback[];
   created_at: string;
   updated_at: string;
 };
+
+export const REPORT_FEEDBACK_SECTIONS = [
+  "natal",
+  "aspects",
+  "cycles",
+  "request",
+  "practice",
+] as const;
+
+export type ReportFeedbackSection = (typeof REPORT_FEEDBACK_SECTIONS)[number];
+
+export type ReportFeedbackRating = "about_me" | "partial" | "not_about_me";
+
+export type SectionFeedback = {
+  section: ReportFeedbackSection;
+  rating: ReportFeedbackRating;
+  comment: string;
+  comment_skipped: boolean;
+  updated_at: string;
+};
+
+export function isReportFeedbackSection(id: string): id is ReportFeedbackSection {
+  return (REPORT_FEEDBACK_SECTIONS as readonly string[]).includes(id);
+}
 
 export const PAID_REPORT_LAYERS = [
   "natal",
@@ -926,11 +952,7 @@ export function reportLayersPending(report?: PaidReport | null): boolean {
   if (!report?.document?.interpretive) return false;
   const interpretive = report.document.interpretive;
   if (interpretive.generation?.status === "done") return false;
-  return (
-    layerWaitingForLlm(interpretive.natal) ||
-    layerWaitingForLlm(interpretive.aspects) ||
-    layerWaitingForLlm(interpretive.cycles)
-  );
+  return PAID_REPORT_LAYERS.some((key) => layerWaitingForLlm(interpretive[key]));
 }
 
 export function reportJobRunning(report?: PaidReport | null): boolean {
@@ -938,16 +960,16 @@ export function reportJobRunning(report?: PaidReport | null): boolean {
 }
 
 export function reportReadyToOpen(report?: PaidReport | null): boolean {
-  // GET already returns the fallback shell. LLM overlays in the background —
-  // blocking the cabinet until natal/aspects/cycles are source=llm leaves
-  // localhost stuck on «формируется» while /api/me/report/ 200s a 500KB payload.
-  return Boolean(report?.document || (report?.sections && report.sections.length > 0));
+  if (!report?.document && !(report?.sections && report.sections.length > 0)) {
+    return false;
+  }
+  return !reportLayersPending(report);
 }
 
 export function reportGeneratingLayer(report?: PaidReport | null): PaidReportLayerId | "" {
   const interpretive = report?.document?.interpretive;
   if (!interpretive) return "natal";
-  for (const key of PAID_REPORT_OPEN_LAYERS) {
+  for (const key of PAID_REPORT_LAYERS) {
     const layer = interpretive[key];
     if (layerWaitingForLlm(layer)) return key;
   }
@@ -1002,10 +1024,12 @@ export type BirthUpdatePayload = {
 export async function startYandexAuth(
   sessionToken?: string,
   redirectUri?: string,
+  after?: string,
 ): Promise<{ url: string; redirect_uri?: string }> {
   const query = new URLSearchParams();
   if (sessionToken) query.set("session_token", sessionToken);
   if (redirectUri) query.set("redirect_uri", redirectUri);
+  if (after) query.set("after", after);
   let res: Response;
   try {
     res = await fetchWithRetry(`${API_URL}/api/auth/yandex/start/?${query.toString()}`, {
@@ -1097,6 +1121,74 @@ export async function fetchMyOrder(): Promise<Order | null> {
     throw new Error(errorMessage(data, "Не удалось загрузить заказ"));
   }
   return data as Order;
+}
+
+export type CabinetQuiz = {
+  focus: string[];
+  intent: string;
+  life_stage: string;
+};
+
+export type CabinetPayload = {
+  access: "free" | "paid";
+  locked_sections: string[];
+  report: PaidReport | null;
+  quiz?: CabinetQuiz;
+  contacts?: { email: string; telegram: string };
+};
+
+export async function fetchMyCabinet(): Promise<CabinetPayload | null> {
+  let res: Response;
+  try {
+    res = await fetchWithRetry(`${API_URL}/api/me/cabinet/`, { cache: "no-store" });
+  } catch (err) {
+    throw new Error(networkErrorMessage(err, "Не удалось открыть кабинет"));
+  }
+  const data = await parseJson(res);
+  if (!res.ok) {
+    if (res.status === 404) return null;
+    throw new Error(errorMessage(data, "Не удалось открыть кабинет"));
+  }
+  return data as CabinetPayload;
+}
+
+export type LockedPreviewCard = {
+  title: string;
+  text: string;
+};
+
+export type LockedPreview = {
+  section: string;
+  cards: LockedPreviewCard[];
+};
+
+export async function fetchLockedPreview(section: string): Promise<LockedPreview | null> {
+  let res: Response;
+  try {
+    res = await fetchWithRetry(
+      `${API_URL}/api/me/cabinet/locked-preview/${section}/`,
+      { cache: "no-store" },
+    );
+  } catch {
+    return null;
+  }
+  if (!res.ok) return null;
+  const data = await parseJson(res);
+  if (typeof data !== "object" || data === null) return null;
+  const record = data as Record<string, unknown>;
+  const rawCards = Array.isArray(record.cards) ? record.cards : [];
+  const cards = rawCards.flatMap((row) => {
+    if (typeof row !== "object" || row === null) return [];
+    const card = row as Record<string, unknown>;
+    const title = typeof card.title === "string" ? card.title.trim() : "";
+    const text = typeof card.text === "string" ? card.text.trim() : "";
+    return title && text ? [{ title, text }] : [];
+  });
+  if (!cards.length) return null;
+  return {
+    section: typeof record.section === "string" ? record.section : section,
+    cards,
+  };
 }
 
 export async function generateReportNatal(force = false): Promise<{
@@ -1317,6 +1409,29 @@ export async function downloadMyReportPdf(): Promise<Blob> {
     throw new Error(errorMessage(data, "Не удалось скачать PDF"));
   }
   return res.blob();
+}
+
+export async function submitSectionFeedback(payload: {
+  section: ReportFeedbackSection;
+  rating: ReportFeedbackRating;
+  comment?: string;
+  comment_skipped?: boolean;
+}): Promise<SectionFeedback> {
+  let res: Response;
+  try {
+    res = await fetchWithRetry(`${API_URL}/api/me/report/feedback/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+  } catch (err) {
+    throw new Error(networkErrorMessage(err, "Не получилось сохранить. Попробуй ещё раз."));
+  }
+  const data = await parseJson(res);
+  if (!res.ok) {
+    throw new Error(errorMessage(data, "Не получилось сохранить. Попробуй ещё раз."));
+  }
+  return data as SectionFeedback;
 }
 
 export async function logoutOnServer(): Promise<void> {
