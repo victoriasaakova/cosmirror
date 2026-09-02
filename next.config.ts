@@ -25,6 +25,10 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true,
   },
+  // TelegramBot is missing from Next's default list; without this it may
+  // stream scripts before OG tags, and Telegram's crawler then shows an empty card.
+  htmlLimitedBots:
+    /[\w-]+-Google|Google-[\w-]+|Chrome-Lighthouse|Slurp|DuckDuckBot|baiduspider|yandex|sogou|bitlybot|tumblr|vkShare|quora link preview|redditbot|ia_archiver|Bingbot|BingPreview|applebot|facebookexternalhit|facebookcatalog|Twitterbot|LinkedInBot|Slackbot|Discordbot|WhatsApp|SkypeUriPreview|Yeti|googleweblight|TelegramBot/,
   async headers() {
     return [
       {

@@ -5,6 +5,13 @@ import { CookieConsentProvider } from "@/components/CookieConsent";
 import { YandexMetrika } from "@/components/YandexMetrika";
 import { PostHogAnalytics } from "@/components/PostHogAnalytics";
 import { AuthProvider } from "@/components/AuthProvider";
+import { BackToTop } from "@/components/BackToTop";
+import {
+  SITE_DESCRIPTION,
+  SITE_OG_IMAGE_PATH,
+  SITE_TITLE,
+  SITE_URL,
+} from "@/lib/site-meta";
 import "./globals.css";
 
 // Keep font files minimal: each weight/style is a separate mobile download.
@@ -44,10 +51,9 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://cosmirror.ru"),
-  title: "Натальная карта с расшифровкой онлайн — Cosmirror",
-  description:
-    "Cosmirror — приложение для самопознания через астрологию. Натальная карта, текущие астрологические циклы и личные наблюдения помогают лучше понимать себя и замечать закономерности своей жизни.",
+  metadataBase: new URL(SITE_URL),
+  title: SITE_TITLE,
+  description: SITE_DESCRIPTION,
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any" },
@@ -60,14 +66,13 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "ru_RU",
-    url: "https://cosmirror.ru",
+    url: SITE_URL,
     siteName: "Cosmirror",
-    title: "Натальная карта с расшифровкой онлайн — Cosmirror",
-    description:
-      "Cosmirror — приложение для самопознания через астрологию. Натальная карта, текущие астрологические циклы и личные наблюдения помогают лучше понимать себя и замечать закономерности своей жизни.",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
     images: [
       {
-        url: "/images/og-cover.jpg?v=3",
+        url: SITE_OG_IMAGE_PATH,
         width: 1200,
         height: 630,
         alt: "Cosmirror",
@@ -77,10 +82,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Натальная карта с расшифровкой онлайн — Cosmirror",
-    description:
-      "Cosmirror — приложение для самопознания через астрологию. Натальная карта, текущие астрологические циклы и личные наблюдения помогают лучше понимать себя и замечать закономерности своей жизни.",
-    images: ["/images/og-cover.jpg?v=3"],
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    images: [SITE_OG_IMAGE_PATH],
   },
 };
 
@@ -103,6 +107,7 @@ export default function RootLayout({
               <PostHogAnalytics />
             </Suspense>
             {children}
+            <BackToTop />
           </AuthProvider>
         </CookieConsentProvider>
       </body>
