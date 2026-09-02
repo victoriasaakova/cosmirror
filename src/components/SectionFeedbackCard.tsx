@@ -15,7 +15,7 @@ const RATINGS: { id: ReportFeedbackRating; emoji: string; label: string }[] = [
 ];
 
 const FIELD_CLASS =
-  "mt-3 w-full border-b border-white/20 bg-transparent pb-3 text-lg text-white caret-[#F6E7A1] outline-none placeholder:text-white/30 focus:border-[#F6E7A1] [color-scheme:dark]";
+  "mt-3 w-full border-b border-white/20 bg-transparent pb-3 text-lg text-white caret-[#F6E7A1] outline-none placeholder:text-white/50 focus:border-[#F6E7A1] [color-scheme:dark]";
 
 function isComplete(row?: SectionFeedback | null): boolean {
   if (!row?.rating) return false;
@@ -32,7 +32,7 @@ function DualHeading({
   after?: string;
 }) {
   return (
-    <h3 className="text-[1.0625rem] font-normal leading-snug tracking-tight text-white sm:text-lg">
+    <h3 className="text-base font-normal leading-snug tracking-tight text-white sm:text-lg">
       {before}{" "}
       <span className="font-display italic text-[#F6E7A1]">{accent}</span>
       {after ? <span> {after}</span> : null}

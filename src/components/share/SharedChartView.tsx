@@ -52,7 +52,7 @@ export function SharedChartView({ report }: { report: PaidReport | null }) {
   return (
     <main className="relative flex min-h-[100dvh] flex-col overflow-x-clip bg-[var(--background)] text-[var(--foreground)]">
       <SharedChartHeader />
-      <div className="cabinet-shell relative z-10 mx-auto flex w-full max-w-[720px] flex-1 flex-col px-5 pt-[var(--cabinet-header-offset)] pb-[max(2.5rem,env(safe-area-inset-bottom))] lg:max-w-[68rem] lg:px-8">
+      <div className="cabinet-shell relative z-10 mx-auto flex w-full max-w-[720px] flex-1 flex-col px-4 pt-[var(--cabinet-header-offset)] pb-[max(2.5rem,env(safe-area-inset-bottom))] lg:max-w-[68rem] lg:px-8">
         {report ? <SharedChartBody report={report} /> : <SharedChartMissing />}
       </div>
       <SiteFooter />
@@ -83,7 +83,7 @@ function SharedChartHeader() {
           </a>
           <a
             href={freshOnboardingHref()}
-            className="inline-flex h-8 min-w-[4.75rem] shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-[#F6E7A1] px-4 text-sm font-medium text-[#0a1a3a] shadow-[0_8px_20px_rgba(246,231,161,0.22)] transition hover:bg-[#f0dc82] active:scale-[0.98] md:h-9"
+            className="inline-flex h-8 min-w-[4.75rem] shrink-0 items-center justify-center whitespace-nowrap rounded-full bg-[#F6E7A1] px-4 text-sm font-medium text-[#0a1a3a] transition hover:bg-[#f0dc82] active:scale-[0.98] md:h-9"
           >
             Собрать свою
           </a>
@@ -128,7 +128,7 @@ function SharedChartBody({ report }: { report: PaidReport }) {
             const point = findPoint(report, key);
             return (
               <li key={key} className="min-w-0 sm:px-5 sm:first:pl-0 sm:last:pr-0">
-                <p className="text-sm text-white/45">{coreLabel(key)}</p>
+                <p className="text-sm text-white/80">{coreLabel(key)}</p>
                 <CoreValue point={point} missing={key === "ascendant" && !hasBirthTime} />
               </li>
             );
@@ -139,7 +139,7 @@ function SharedChartBody({ report }: { report: PaidReport }) {
             <div className="-mx-4 overflow-x-clip sm:mx-0">
               <SharedNatalWheel wheel={wheel} />
             </div>
-            <ul className="mt-3 flex flex-col items-center gap-1.5 text-[0.75rem] leading-snug text-white/65 sm:mt-4 sm:flex-row sm:justify-center sm:gap-6">
+            <ul className="mt-3 flex flex-col items-center gap-1.5 text-[0.75rem] leading-snug text-white/80 sm:mt-4 sm:flex-row sm:justify-center sm:gap-6">
               <li className="inline-flex items-center gap-2">
                 <AspectSwatch kind="hard" />
                 напряжение: квадрат и оппозиция
@@ -295,7 +295,7 @@ function SharedNatalReading({ document }: { document?: ReportDocument }) {
                 <div key={house.house} className="rounded-2xl border border-white/10 p-4">
                   <p className="flex flex-wrap items-baseline gap-x-2 text-base text-[#F6E7A1]">
                     <span>{house.house}-й дом</span>
-                    <span className="text-white/35">·</span>
+                    <span className="text-white/80">·</span>
                     {glyph ? (
                       <span className="natal-astro-glyph text-base leading-none" aria-hidden>
                         {glyph}
@@ -401,7 +401,7 @@ function PlanetDetails({
               return (
                 <span
                   key={`${mark.aspect}-${mark.planetKey}-${mark.otherKey || ""}-${index}`}
-                  className="inline-flex items-baseline gap-1.5 text-white/45"
+                  className="inline-flex items-baseline gap-1.5 text-white/80"
                 >
                   <span className="natal-astro-glyph inline-flex items-baseline gap-1 text-base leading-none text-[#F6E7A1]">
                     {mark.pair && left ? <span>{left}</span> : null}
@@ -415,7 +415,7 @@ function PlanetDetails({
           </div>
         ) : null}
         {dms ? (
-          <p className="mt-2 text-base text-[color:var(--muted)]">
+          <p className="mt-2 text-base text-white/50">
             {dms}
             {point.retrograde ? " · ретроград" : ""}
           </p>
@@ -520,7 +520,7 @@ function CoreValue({
   missing: boolean;
 }) {
   if (missing || !point?.sign_ru) {
-    return <p className="mt-1 text-base text-white/55">не считаем</p>;
+    return <p className="mt-1 text-base text-white/80">не считаем</p>;
   }
   const glyph = signGlyph(point.sign);
   const dms = formatDms(point.degree, point.minute);

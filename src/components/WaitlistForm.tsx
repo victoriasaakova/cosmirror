@@ -113,7 +113,7 @@ export function WaitlistForm({ variant = "section" }: WaitlistFormProps) {
           <button
             type="submit"
             disabled={status === "loading"}
-            className="group relative mx-auto flex h-36 w-36 shrink-0 flex-col items-center justify-center rounded-full bg-gradient-to-br from-[#f2c4a8] via-[#e89a8c] to-[#c97a58] text-[#1a1210] shadow-[0_16px_50px_rgba(232,160,122,0.35)] transition hover:scale-[1.03] disabled:opacity-60 lg:mx-0"
+            className="group relative mx-auto flex h-36 w-36 shrink-0 flex-col items-center justify-center rounded-full bg-gradient-to-br from-[#f2c4a8] via-[#e89a8c] to-[#c97a58] text-[#1a1210] transition hover:scale-[1.03] disabled:opacity-60 lg:mx-0"
             aria-label="Получить портрет"
           >
             <span className="mb-1 text-2xl transition group-hover:translate-x-0.5">→</span>

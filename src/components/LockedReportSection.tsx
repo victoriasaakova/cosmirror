@@ -24,14 +24,14 @@ export function LockedReportSection({
         />
       </div>
       <div className="px-5 py-4 lg:shrink-0">
-        <h2 className="text-[1.45rem] font-normal leading-[1.15] tracking-tight text-white sm:text-[1.65rem]">
+        <h2 className="text-xl font-normal leading-[1.15] tracking-tight text-white sm:text-[1.65rem]">
           Открыть{" "}
           <span className="font-display italic text-[#F6E7A1]">все разделы</span>
         </h2>
-        <p className="mt-2 text-[15px] leading-snug text-white/75">
+        <p className="mt-2 text-sm leading-snug text-white/80 sm:text-[15px]">
           Чтение карты, аспекты, циклы, запрос и практика — в одном персональном разборе.
         </p>
-        <span className="cabinet-cta mt-4 w-full min-h-11">Узнать больше</span>
+        <span className="cabinet-cta mt-4 w-full">Узнать больше</span>
       </div>
     </button>
   );

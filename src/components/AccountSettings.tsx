@@ -148,7 +148,7 @@ export function AccountSettings({ onSaved }: { onSaved?: () => Promise<void> | v
   }
 
   const fieldClass =
-    "mt-3 w-full border-b border-white/20 bg-transparent pb-3 text-xl text-white outline-none placeholder:text-white/30 focus:border-[#F6E7A1] [color-scheme:dark]";
+    "mt-3 w-full border-b border-white/20 bg-transparent pb-3 text-xl text-white outline-none placeholder:text-white/50 focus:border-[#F6E7A1] [color-scheme:dark]";
 
   const loginLine = useMemo(() => {
     if (email) return `Вход выполнен через Яндекс: ${email}`;
@@ -157,7 +157,7 @@ export function AccountSettings({ onSaved }: { onSaved?: () => Promise<void> | v
 
   return (
     <div className="min-w-0">
-      <p className="text-sm leading-relaxed text-white/45">{loginLine}</p>
+      <p className="text-sm leading-relaxed text-white/80">{loginLine}</p>
       <h1 className="mt-3 text-3xl font-normal leading-[1.15] tracking-tight text-white sm:text-4xl">
         Аккаунт
       </h1>
@@ -182,7 +182,7 @@ export function AccountSettings({ onSaved }: { onSaved?: () => Promise<void> | v
         {editing ? (
           <form onSubmit={(event) => void onSave(event)} className="mt-6 flex flex-col gap-8">
             <label className="block">
-              <span className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.16em] text-white/40">
+              <span className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.16em] text-white/80">
                 <Calendar className="h-3.5 w-3.5 text-[#F6E7A1]" strokeWidth={1.7} aria-hidden />
                 Дата
               </span>
@@ -203,7 +203,7 @@ export function AccountSettings({ onSaved }: { onSaved?: () => Promise<void> | v
             </label>
 
             <label className="relative block">
-              <span className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.16em] text-white/40">
+              <span className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.16em] text-white/80">
                 <MapPin className="h-3.5 w-3.5 text-[#F6E7A1]" strokeWidth={1.7} aria-hidden />
                 Место
               </span>
@@ -232,7 +232,7 @@ export function AccountSettings({ onSaved }: { onSaved?: () => Promise<void> | v
                 className={fieldClass}
               />
               {suggestLoading ? (
-                <p className="mt-2 text-xs font-normal text-white/50">Ищем города…</p>
+                <p className="mt-2 text-xs font-normal text-white/80">Ищем города…</p>
               ) : null}
               {suggestOpen && suggestions.length > 0 ? (
                 <ul
@@ -268,7 +268,7 @@ export function AccountSettings({ onSaved }: { onSaved?: () => Promise<void> | v
 
             <div>
               <label className="block">
-                <span className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.16em] text-white/40">
+              <span className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.16em] text-white/80">
                   <Clock className="h-3.5 w-3.5 text-[#F6E7A1]" strokeWidth={1.7} aria-hidden />
                   Время
                 </span>
@@ -287,7 +287,7 @@ export function AccountSettings({ onSaved }: { onSaved?: () => Promise<void> | v
                   className={`${fieldClass} ${draft.unknown_time ? "opacity-35" : ""}`}
                 />
               </label>
-              <label className="mt-4 flex cursor-pointer items-start gap-3 text-sm text-white/65">
+              <label className="mt-4 flex cursor-pointer items-start gap-3 text-sm text-white/80">
                 <input
                   type="checkbox"
                   checked={draft.unknown_time}
@@ -305,7 +305,7 @@ export function AccountSettings({ onSaved }: { onSaved?: () => Promise<void> | v
               </label>
             </div>
 
-            <button type="submit" disabled={saving} className="cabinet-cta sm:w-auto sm:px-8">
+            <button type="submit" disabled={saving} className="cabinet-cta sm:w-auto">
               {saving ? "Сохраняем…" : "Сохранить"}
             </button>
           </form>
@@ -341,7 +341,7 @@ export function AccountSettings({ onSaved }: { onSaved?: () => Promise<void> | v
                 type="button"
                 disabled={deleting}
                 onClick={() => setConfirmDelete(false)}
-                className="inline-flex min-h-11 items-center justify-center rounded-full px-5 text-base text-white/70 transition hover:text-white"
+                className="inline-flex min-h-11 items-center justify-center rounded-full px-5 text-base text-white/80 transition hover:text-white"
               >
                 Отмена
               </button>
@@ -386,7 +386,7 @@ function BirthRow({
     <li className="flex items-start gap-3">
       <Icon className="mt-0.5 h-5 w-5 shrink-0 text-[#F6E7A1]" strokeWidth={1.7} aria-hidden />
       <div className="min-w-0">
-        <p className="text-sm text-white/45">{label}</p>
+        <p className="text-sm text-white/80">{label}</p>
         <p className="text-base text-white">{value}</p>
       </div>
     </li>

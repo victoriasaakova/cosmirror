@@ -29,6 +29,7 @@ type Props = {
   actionNote?: string;
   hideShareActions?: boolean;
   shareMode?: boolean;
+  mobileView?: "overview" | "chart";
 };
 
 export function ReportOpening({
@@ -39,6 +40,7 @@ export function ReportOpening({
   actionNote,
   hideShareActions = false,
   shareMode = false,
+  mobileView = "overview",
 }: Props) {
   const natal = report.document?.factual?.natal;
   const wheel = natal?.wheel;
@@ -103,166 +105,181 @@ export function ReportOpening({
   ].filter(Boolean);
 
   const paid = !hideShareActions && !shareMode;
+  const reportCard =
+    paid && mobileView === "overview" ? (
+      <section className="mt-6 overflow-hidden rounded-2xl border border-white/12 bg-white/[0.04] sm:mt-10">
+        <div className="flex flex-col items-stretch sm:flex-row">
+          <div className="relative aspect-[16/9] w-full shrink-0 sm:aspect-auto sm:w-[11rem] lg:w-[13.5rem]">
+            <Image
+              src="/images/report.webp"
+              alt=""
+              fill
+              className="object-cover object-center"
+              sizes="(max-width: 1024px) 11rem, 13.5rem"
+            />
+          </div>
+          <div className="flex min-w-0 flex-1 flex-col justify-center gap-3 p-4 sm:gap-4 sm:p-5">
+            <h2 className="text-xl font-normal leading-[1.15] tracking-tight text-white sm:text-2xl">
+              Твой персональный{" "}
+              <span className="font-display inline-block pb-0.5 italic leading-[1.15] text-[#F6E7A1]">
+                отчёт
+              </span>
+            </h2>
+            <div className="report-cta-row grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={onDownloadPdf}
+                disabled={downloading}
+                className="cabinet-cta"
+              >
+                {downloading ? "Готовим…" : "Скачать PDF"}
+              </button>
+              <button
+                type="button"
+                onClick={() => void onShare()}
+                disabled={shareBusy}
+                className="cabinet-cta-ghost"
+              >
+                {copied ? "Скопировано" : shareBusy ? "Создаём…" : "Поделиться"}
+              </button>
+            </div>
+            {shareHint ? (
+              <p className="break-all text-sm text-[color:var(--muted)]">{shareHint}</p>
+            ) : null}
+            {actionNote ? (
+              <p className="text-sm text-[color:var(--muted)]">{actionNote}</p>
+            ) : null}
+          </div>
+        </div>
+      </section>
+    ) : null;
 
   return (
     <header className="reveal">
-      <h1 className="text-3xl font-normal leading-[1.15] tracking-tight text-white sm:text-4xl">
-        {shareMode ? (
-          <>
-            Натальная{" "}
-            <span className="font-display inline-block pb-1 italic leading-[1.15] text-[#F6E7A1]">
-              карта
-            </span>
-          </>
-        ) : (
-          <>
-            Добро пожаловать
-            {displayName ? (
+      {mobileView === "overview" ? (
+        <>
+          <h1 className="text-3xl font-normal leading-[1.15] tracking-tight text-white sm:text-4xl">
+            {shareMode ? (
               <>
-                ,{" "}
+                Натальная{" "}
                 <span className="font-display inline-block pb-1 italic leading-[1.15] text-[#F6E7A1]">
-                  {displayName}
+                  карта
                 </span>
               </>
-            ) : null}
-          </>
-        )}
-      </h1>
+            ) : (
+              <>
+                Добро пожаловать
+                {displayName ? (
+                  <>
+                    ,{" "}
+                    <span className="font-display inline-block pb-1 italic leading-[1.15] text-[#F6E7A1]">
+                      {displayName}
+                    </span>
+                  </>
+                ) : null}
+              </>
+            )}
+          </h1>
 
-      {shareMode ? (
-        !hasBirthTime ? (
-          <p className="report-lede mt-5">Асцендент и дома не считаем.</p>
-        ) : null
-      ) : (
-        <>
-      <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2">
-        <p className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-base leading-snug text-white/80">
-          {birthParts.map((part, index) => (
-            <Fragment key={`${index}-${part}`}>
-              {index > 0 ? (
-                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#F6E7A1]" aria-hidden />
-              ) : null}
-              <span>{part}</span>
-            </Fragment>
-          ))}
-        </p>
-        {canEditTime ? (
-          <button
-            type="button"
-            onClick={() => setTimeOpen((open) => !open)}
-            className="inline-flex min-h-11 items-center text-base text-[#F6E7A1] underline-offset-4 transition hover:underline"
-          >
-            {timeOpen ? "Закрыть" : timeSaved ? "Изменить время" : "Указать время"}
-          </button>
-        ) : null}
-      </div>
-      {!hasBirthTime ? (
-        <p className="report-lede mt-2">Асцендент и дома не считаем.</p>
-      ) : null}
-      {canEditTime && timeOpen ? (
-        <form
-          onSubmit={onSaveTime}
-          className="mt-3 flex w-full flex-col gap-3 scroll-mb-32 sm:flex-row sm:items-end"
-        >
-          <label className="w-full min-w-0 sm:min-w-[10rem] sm:flex-1">
-            <span className="sr-only">Время рождения</span>
-            <input
-              type="time"
-              name="birth_time"
-              value={draftTime}
-              onChange={(event) => setDraftTime(event.target.value)}
-              className="min-h-11 w-full border-b border-white/20 bg-transparent text-base text-white outline-none [color-scheme:dark] focus:border-[#F6E7A1]"
-            />
-          </label>
-          <button type="submit" disabled={!draftTime} className="cabinet-cta sm:w-auto sm:px-6">
-            Сохранить
-          </button>
-        </form>
-      ) : null}
-      {canEditTime && timeSaved ? (
-        <p className="report-lede mt-2">
-          Время запомнили здесь. Карту пока не пересчитываем, асцендент и дома не считаем.
-        </p>
-      ) : null}
-        </>
-      )}
-
-      <ul className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-white/10">
-        {core.map((item) => (
-          <li key={item.key} className="min-w-0 sm:px-5 sm:first:pl-0 sm:last:pr-0">
-            <p className="text-sm text-white/45">{item.label}</p>
-            <CoreValue point={item.point} missing={item.key === "ascendant" && !hasBirthTime} />
-          </li>
-        ))}
-      </ul>
-
-      {wheel?.planets?.length ? (
-        <div className="mt-8 sm:mt-10">
-          <div className="-mx-4 overflow-x-clip sm:mx-0">
-            <NatalWheel wheel={wheel} />
-          </div>
-          <ul className="mt-3 flex flex-col items-center gap-1.5 text-[0.75rem] leading-snug text-white/65 sm:mt-4 sm:flex-row sm:justify-center sm:gap-6">
-            <li className="inline-flex items-center gap-2">
-              <AspectSwatch kind="hard" />
-              напряжение: квадрат и оппозиция
-            </li>
-            <li className="inline-flex items-center gap-2">
-              <AspectSwatch kind="soft" />
-              поддержка: тригон и секстиль
-            </li>
-          </ul>
-        </div>
-      ) : null}
-
-      <SignsTable points={natal?.points} hasBirthTime={hasBirthTime} />
-
-      {paid ? (
-        <section className="mt-10 overflow-hidden rounded-2xl border border-white/12 bg-white/[0.04]">
-          <div className="flex flex-col md:flex-row md:items-stretch">
-            <div className="relative aspect-[16/10] w-full shrink-0 md:aspect-auto md:w-[13.5rem] md:min-h-[11.5rem] lg:w-60">
-              <Image
-                src="/images/report.webp"
-                alt=""
-                fill
-                className="object-cover object-center"
-                sizes="(max-width: 768px) 100vw, 15rem"
-              />
-            </div>
-            <div className="flex min-w-0 flex-1 flex-col justify-center gap-5 p-5 sm:p-6">
-              <h2 className="text-2xl font-normal leading-[1.15] tracking-tight text-white sm:text-3xl">
-                Твой персональный{" "}
-                <span className="font-display inline-block pb-1 italic leading-[1.15] text-[#F6E7A1]">
-                  отчёт
-                </span>
-              </h2>
-              <div className="report-cta-row flex flex-col gap-2 md:flex-row">
-                <button
-                  type="button"
-                  onClick={onDownloadPdf}
-                  disabled={downloading}
-                  className="cabinet-cta"
-                >
-                  {downloading ? "Готовим PDF…" : "Скачать PDF"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void onShare()}
-                  disabled={shareBusy}
-                  className="cabinet-cta-ghost"
-                >
-                  {copied ? "Ссылка скопирована" : shareBusy ? "Создаём ссылку…" : "Поделиться ссылкой"}
-                </button>
+          {shareMode ? (
+            !hasBirthTime ? (
+              <p className="report-lede mt-5">Асцендент и дома не считаем.</p>
+            ) : null
+          ) : (
+            <>
+              <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2">
+                <p className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-base leading-snug text-white/80">
+                  {birthParts.map((part, index) => (
+                    <Fragment key={`${index}-${part}`}>
+                      {index > 0 ? (
+                        <span
+                          className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#F6E7A1]"
+                          aria-hidden
+                        />
+                      ) : null}
+                      <span>{part}</span>
+                    </Fragment>
+                  ))}
+                </p>
+                {canEditTime ? (
+                  <button
+                    type="button"
+                    onClick={() => setTimeOpen((open) => !open)}
+                    className="inline-flex min-h-11 items-center text-base text-[#F6E7A1] underline-offset-4 transition hover:underline"
+                  >
+                    {timeOpen ? "Закрыть" : timeSaved ? "Изменить время" : "Указать время"}
+                  </button>
+                ) : null}
               </div>
-              {shareHint ? (
-                <p className="break-all text-base text-[color:var(--muted)]">{shareHint}</p>
+              {!hasBirthTime ? (
+                <p className="report-lede mt-2">Асцендент и дома не считаем.</p>
               ) : null}
-              {actionNote ? (
-                <p className="text-base text-[color:var(--muted)]">{actionNote}</p>
+              {canEditTime && timeOpen ? (
+                <form
+                  onSubmit={onSaveTime}
+                  className="mt-3 flex w-full flex-col gap-3 scroll-mb-32 sm:flex-row sm:items-end"
+                >
+                  <label className="w-full min-w-0 sm:min-w-[10rem] sm:flex-1">
+                    <span className="sr-only">Время рождения</span>
+                    <input
+                      type="time"
+                      name="birth_time"
+                      value={draftTime}
+                      onChange={(event) => setDraftTime(event.target.value)}
+                      className="min-h-11 w-full border-b border-white/20 bg-transparent text-base text-white outline-none [color-scheme:dark] focus:border-[#F6E7A1]"
+                    />
+                  </label>
+                  <button
+                    type="submit"
+                    disabled={!draftTime}
+                    className="cabinet-cta sm:w-auto"
+                  >
+                    Сохранить
+                  </button>
+                </form>
               ) : null}
-            </div>
-          </div>
-        </section>
+              {canEditTime && timeSaved ? (
+                <p className="report-lede mt-2">
+                  Время запомнили здесь. Карту пока не пересчитываем, асцендент и дома не считаем.
+                </p>
+              ) : null}
+            </>
+          )}
+
+          {reportCard}
+        </>
       ) : null}
+
+      <div className={mobileView === "overview" && !shareMode ? "hidden lg:block" : undefined}>
+        <ul className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-white/10">
+          {core.map((item) => (
+            <li key={item.key} className="min-w-0 sm:px-5 sm:first:pl-0 sm:last:pr-0">
+              <p className="text-sm text-white/80">{item.label}</p>
+              <CoreValue point={item.point} missing={item.key === "ascendant" && !hasBirthTime} />
+            </li>
+          ))}
+        </ul>
+
+        {wheel?.planets?.length ? (
+          <div className="mt-8 sm:mt-10">
+            <div className="-mx-4 overflow-x-clip sm:mx-0">
+              <NatalWheel wheel={wheel} />
+            </div>
+            <ul className="mt-3 flex flex-col items-center gap-1.5 text-[0.75rem] leading-snug text-white/80 sm:mt-4 sm:flex-row sm:justify-center sm:gap-6">
+              <li className="inline-flex items-center gap-2">
+                <AspectSwatch kind="hard" />
+                напряжение: квадрат и оппозиция
+              </li>
+              <li className="inline-flex items-center gap-2">
+                <AspectSwatch kind="soft" />
+                поддержка: тригон и секстиль
+              </li>
+            </ul>
+          </div>
+        ) : null}
+
+        <SignsTable points={natal?.points} hasBirthTime={hasBirthTime} />
+      </div>
     </header>
   );
 }
@@ -294,7 +311,7 @@ function AspectSwatch({ kind }: { kind: "hard" | "soft" }) {
 
 function CoreValue({ point, missing }: { point: CorePoint | null; missing: boolean }) {
   if (missing || !point?.sign_ru) {
-    return <p className="mt-1 text-base text-white/55">не считаем</p>;
+    return <p className="mt-1 text-base text-white/80">не считаем</p>;
   }
   const glyph = signGlyph(point.sign);
   const dms = formatDms(point.degree, point.minute);

@@ -303,7 +303,7 @@ export function LandingChartBlock() {
               {hasChart ? (
                 <a
                   href={continueOnboardingHref()}
-                  className="inline-flex items-center justify-center rounded-full bg-[#F6E7A1] px-8 py-2.5 font-grotesk text-lg font-medium text-[#0a1a3a] shadow-[0_10px_28px_rgba(246,231,161,0.28)] transition-all hover:scale-[1.03] hover:bg-[#f0dc82] active:scale-[0.98]"
+                  className="inline-flex items-center justify-center rounded-full bg-[#F6E7A1] px-8 py-2.5 font-grotesk text-lg font-medium text-[#0a1a3a] transition-all hover:scale-[1.03] hover:bg-[#f0dc82] active:scale-[0.98]"
                 >
                   Узнать больше
                 </a>
@@ -311,7 +311,7 @@ export function LandingChartBlock() {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="inline-flex items-center justify-center rounded-full bg-[#F6E7A1] px-8 py-2.5 font-grotesk text-lg font-medium text-[#0a1a3a] shadow-[0_10px_28px_rgba(246,231,161,0.28)] transition-all hover:scale-[1.03] hover:bg-[#f0dc82] active:scale-[0.98] disabled:opacity-60"
+                  className="inline-flex items-center justify-center rounded-full bg-[#F6E7A1] px-8 py-2.5 font-grotesk text-lg font-medium text-[#0a1a3a] transition-all hover:scale-[1.03] hover:bg-[#f0dc82] active:scale-[0.98] disabled:opacity-60"
                 >
                   {submitting ? "Считаем…" : "Показать карту"}
                 </button>

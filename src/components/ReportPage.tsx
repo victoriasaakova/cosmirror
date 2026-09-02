@@ -488,7 +488,7 @@ function ReportInner({ initialSection }: { initialSection?: "account" }) {
       ) : null}
 
       <div
-        className="cabinet-shell relative z-10 mx-auto flex w-full max-w-[720px] flex-1 flex-col px-5 pt-[var(--cabinet-header-offset)] pb-[max(2.5rem,env(safe-area-inset-bottom))] lg:max-w-[68rem] lg:px-8"
+        className="cabinet-shell relative z-10 mx-auto flex w-full max-w-[720px] flex-1 flex-col px-4 pt-[var(--cabinet-header-offset)] pb-[max(2.5rem,env(safe-area-inset-bottom))] lg:max-w-[68rem] lg:px-8"
       >
         {showNeedsAuth ? (
           <StatusScreen titleBefore="открой" titleAccent="кабинет">

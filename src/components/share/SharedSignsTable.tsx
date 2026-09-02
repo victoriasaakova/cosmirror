@@ -53,7 +53,7 @@ export function SharedSignsTable({
 
   const lastCol = hasBirthTime ? 2 : 1;
   const headerClass = (col: number) =>
-    `px-2 py-1.5 text-[0.8125rem] font-normal leading-snug text-white/55 sm:px-2.5 sm:text-sm${gridBorders({ col, lastCol, rowEnd: false })}`;
+    `px-2 py-1.5 text-[0.8125rem] font-normal leading-snug text-white/80 sm:px-2.5 sm:text-sm${gridBorders({ col, lastCol, rowEnd: false })}`;
 
   return (
     <div className="mt-6 rounded-xl border border-white/25">
@@ -121,7 +121,7 @@ export function SharedSignsTable({
                         {point.house}
                       </span>
                     ) : (
-                      <span className="text-xs text-white/40">—</span>
+                      <span className="text-xs text-white/80">—</span>
                     )}
                   </td>
                 ) : null}

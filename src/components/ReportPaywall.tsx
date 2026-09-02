@@ -266,7 +266,7 @@ function PaywallBody({
 }) {
   return (
     <div className="flex min-h-0 w-full flex-col overflow-hidden overscroll-none bg-[var(--background)] max-lg:h-full lg:h-full">
-      <div className="flex shrink-0 justify-end px-5 pt-[max(0.75rem,env(safe-area-inset-top))] lg:px-6 lg:pt-3">
+      <div className="flex shrink-0 justify-end px-4 pt-[max(0.75rem,env(safe-area-inset-top))] lg:px-6 lg:pt-3">
         <button
           type="button"
           onClick={onClose}
@@ -277,7 +277,7 @@ function PaywallBody({
         </button>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-5 lg:px-6">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 lg:px-6">
         <div className="mx-auto min-h-0 w-full max-w-lg flex-1 overflow-y-auto overscroll-contain lg:max-w-none lg:overflow-y-hidden">
           {screen === 1 ? (
             <InsightFunnel
@@ -322,7 +322,7 @@ function PaywallBody({
             type="button"
             onClick={onAdvance}
             disabled={screen === 3 && (submitting || !confirmReady)}
-            className="cabinet-cta min-h-11 w-full disabled:cursor-not-allowed disabled:bg-white/12 disabled:text-white/35 disabled:hover:bg-white/12"
+            className="cabinet-cta w-full disabled:cursor-not-allowed disabled:bg-white/12 disabled:text-white/50 disabled:hover:bg-white/12"
           >
             {cta}
           </button>
@@ -364,12 +364,12 @@ function PaywallContacts({
       <h2 className="text-3xl font-normal leading-tight tracking-tight text-white sm:text-4xl">
         Проверь <span className="font-display italic text-[#F6E7A1]">почту</span>
       </h2>
-      <p className="mt-4 text-base font-normal leading-relaxed text-white/75">
+      <p className="mt-4 text-base font-normal leading-relaxed text-white/80">
         Сюда придёт PDF-разбор. Telegram нужен, чтобы отправить доступ к кабинету.
       </p>
       <div className="mt-7 flex flex-col gap-6">
         <div>
-          <label htmlFor={emailId} className="text-xs uppercase tracking-[0.16em] text-white/40">
+          <label htmlFor={emailId} className="text-xs uppercase tracking-[0.16em] text-white/80">
             Email
           </label>
           <input
@@ -383,13 +383,13 @@ function PaywallContacts({
             value={value.email}
             onChange={(event) => onChange({ ...value, email: event.target.value })}
             aria-invalid={emailInvalid || undefined}
-            className={`mt-3 w-full border-b bg-transparent pb-3 text-xl text-white outline-none placeholder:text-white/30 focus:border-[#F6E7A1] sm:text-2xl [color-scheme:dark] ${
+            className={`mt-3 w-full border-b bg-transparent pb-3 text-xl text-white outline-none placeholder:text-white/50 focus:border-[#F6E7A1] sm:text-2xl [color-scheme:dark] ${
               emailInvalid ? "border-[#F6E7A1]" : "border-white/20"
             }`}
           />
         </div>
         <div>
-          <label htmlFor={telegramId} className="text-xs uppercase tracking-[0.16em] text-white/40">
+          <label htmlFor={telegramId} className="text-xs uppercase tracking-[0.16em] text-white/80">
             Telegram
           </label>
           <input
@@ -402,7 +402,7 @@ function PaywallContacts({
             value={value.telegram}
             onChange={(event) => onChange({ ...value, telegram: event.target.value })}
             aria-invalid={telegramInvalid || undefined}
-            className={`mt-3 w-full border-b bg-transparent pb-3 text-xl text-white outline-none placeholder:text-white/30 focus:border-[#F6E7A1] sm:text-2xl [color-scheme:dark] ${
+            className={`mt-3 w-full border-b bg-transparent pb-3 text-xl text-white outline-none placeholder:text-white/50 focus:border-[#F6E7A1] sm:text-2xl [color-scheme:dark] ${
               telegramInvalid ? "border-[#F6E7A1]" : "border-white/20"
             }`}
           />
@@ -412,7 +412,7 @@ function PaywallContacts({
             {CONTACTS_SUPPORT}
           </p>
         ) : null}
-        <label htmlFor={offerId} className="flex cursor-pointer items-start gap-3 text-sm leading-snug text-white/65">
+        <label htmlFor={offerId} className="flex cursor-pointer items-start gap-3 text-sm leading-snug text-white/80">
           <input
             id={offerId}
             type="checkbox"

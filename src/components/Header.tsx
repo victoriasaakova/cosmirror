@@ -135,7 +135,7 @@ export function Header() {
                   </SecondaryButton>
                   <a
                     href={ctaHref}
-                    className={`${headerBtnBase} ${headerBtnDesktop} bg-[#F6E7A1] font-medium text-[#0a1a3a] shadow-[0_8px_20px_rgba(246,231,161,0.22)] hover:bg-[#f0dc82]`}
+                    className={`${headerBtnBase} ${headerBtnDesktop} bg-[#F6E7A1] font-medium text-[#0a1a3a] hover:bg-[#f0dc82]`}
                   >
                     {ctaLabel}
                   </a>
@@ -191,7 +191,7 @@ export function Header() {
               <a
                 href={ctaHref}
                 onClick={() => setIsOpen(false)}
-                className={`${headerBtnBase} ${headerBtnMobile} bg-[#F6E7A1] font-medium text-[#0a1a3a] shadow-[0_8px_20px_rgba(246,231,161,0.22)] hover:bg-[#f0dc82]`}
+                className={`${headerBtnBase} ${headerBtnMobile} bg-[#F6E7A1] font-medium text-[#0a1a3a] hover:bg-[#f0dc82]`}
               >
                 {ctaLabel}
               </a>

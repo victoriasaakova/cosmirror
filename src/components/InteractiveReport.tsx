@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ChevronRight } from "lucide-react";
 import { ReportOpening } from "@/components/ReportOpening";
 import { SectionFeedbackCard } from "@/components/SectionFeedbackCard";
 import { LockedReportSection } from "@/components/LockedReportSection";
@@ -40,7 +40,8 @@ const FREE_LOCKED_SECTIONS = ["natal", "aspects", "cycles", "request", "practice
 function noopUnlock() {}
 
 const REPORT_NAV = [
-  { id: "home", label: "Главная", subtitle: "твоя натальная карта" },
+  { id: "home", label: "Космопортрет", subtitle: "карта и положения планет" },
+  { id: "chart", label: "Космопортрет", subtitle: "карта и положения планет", mobileOnly: true },
   { id: "natal", label: "Твоя карта", subtitle: "расшифровка значений" },
   { id: "aspects", label: "Аспекты", subtitle: "как связаны темы в карте" },
   { id: "cycles", label: "Циклы", subtitle: "что актуально сейчас" },
@@ -278,6 +279,7 @@ export function InteractiveReport({
       actionNote={actionNote}
       hideShareActions={isShare || isFree || !reportReadyToOpen(live)}
       shareMode={isShare}
+      mobileView="overview"
     />
   );
 
@@ -308,7 +310,7 @@ export function InteractiveReport({
             : "hidden lg:sticky lg:top-28 lg:flex lg:max-h-[calc(100dvh-7.5rem)] lg:flex-col lg:gap-1.5 lg:self-start"
         }
       >
-        {tabs.map((item) => {
+        {tabs.filter((item) => !("mobileOnly" in item && item.mobileOnly)).map((item) => {
           const active = tab === item.id;
           return (
             <button
@@ -316,7 +318,7 @@ export function InteractiveReport({
               type="button"
               aria-current={active ? "page" : undefined}
               onClick={() => openSection(item.id)}
-              className={`rounded-2xl border px-4 py-2.5 text-left transition duration-200 ease-out active:scale-[0.99] ${
+              className={`flex flex-col gap-2 rounded-2xl border px-4 py-2.5 text-left transition duration-200 ease-out active:scale-[0.99] ${
                 active
                   ? "border-[#F6E7A1]/45 bg-white/[0.06]"
                   : "border-white/12 bg-white/[0.03] hover:border-white/25 hover:bg-white/[0.05]"
@@ -329,7 +331,7 @@ export function InteractiveReport({
               >
                 {item.label}
               </span>
-              <span className="mt-0.5 block text-sm font-normal leading-snug text-[color:var(--muted)]">
+              <span className="block text-sm font-normal leading-snug text-[color:var(--muted)]">
                 {item.subtitle}
               </span>
             </button>
@@ -370,6 +372,18 @@ export function InteractiveReport({
                 {tab === "natal" ? (
                   <NatalTab document={document} focusKey={focusKey} />
                 ) : null}
+                {!isShare && tab === "chart" ? (
+                  <ReportOpening
+                    report={live}
+                    displayName={displayName}
+                    orderId={orderId}
+                    downloading={downloading}
+                    onDownloadPdf={onDownloadPdf}
+                    actionNote={actionNote}
+                    hideShareActions
+                    mobileView="chart"
+                  />
+                ) : null}
                 {!isShare && tab === "aspects" ? (
                   <AspectsTab document={document} focusKey={focusKey} initialFilter={categoryFilter} />
                 ) : null}
@@ -408,28 +422,32 @@ function MobileSectionCatalog({
   items,
   onOpen,
 }: {
-  items: ReadonlyArray<{ id: string; label: string; subtitle: string }>;
+  items: ReadonlyArray<{ id: string; label: string; subtitle: string; mobileOnly?: boolean }>;
   onOpen: (id: string) => void;
 }) {
   const rows = items.filter((item) => item.id !== "home");
   return (
-    <nav aria-label="Разделы отчёта" className="mt-12 space-y-3 lg:hidden">
+    <nav aria-label="Разделы отчёта" className="mt-8 space-y-3 lg:hidden">
       {rows.map((row) => (
         <button
           key={row.id}
           type="button"
           onClick={() => onOpen(row.id)}
-          className="flex min-h-11 w-full items-center justify-between gap-4 rounded-2xl border border-white/12 bg-white/[0.04] px-5 py-4 text-left transition active:scale-[0.99]"
+          className="flex min-h-11 w-full items-center justify-between gap-4 rounded-2xl border border-white/12 bg-white/[0.04] px-4 py-4 text-left transition active:scale-[0.99]"
         >
-          <span className="min-w-0">
-            <span className="block text-[1.45rem] leading-[1.15] tracking-tight text-white">{row.label}</span>
-            <span className="mt-1 block text-sm font-normal leading-snug text-[color:var(--muted)]">
+          <span className="min-w-0 flex flex-col gap-2">
+            <span className="block text-xl leading-[1.15] tracking-tight text-white sm:text-[1.45rem]">
+              {row.label}
+            </span>
+            <span className="block text-sm font-normal leading-snug text-[color:var(--muted)]">
               {row.subtitle}
             </span>
           </span>
-          <span className="shrink-0 font-display text-2xl italic leading-none text-[#F6E7A1]" aria-hidden>
-            ›
-          </span>
+          <ChevronRight
+            className="h-5 w-5 shrink-0 text-[#F6E7A1]"
+            strokeWidth={1.75}
+            aria-hidden
+          />
         </button>
       ))}
     </nav>
@@ -588,7 +606,7 @@ function NatalTab({ document, focusKey }: { document: ReportDocument; focusKey?:
                 <div key={house.house} className="rounded-2xl border border-white/10 p-4">
                   <p className="flex flex-wrap items-baseline gap-x-2 text-base text-[#F6E7A1]">
                     <span>{house.house}-й дом</span>
-                    <span className="text-white/35">·</span>
+                    <span className="text-white/80">·</span>
                     {glyph ? (
                       <span className="natal-astro-glyph text-base leading-none" aria-hidden>
                         {glyph}
@@ -818,7 +836,7 @@ function PlanetRow({
                 return (
                   <span
                     key={`${mark.aspect}-${mark.planetKey}-${mark.otherKey || ""}-${index}`}
-                    className="inline-flex items-baseline gap-1.5 text-white/45"
+                    className="inline-flex items-baseline gap-1.5 text-white/80"
                   >
                     <span className="inline-flex items-baseline gap-1 natal-astro-glyph text-base leading-none text-[#F6E7A1]">
                       {mark.pair && left ? <span>{left}</span> : null}
@@ -1039,7 +1057,7 @@ function AspectRow({
           <p className="text-sm font-medium tracking-tight text-[#F6E7A1]">
             {categoryLabel(card.category)}
             {typeof card.orb_deg === "number" ? (
-              <span className="ml-2 tracking-normal text-[color:var(--muted)]">орб {card.orb_deg}°</span>
+              <span className="ml-2 tracking-normal text-white/50">орб {card.orb_deg}°</span>
             ) : null}
           </p>
           <h3 className="mt-2 break-words text-base font-normal leading-snug text-white">
@@ -1085,7 +1103,7 @@ function AspectRow({
             <p className="mt-4 report-lede">{card.astro_explanation}</p>
           ) : null}
           <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2" aria-label="Почему мы это видим">
-            <span className="inline-flex items-baseline gap-1.5 text-white/45">
+            <span className="inline-flex items-baseline gap-1.5 text-white/80">
               <span className="inline-flex items-baseline gap-1 natal-astro-glyph text-base leading-none text-[#F6E7A1]">
                 {aGlyph ? <span>{aGlyph}</span> : null}
                 {aspect ? <span>{aspect}</span> : null}
@@ -1284,9 +1302,9 @@ function CycleRow({
           <p className="text-sm font-medium tracking-tight text-[#F6E7A1]">
             {cycleCategoryLabel(card.category)}
             {typeof orb === "number" ? (
-              <span className="ml-2 tracking-normal text-[color:var(--muted)]">орб {orb}°</span>
+              <span className="ml-2 tracking-normal text-white/50">орб {orb}°</span>
             ) : null}
-            {phase ? <span className="ml-2 tracking-normal text-[color:var(--muted)]">{phase}</span> : null}
+            {phase ? <span className="ml-2 tracking-normal text-white/50">{phase}</span> : null}
           </p>
           <h3 className="mt-2 break-words text-base font-normal leading-snug text-white">
             <span className="inline-flex items-baseline gap-1 natal-astro-glyph text-[#F6E7A1]">
@@ -1321,7 +1339,7 @@ function CycleRow({
               </div>
             ) : null}
             <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2" aria-label="Почему мы это видим">
-              <span className="inline-flex items-baseline gap-1.5 text-white/45">
+              <span className="inline-flex items-baseline gap-1.5 text-white/80">
                 <span className="inline-flex items-baseline gap-1 natal-astro-glyph text-base leading-none text-[#F6E7A1]">
                   {tGlyph ? <span>{tGlyph}</span> : null}
                   {aspect ? <span>{aspect}</span> : null}
@@ -1365,7 +1383,7 @@ function CycleRow({
             ) : null}
             {whyText ? <p className="mt-4 report-lede">{whyText}</p> : null}
             <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2" aria-label="Почему мы это видим">
-              <span className="inline-flex items-baseline gap-1.5 text-white/45">
+              <span className="inline-flex items-baseline gap-1.5 text-white/80">
                 <span className="inline-flex items-baseline gap-1 natal-astro-glyph text-base leading-none text-[#F6E7A1]">
                   {tGlyph ? <span>{tGlyph}</span> : null}
                   {aspect ? <span>{aspect}</span> : null}
@@ -1722,9 +1740,9 @@ function TransitCard({
       <div className="flex flex-wrap items-center gap-2">
         <p className="text-sm font-medium tracking-tight text-[#F6E7A1]">{polarity}</p>
         {typeof hit.orb === "number" ? (
-          <p className="text-sm text-[color:var(--muted)]">орб {hit.orb}°</p>
+          <p className="text-sm text-white/50">орб {hit.orb}°</p>
         ) : null}
-        {hit.motion ? <p className="text-sm text-[color:var(--muted)]">{hit.motion}</p> : null}
+        {hit.motion ? <p className="text-sm text-white/80">{hit.motion}</p> : null}
       </div>
       <h3 className="mt-2 text-lg font-medium leading-snug text-white">
         {hit.transit_name} {hit.aspect_ru} {hit.natal_name}

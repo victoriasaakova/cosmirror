@@ -85,7 +85,7 @@ export default async function BlogPostPage({ params }: PageProps) {
           </p>
           <a
             href={startHref}
-            className="mt-5 inline-flex rounded-full bg-[#F6E7A1] px-5 py-2.5 font-grotesk text-sm font-medium text-[#0a1a3a] shadow-[0_8px_20px_rgba(246,231,161,0.22)] transition hover:scale-[1.02] hover:bg-[#f0dc82] active:scale-[0.98]"
+            className="mt-5 inline-flex rounded-full bg-[#F6E7A1] px-5 py-2.5 font-grotesk text-sm font-medium text-[#0a1a3a] transition hover:scale-[1.02] hover:bg-[#f0dc82] active:scale-[0.98]"
           >
             Начать путешествие
           </a>
