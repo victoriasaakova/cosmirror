@@ -52,24 +52,31 @@ function crawlerHtml() {
 
 const STATIC_FILE = /\.[a-zA-Z0-9]+$/;
 
+function behindProxyUrl(request: NextRequest, pathname: string) {
+  // Next's initUrl behind nginx is http://localhost:PORT. request.nextUrl is
+  // https://localhost because of X-Forwarded-Proto; an absolute rewrite/redirect
+  // to that origin is treated as an external proxy and returns 500.
+  const dest = new URL(request.url);
+  dest.protocol = "http:";
+  dest.pathname = pathname;
+  dest.search = request.nextUrl.search;
+  dest.hash = "";
+  return dest;
+}
+
 export function middleware(request: NextRequest) {
   const host = (request.headers.get("host") || "").split(":")[0].toLowerCase();
   if (host === "www.cosmirror.ru") {
-    const dest = new URL(request.url);
-    dest.hostname = "cosmirror.ru";
-    dest.protocol = "https:";
-    dest.port = "";
+    const dest = new URL(`https://cosmirror.ru${request.nextUrl.pathname}${request.nextUrl.search}`);
     return NextResponse.redirect(dest, 301);
   }
 
   const { pathname } = request.nextUrl;
 
-  // Yandex returns to the Callback URL without a trailing slash. A 308
-  // here shows as an error in the Yandex ID app / mobile WebView.
+  // Do not 308 this path: Yandex OAuth lands here without a trailing slash.
+  // next.config beforeFiles rewrites it internally to /onboarding/contacts/.
   if (pathname === "/onboarding/contacts") {
-    const url = request.nextUrl.clone();
-    url.pathname = "/onboarding/contacts/";
-    return NextResponse.rewrite(url);
+    return NextResponse.next();
   }
 
   const ua = request.headers.get("user-agent") || "";
@@ -88,9 +95,7 @@ export function middleware(request: NextRequest) {
   }
 
   if (pathname !== "/" && !pathname.endsWith("/") && !STATIC_FILE.test(pathname)) {
-    const url = request.nextUrl.clone();
-    url.pathname = `${pathname}/`;
-    return NextResponse.redirect(url, 308);
+    return NextResponse.redirect(behindProxyUrl(request, `${pathname}/`), 308);
   }
 
   return NextResponse.next();

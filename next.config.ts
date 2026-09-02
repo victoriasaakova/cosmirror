@@ -7,6 +7,16 @@ const nextConfig: NextConfig = {
   // (`/onboarding/contacts?code=`) is rewritten, not 308'd. Yandex's
   // mobile WebView treats that 308 as a login error.
   skipTrailingSlashRedirect: true,
+  async rewrites() {
+    return {
+      beforeFiles: [
+        {
+          source: "/onboarding/contacts",
+          destination: "/onboarding/contacts/",
+        },
+      ],
+    };
+  },
   allowedDevOrigins: ["127.0.0.1", "localhost"],
   async redirects() {
     return [
