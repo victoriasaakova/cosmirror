@@ -37,9 +37,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const me = await fetchMe();
       setUser(me);
-    } catch {
-      clearAuthToken();
-      setUser(null);
+    } catch (err) {
+      const timedOut =
+        err instanceof Error &&
+        (err.name === "AbortError" || /abort|timeout|время ожидания/i.test(err.message));
+      if (!timedOut) {
+        clearAuthToken();
+        setUser(null);
+      }
     } finally {
       setReady(true);
     }

@@ -6,6 +6,19 @@ import {
   isCabinetOnboardingPurchase,
   type OnboardingPurchaseFlow,
 } from "@/lib/flags/onboarding-purchase-flow";
+import { SITE_URL } from "@/lib/site-meta";
+
+/** Без завершающего слэша — так зарегистрировано в кабинете Яндекс OAuth. */
+export const YANDEX_CONTACTS_PATH = "/onboarding/contacts";
+
+export function yandexRedirectUri(): string {
+  if (typeof window === "undefined") return `${SITE_URL}${YANDEX_CONTACTS_PATH}`;
+  const host = window.location.hostname;
+  if (host === "localhost" || host === "127.0.0.1") {
+    return `${window.location.origin}${YANDEX_CONTACTS_PATH}`;
+  }
+  return `${SITE_URL}${YANDEX_CONTACTS_PATH}`;
+}
 
 export async function beginYandexLogin(
   nextPath = "/account/",
@@ -13,8 +26,7 @@ export async function beginYandexLogin(
 ) {
   rememberAuthNext(nextPath);
   const token = await ensureSessionToken();
-  const redirectUri = `${window.location.origin}/onboarding/contacts`;
-  const { url } = await startYandexAuth(token, redirectUri, after);
+  const { url } = await startYandexAuth(token, yandexRedirectUri(), after);
   window.location.assign(url);
 }
 

@@ -3,6 +3,10 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   // Match API OnboardingStep.url_path (`/onboarding/<slug>/`).
   trailingSlash: true,
+  // Middleware handles trailing slashes so the Yandex OAuth return
+  // (`/onboarding/contacts?code=`) is rewritten, not 308'd. Yandex's
+  // mobile WebView treats that 308 as a login error.
+  skipTrailingSlashRedirect: true,
   allowedDevOrigins: ["127.0.0.1", "localhost"],
   async redirects() {
     return [

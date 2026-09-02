@@ -50,26 +50,50 @@ function crawlerHtml() {
 </html>`;
 }
 
+const STATIC_FILE = /\.[a-zA-Z0-9]+$/;
+
 export function middleware(request: NextRequest) {
-  const ua = request.headers.get("user-agent") || "";
-  if (!CRAWLER_UA.test(ua)) {
-    return NextResponse.next();
+  const host = (request.headers.get("host") || "").split(":")[0].toLowerCase();
+  if (host === "www.cosmirror.ru") {
+    const dest = new URL(request.url);
+    dest.hostname = "cosmirror.ru";
+    dest.protocol = "https:";
+    dest.port = "";
+    return NextResponse.redirect(dest, 301);
   }
 
   const { pathname } = request.nextUrl;
-  const isHome = pathname === "/" || pathname === "";
-  const isOg = pathname === "/og.html" || pathname === "/og.html/";
-  if (!isHome && !isOg) {
-    return NextResponse.next();
+
+  // Yandex returns to the Callback URL without a trailing slash. A 308
+  // here shows as an error in the Yandex ID app / mobile WebView.
+  if (pathname === "/onboarding/contacts") {
+    const url = request.nextUrl.clone();
+    url.pathname = "/onboarding/contacts/";
+    return NextResponse.rewrite(url);
   }
 
-  return new NextResponse(crawlerHtml(), {
-    status: 200,
-    headers: {
-      "content-type": "text/html; charset=utf-8",
-      "cache-control": "public, max-age=0, must-revalidate",
-    },
-  });
+  const ua = request.headers.get("user-agent") || "";
+  if (CRAWLER_UA.test(ua)) {
+    const isHome = pathname === "/" || pathname === "";
+    const isOg = pathname === "/og.html" || pathname === "/og.html/";
+    if (isHome || isOg) {
+      return new NextResponse(crawlerHtml(), {
+        status: 200,
+        headers: {
+          "content-type": "text/html; charset=utf-8",
+          "cache-control": "public, max-age=0, must-revalidate",
+        },
+      });
+    }
+  }
+
+  if (pathname !== "/" && !pathname.endsWith("/") && !STATIC_FILE.test(pathname)) {
+    const url = request.nextUrl.clone();
+    url.pathname = `${pathname}/`;
+    return NextResponse.redirect(url, 308);
+  }
+
+  return NextResponse.next();
 }
 
 export const config = {

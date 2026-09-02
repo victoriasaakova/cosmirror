@@ -10,12 +10,39 @@ async function parseJson(res: Response): Promise<unknown> {
   return res.json().catch(() => ({}));
 }
 
+function isAbortError(err: unknown): boolean {
+  return (
+    (err instanceof DOMException && err.name === "AbortError") ||
+    (err instanceof Error && err.name === "AbortError")
+  );
+}
+
 function networkErrorMessage(err: unknown, fallback: string): string {
+  if (isAbortError(err)) return "Превышено время ожидания.";
   if (err instanceof TypeError) {
     return "Не получилось сохранить. Попробуй ещё раз.";
   }
   if (err instanceof Error && err.message) return err.message;
   return fallback;
+}
+
+function abortAfter(ms: number, parent?: AbortSignal): AbortSignal {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  const onAbort = () => {
+    clearTimeout(timer);
+    controller.abort();
+  };
+  parent?.addEventListener("abort", onAbort, { once: true });
+  controller.signal.addEventListener(
+    "abort",
+    () => {
+      clearTimeout(timer);
+      parent?.removeEventListener("abort", onAbort);
+    },
+    { once: true },
+  );
+  return controller.signal;
 }
 
 async function fetchWithRetry(input: string, init?: RequestInit, retries = 3): Promise<Response> {
@@ -1031,6 +1058,7 @@ export async function startYandexAuth(
   try {
     res = await fetchWithRetry(`${API_URL}/api/auth/yandex/start/?${query.toString()}`, {
       cache: "no-store",
+      signal: abortAfter(20_000),
     });
   } catch (err) {
     throw new Error(networkErrorMessage(err, "Не удалось начать вход через Яндекс ID"));
@@ -1050,6 +1078,7 @@ export async function completeYandexAuth(
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ code, state }),
+      signal: abortAfter(20_000),
     });
   } catch (err) {
     throw new Error(networkErrorMessage(err, "Не удалось войти через Яндекс ID"));
@@ -1062,7 +1091,10 @@ export async function completeYandexAuth(
 export async function fetchMe(): Promise<AuthUser> {
   let res: Response;
   try {
-    res = await fetchWithRetry(`${API_URL}/api/me/`, { cache: "no-store" });
+    res = await fetchWithRetry(`${API_URL}/api/me/`, {
+      cache: "no-store",
+      signal: abortAfter(20_000),
+    });
   } catch (err) {
     throw new Error(networkErrorMessage(err, "Не удалось загрузить профиль"));
   }

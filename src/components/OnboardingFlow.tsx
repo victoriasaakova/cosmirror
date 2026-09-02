@@ -23,7 +23,7 @@ import {
 } from "@/lib/api";
 import { writeAuthToken, readAuthToken, clearAuthNext, rememberAuthNext } from "@/lib/auth";
 import { captureEvent } from "@/lib/posthog-client";
-import { destinationAfterYandexLogin } from "@/lib/yandex-login";
+import { destinationAfterYandexLogin, yandexRedirectUri } from "@/lib/yandex-login";
 import { useAuth } from "@/components/AuthProvider";
 import { useOnboardingPurchaseFlow } from "@/hooks/useOnboardingPurchaseFlow";
 import {
@@ -782,6 +782,11 @@ export function OnboardingFlow({
     showPaidMapCta,
   ]);
 
+  const purchaseFlowRef = useRef(purchaseFlow);
+  purchaseFlowRef.current = purchaseFlow;
+  const stepsRef = useRef(steps);
+  stepsRef.current = steps;
+
   useEffect(() => {
     const fromHash = readYandexHash();
     if (!fromHash.auth || oauthHandledRef.current) return;
@@ -790,30 +795,35 @@ export function OnboardingFlow({
     if (fromHash.sessionToken) applyToken(fromHash.sessionToken);
     window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
     setOauthBusy(true);
-    let cancelled = false;
     void (async () => {
       try {
         const me = await fetchMe();
-        if (cancelled) return;
         const email = me.email || "";
         setAuthedEmail(email);
         void refreshAuth();
-        if (fromHash.sessionToken && steps) {
-          const session = await fetchOnboardingSession(fromHash.sessionToken);
-          if (cancelled) return;
-          const next = { ...flowCache.payloadByStep };
-          for (const answer of session.answers) {
-            const payload =
-              answer.payload && typeof answer.payload === "object"
-                ? (answer.payload as Record<string, unknown>)
-                : {};
-            next[answer.step_slug] = { ...(next[answer.step_slug] ?? {}), ...payload };
+        const loadedSteps = stepsRef.current;
+        if (fromHash.sessionToken && loadedSteps) {
+          try {
+            const session = await fetchOnboardingSession(fromHash.sessionToken);
+            const next = { ...flowCache.payloadByStep };
+            for (const answer of session.answers) {
+              const payload =
+                answer.payload && typeof answer.payload === "object"
+                  ? (answer.payload as Record<string, unknown>)
+                  : {};
+              next[answer.step_slug] = { ...(next[answer.step_slug] ?? {}), ...payload };
+            }
+            const withEmail = withAuthedEmail(loadedSteps, next, email);
+            applyPayload(withEmail);
+            patchDraft({ byStep: withEmail });
+          } catch {
+            /* login already succeeded */
           }
-          const withEmail = withAuthedEmail(steps, next, email);
-          applyPayload(withEmail);
-          patchDraft({ byStep: withEmail });
         }
-        const dest = destinationAfterYandexLogin(Boolean(me.has_paid_report), purchaseFlow);
+        const dest = destinationAfterYandexLogin(
+          Boolean(me.has_paid_report),
+          purchaseFlowRef.current,
+        );
         if (!dest) {
           setShowPaidMapCta(true);
           setOauthBusy(false);
@@ -823,48 +833,49 @@ export function OnboardingFlow({
         router.replace(dest);
       } catch {
         oauthHandledRef.current = false;
-        if (!cancelled) {
-          setError("Не удалось войти через Яндекс ID");
-          setOauthBusy(false);
-        }
+        setError("Не удалось войти через Яндекс ID");
+        setOauthBusy(false);
       }
     })();
-    return () => {
-      cancelled = true;
-    };
-  }, [applyPayload, applyToken, purchaseFlow, refreshAuth, router, steps]);
+  }, [applyPayload, applyToken, refreshAuth, router]);
 
   useEffect(() => {
-    if (!oauthCode || !oauthState || !sessionToken || !steps) return;
-    const waitlist = waitlistStepOf(steps);
-    if (!waitlist || slug !== waitlist.slug) return;
+    if (!oauthCode || !oauthState) return;
     if (oauthHandledRef.current) return;
     oauthHandledRef.current = true;
-    let cancelled = false;
     setOauthBusy(true);
     setError("");
-    (async () => {
+    void (async () => {
       try {
         const result = await completeYandexAuth(oauthCode, oauthState);
-        if (cancelled) return;
         writeAuthToken(result.token);
         const email = result.user.email || "";
         setAuthedEmail(email);
         applyToken(result.session_token);
-        const session = await fetchOnboardingSession(result.session_token);
-        const next = { ...flowCache.payloadByStep };
-        for (const answer of session.answers) {
-          const payload =
-            answer.payload && typeof answer.payload === "object"
-              ? (answer.payload as Record<string, unknown>)
-              : {};
-          next[answer.step_slug] = { ...(next[answer.step_slug] ?? {}), ...payload };
-        }
-        const withEmail = withAuthedEmail(steps, next, email);
-        applyPayload(withEmail);
-        patchDraft({ byStep: withEmail });
         void refreshAuth();
-        const dest = destinationAfterYandexLogin(Boolean(result.user.has_paid_report), purchaseFlow);
+        const loadedSteps = stepsRef.current;
+        if (loadedSteps) {
+          try {
+            const session = await fetchOnboardingSession(result.session_token);
+            const next = { ...flowCache.payloadByStep };
+            for (const answer of session.answers) {
+              const payload =
+                answer.payload && typeof answer.payload === "object"
+                  ? (answer.payload as Record<string, unknown>)
+                  : {};
+              next[answer.step_slug] = { ...(next[answer.step_slug] ?? {}), ...payload };
+            }
+            const withEmail = withAuthedEmail(loadedSteps, next, email);
+            applyPayload(withEmail);
+            patchDraft({ byStep: withEmail });
+          } catch {
+            /* login already succeeded */
+          }
+        }
+        const dest = destinationAfterYandexLogin(
+          Boolean(result.user.has_paid_report),
+          purchaseFlowRef.current,
+        );
         if (!dest) {
           setShowPaidMapCta(true);
           setOauthBusy(false);
@@ -874,27 +885,21 @@ export function OnboardingFlow({
         router.replace(dest);
       } catch (err) {
         oauthHandledRef.current = false;
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Не удалось войти через Яндекс ID");
-          setOauthBusy(false);
-        }
+        setError(err instanceof Error ? err.message : "Не удалось войти через Яндекс ID");
+        setOauthBusy(false);
       }
     })();
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    applyPayload,
-    applyToken,
-    oauthCode,
-    oauthState,
-    purchaseFlow,
-    refreshAuth,
-    router,
-    sessionToken,
-    slug,
-    steps,
-  ]);
+  }, [applyPayload, applyToken, oauthCode, oauthState, refreshAuth, router]);
+
+  useEffect(() => {
+    if (!oauthBusy) return;
+    const timer = window.setTimeout(() => {
+      oauthHandledRef.current = false;
+      setError("Не удалось войти через Яндекс ID. Попробуй ещё раз.");
+      setOauthBusy(false);
+    }, 25_000);
+    return () => window.clearTimeout(timer);
+  }, [oauthBusy]);
 
   useEffect(() => {
     const canonical = canonicalOnboardingSlug(slug);
@@ -1060,10 +1065,9 @@ export function OnboardingFlow({
         },
         false,
       );
-      const redirectUri = `${window.location.origin}${window.location.pathname.replace(/\/+$/, "")}`;
       const { url } = await startYandexAuth(
         token,
-        redirectUri,
+        yandexRedirectUri(),
         isCabinetPurchase ? "account" : undefined,
       );
       window.location.assign(url);
