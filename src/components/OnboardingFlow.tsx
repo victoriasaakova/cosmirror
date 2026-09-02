@@ -219,7 +219,7 @@ const CONTACTS_SUPPORT =
   "Введи реальные данные — нужно верифицировать Telegram и email";
 
 function choiceClass(active: boolean) {
-  return `w-full min-h-11 rounded-lg border px-4 py-3 text-left text-sm font-normal leading-snug transition-colors lg:min-h-12 lg:rounded-xl lg:px-5 lg:py-3.5 lg:text-lg ${
+  return `w-full min-h-12 rounded-xl border px-4 py-3.5 text-left text-base font-normal leading-snug transition-colors lg:min-h-[3.25rem] lg:rounded-xl lg:px-5 lg:py-3.5 lg:text-lg ${
     active
       ? "border-[#F6E7A1] bg-white/[0.03] text-[#F6E7A1]"
       : "border-white/15 bg-white/[0.03] text-white/75 hover:border-[#F6E7A1] hover:text-[#F6E7A1]"
@@ -227,7 +227,7 @@ function choiceClass(active: boolean) {
 }
 
 function quizTitleClass() {
-  return "text-[1.35rem] font-normal leading-snug tracking-tight text-white lg:text-[2.35rem] lg:leading-[1.15]";
+  return "text-[1.875rem] font-normal leading-[1.15] tracking-tight text-white lg:text-[2.35rem]";
 }
 
 function onboardingShellClass() {
@@ -1703,7 +1703,7 @@ function ContentScreenView({
                   : event.target.value,
             })
           }
-          className="mt-6 w-full border-b border-white/20 bg-transparent pb-2.5 text-xl text-white outline-none placeholder:text-white/30 focus:border-[#F6E7A1] md:mt-8 md:text-3xl"
+          className="mt-6 w-full border-b border-white/20 bg-transparent pb-2.5 text-2xl text-white outline-none placeholder:text-white/30 focus:border-[#F6E7A1] md:mt-8 md:text-3xl"
         />
       </div>
     );
@@ -1773,7 +1773,7 @@ function ContentScreenView({
     <div className="flex flex-col">
       <h1 className={quizTitleClass()}>{renderTitle(screen.title)}</h1>
       {screen.hint ? (
-        <p className="mt-2.5 text-xs font-normal text-white/70 md:mt-3 md:text-base">{screen.hint}</p>
+        <p className="mt-2.5 text-sm font-normal text-white/70 md:mt-3 md:text-base">{screen.hint}</p>
       ) : null}
       <div className="mt-6 flex flex-col gap-3.5 md:mt-8 md:gap-5">
         {screen.options.map((option) => {

@@ -53,7 +53,7 @@ export function SharedSignsTable({
 
   const lastCol = hasBirthTime ? 2 : 1;
   const headerClass = (col: number) =>
-    `px-2 py-1.5 text-[0.8125rem] font-normal leading-snug text-white/80 sm:px-2.5 sm:text-sm${gridBorders({ col, lastCol, rowEnd: false })}`;
+    `px-2 py-1.5 text-sm font-normal leading-snug text-white/80 sm:px-2.5${gridBorders({ col, lastCol, rowEnd: false })}`;
 
   return (
     <div className="mt-6 rounded-xl border border-white/25">
@@ -85,8 +85,8 @@ export function SharedSignsTable({
                     rowSpan={group.rows.length}
                     className={`px-2 py-1 align-middle font-normal sm:px-2.5${gridBorders({ col: 0, lastCol, rowEnd: lastGroup })}`}
                   >
-                    <span className="flex items-center gap-1.5 text-[0.8125rem] leading-snug text-white sm:text-sm">
-                      <span className="natal-astro-glyph text-[0.95rem] text-[#F6E7A1]" aria-hidden>
+                    <span className="flex items-center gap-1.5 text-sm leading-snug text-white">
+                      <span className="natal-astro-glyph text-base text-[#F6E7A1]" aria-hidden>
                         {signGlyph(group.sign)}
                       </span>
                       {group.signRu}
@@ -100,8 +100,8 @@ export function SharedSignsTable({
                     rowEnd: lastGroup && index === group.rows.length - 1,
                   })}`}
                 >
-                  <span className="flex items-center gap-1.5 text-[0.8125rem] leading-snug text-white sm:text-sm">
-                    <span className="natal-astro-glyph text-[0.95rem] text-[#F6E7A1]" aria-hidden>
+                  <span className="flex items-center gap-1.5 text-sm leading-snug text-white">
+                    <span className="natal-astro-glyph text-base text-[#F6E7A1]" aria-hidden>
                       {planetGlyph(point.key, point.glyph)}
                     </span>
                     {planetName(point)}
@@ -117,7 +117,7 @@ export function SharedSignsTable({
                     })}`}
                   >
                     {point.house ? (
-                      <span className="font-display text-[0.8125rem] italic font-normal tabular-nums leading-none text-[#F6E7A1] sm:text-sm">
+                      <span className="font-display text-sm italic font-normal tabular-nums leading-none text-[#F6E7A1]">
                         {point.house}
                       </span>
                     ) : (

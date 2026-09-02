@@ -265,7 +265,7 @@ export function ReportOpening({
             <div className="-mx-4 overflow-x-clip sm:mx-0">
               <NatalWheel wheel={wheel} />
             </div>
-            <ul className="mt-3 flex flex-col items-center gap-1.5 text-[0.75rem] leading-snug text-white/80 sm:mt-4 sm:flex-row sm:justify-center sm:gap-6">
+            <ul className="mt-3 flex flex-col items-center gap-1.5 text-sm leading-snug text-white/80 sm:mt-4 sm:flex-row sm:justify-center sm:gap-6">
               <li className="inline-flex items-center gap-2">
                 <AspectSwatch kind="hard" />
                 напряжение: квадрат и оппозиция

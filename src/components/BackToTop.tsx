@@ -30,7 +30,7 @@ export function BackToTop() {
       onClick={scrollToTop}
       className={`back-to-top${visible ? " back-to-top--visible" : ""}`}
     >
-      <ChevronUp className="h-4 w-4" strokeWidth={2.25} aria-hidden />
+      <ChevronUp className="h-5 w-5" strokeWidth={2.25} aria-hidden />
     </button>
   );
 }

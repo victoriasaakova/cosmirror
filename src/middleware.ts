@@ -15,9 +15,10 @@ function attr(value: string) {
   return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
 }
 
-function crawlerHtml() {
+function crawlerHtml(pageUrl: string) {
   const title = attr(SITE_TITLE);
   const description = attr(SITE_DESCRIPTION);
+  const url = attr(pageUrl);
   return `<!DOCTYPE html>
 <html lang="ru" prefix="og: http://ogp.me/ns#">
 <head>
@@ -27,7 +28,7 @@ function crawlerHtml() {
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="${attr(SITE_NAME)}">
 <meta property="og:locale" content="ru_RU">
-<meta property="og:url" content="${SITE_URL}/">
+<meta property="og:url" content="${url}">
 <meta property="og:title" content="${title}">
 <meta property="og:description" content="${description}">
 <meta property="og:image" content="${SITE_OG_IMAGE}">
@@ -80,18 +81,14 @@ export function middleware(request: NextRequest) {
   }
 
   const ua = request.headers.get("user-agent") || "";
-  if (CRAWLER_UA.test(ua)) {
-    const isHome = pathname === "/" || pathname === "";
-    const isOg = pathname === "/og.html" || pathname === "/og.html/";
-    if (isHome || isOg) {
-      return new NextResponse(crawlerHtml(), {
-        status: 200,
-        headers: {
-          "content-type": "text/html; charset=utf-8",
-          "cache-control": "public, max-age=0, must-revalidate",
-        },
-      });
-    }
+  if (CRAWLER_UA.test(ua) && (pathname === "/" || pathname === "")) {
+    return new NextResponse(crawlerHtml(`${SITE_URL}/`), {
+      status: 200,
+      headers: {
+        "content-type": "text/html; charset=utf-8",
+        "cache-control": "public, max-age=0, must-revalidate",
+      },
+    });
   }
 
   if (pathname !== "/" && !pathname.endsWith("/") && !STATIC_FILE.test(pathname)) {

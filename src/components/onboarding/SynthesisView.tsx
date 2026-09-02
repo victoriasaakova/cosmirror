@@ -1,7 +1,7 @@
 import { buildSynthesis } from "@/lib/onboarding/synthesis";
 
 const TITLE_CLASS =
-  "text-[1.35rem] font-normal leading-snug tracking-tight text-white lg:text-[2.35rem] lg:leading-[1.15]";
+  "text-[1.875rem] font-normal leading-[1.15] tracking-tight text-white lg:text-[2.35rem]";
 
 const BLOCKS: { key: "happening" | "question" | "method"; label: string }[] = [
   { key: "happening", label: "Что происходит" },
