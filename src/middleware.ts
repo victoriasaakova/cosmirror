@@ -19,7 +19,7 @@ function crawlerHtml() {
   const title = attr(SITE_TITLE);
   const description = attr(SITE_DESCRIPTION);
   return `<!DOCTYPE html>
-<html lang="ru" prefix="og: https://ogp.me/ns#">
+<html lang="ru" prefix="og: http://ogp.me/ns#">
 <head>
 <meta charset="utf-8">
 <title>${title}</title>
@@ -40,6 +40,7 @@ function crawlerHtml() {
 <meta name="twitter:title" content="${title}">
 <meta name="twitter:description" content="${description}">
 <meta name="twitter:image" content="${SITE_OG_IMAGE}">
+<link rel="image_src" href="${SITE_OG_IMAGE}">
 <link rel="icon" href="${SITE_FAVICON}">
 </head>
 <body>
@@ -56,7 +57,9 @@ export function middleware(request: NextRequest) {
   }
 
   const { pathname } = request.nextUrl;
-  if (pathname !== "/" && pathname !== "") {
+  const isHome = pathname === "/" || pathname === "";
+  const isOg = pathname === "/og.html" || pathname === "/og.html/";
+  if (!isHome && !isOg) {
     return NextResponse.next();
   }
 
