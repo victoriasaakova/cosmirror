@@ -1,5 +1,5 @@
 import { API_URL } from "@/lib/api";
-import { clearAuthToken, readAuthToken, writeAuthToken } from "@/lib/auth";
+import { clearAuthToken, readAuthToken, sessionHeaders, writeAuthToken, readDeviceId } from "@/lib/auth";
 import {
   clearOnboardingClientState,
   patchDraft,
@@ -12,7 +12,7 @@ export async function resetLocalDevFlow(): Promise<void> {
     try {
       await fetch(`${API_URL}/api/me/dev-reset/`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: sessionHeaders(),
       });
     } catch {
       /* API мог быть выключен */
@@ -20,7 +20,7 @@ export async function resetLocalDevFlow(): Promise<void> {
     try {
       await fetch(`${API_URL}/api/auth/logout/`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: sessionHeaders(),
       });
     } catch {
       /* local clear below */
@@ -38,7 +38,7 @@ async function devLogin(persona: "empty" | "report" | "insight" | "cabinet"): Pr
     res = await fetch(`${API_URL}/api/auth/dev-login/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ persona }),
+      body: JSON.stringify({ persona, device_id: readDeviceId() }),
     });
   } catch {
     throw new Error("API не отвечает на http://127.0.0.1:8000. Запусти Django и нажми ещё раз.");

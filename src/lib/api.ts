@@ -1,14 +1,9 @@
+import { readAuthToken, readDeviceId, sessionHeaders } from "@/lib/auth";
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
 
 function authHeaders(extra?: HeadersInit): Headers {
-  const headers = new Headers(extra);
-  if (typeof window !== "undefined") {
-    const token = window.localStorage.getItem("cosmirror.auth.token");
-    if (token && !headers.has("Authorization")) {
-      headers.set("Authorization", `Bearer ${token}`);
-    }
-  }
-  return headers;
+  return sessionHeaders(extra);
 }
 
 async function parseJson(res: Response): Promise<unknown> {
@@ -1030,6 +1025,8 @@ export async function startYandexAuth(
   if (sessionToken) query.set("session_token", sessionToken);
   if (redirectUri) query.set("redirect_uri", redirectUri);
   if (after) query.set("after", after);
+  const deviceId = readDeviceId();
+  if (deviceId) query.set("device_id", deviceId);
   let res: Response;
   try {
     res = await fetchWithRetry(`${API_URL}/api/auth/yandex/start/?${query.toString()}`, {
@@ -1435,13 +1432,11 @@ export async function submitSectionFeedback(payload: {
 }
 
 export async function logoutOnServer(): Promise<void> {
-  const token =
-    typeof window === "undefined" ? "" : window.localStorage.getItem("cosmirror.auth.token") || "";
-  if (!token) return;
+  if (!readAuthToken()) return;
   try {
     await fetch(`${API_URL}/api/auth/logout/`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
+      headers: sessionHeaders(),
     });
   } catch {
     /* offline: local session still drops */
