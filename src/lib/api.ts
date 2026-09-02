@@ -1443,4 +1443,22 @@ export async function logoutOnServer(): Promise<void> {
   }
 }
 
+export async function createChartShare(): Promise<{ url: string }> {
+  let res: Response;
+  try {
+    res = await fetchWithRetry(`${API_URL}/api/me/report/share/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+    });
+  } catch (err) {
+    throw new Error(networkErrorMessage(err, "Не получилось создать ссылку"));
+  }
+  const data = await parseJson(res);
+  if (!res.ok) throw new Error(errorMessage(data, "Не получилось создать ссылку"));
+  const url = typeof data === "object" && data && "url" in data ? String((data as { url: string }).url || "") : "";
+  if (!url) throw new Error("Не получилось создать ссылку");
+  return { url };
+}
+
 export { API_URL };

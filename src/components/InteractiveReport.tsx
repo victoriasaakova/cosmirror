@@ -48,6 +48,11 @@ const REPORT_NAV = [
   { id: "practice", label: "Практика", subtitle: "как работать с темами" },
 ] as const;
 
+const SHARE_NAV = [
+  { id: "home", label: "Карта", subtitle: "колесо и планеты" },
+  { id: "natal", label: "Расшифровка", subtitle: "значения в карте" },
+] as const;
+
 const NATAL_GROUPS: { title: string; keys: string[] }[] = [
   { title: "Солнце, Луна, Асцендент", keys: ["sun", "moon", "ascendant"] },
   { title: "Как работает твой ум", keys: ["mercury"] },
@@ -112,6 +117,7 @@ type Props = {
   access?: "free" | "paid";
   lockedSections?: string[];
   onUnlock?: () => void;
+  variant?: "account" | "share";
 };
 
 function isTakeawayBlock(block: ReportBlock): boolean {
@@ -193,6 +199,7 @@ export function InteractiveReport({
   access = "paid",
   lockedSections = [],
   onUnlock,
+  variant = "account",
 }: Props) {
   const [live, setLive] = useState(report);
   const [tab, setTab] = useState("home");
@@ -216,7 +223,8 @@ export function InteractiveReport({
 
   const document = live.document;
   const sectionTabs = document?.presentation?.web?.tabs ?? [];
-  const tabs = REPORT_NAV.map((item) => ({ ...item }));
+  const isShare = variant === "share";
+  const tabs = (isShare ? SHARE_NAV : REPORT_NAV).map((item) => ({ ...item }));
 
   const isFree = access === "free";
   const locked = new Set<string>(
@@ -253,6 +261,7 @@ export function InteractiveReport({
   const generatingPractice = layerAwaitingLlm(document?.interpretive?.practice, generationStatus);
   const tabGenerating =
     !isFree &&
+    !isShare &&
     ((tab === "natal" && generatingNatal) ||
       (tab === "aspects" && generatingAspects) ||
       (tab === "cycles" && generatingCycles) ||
@@ -267,7 +276,8 @@ export function InteractiveReport({
       downloading={downloading}
       onDownloadPdf={onDownloadPdf}
       actionNote={actionNote}
-      hideShareActions={isFree || !reportReadyToOpen(live)}
+      hideShareActions={isShare || isFree || !reportReadyToOpen(live)}
+      shareMode={isShare}
     />
   );
 
@@ -331,7 +341,7 @@ export function InteractiveReport({
         {tab === "home" ? (
           <>
             {opening}
-            <MobileSectionCatalog onOpen={openSection} />
+            <MobileSectionCatalog items={tabs} onOpen={openSection} />
           </>
         ) : null}
 
@@ -360,16 +370,17 @@ export function InteractiveReport({
                 {tab === "natal" ? (
                   <NatalTab document={document} focusKey={focusKey} />
                 ) : null}
-                {tab === "aspects" ? (
+                {!isShare && tab === "aspects" ? (
                   <AspectsTab document={document} focusKey={focusKey} initialFilter={categoryFilter} />
                 ) : null}
-                {tab === "cycles" ? (
+                {!isShare && tab === "cycles" ? (
                   <CyclesTab document={document} focusKey={focusKey} initialFilter={categoryFilter} />
                 ) : null}
-                {tab === "request" ? <RequestTab document={document} /> : null}
-                {tab === "practice" ? <PracticeTab document={document} /> : null}
-                {isReportFeedbackSection(tab) ? (
+                {!isShare && tab === "request" ? <RequestTab document={document} /> : null}
+                {!isShare && tab === "practice" ? <PracticeTab document={document} /> : null}
+                {!isShare && isReportFeedbackSection(tab) ? (
                   <SectionFeedbackCard
+                    key={tab}
                     section={tab}
                     initial={feedbackRows.find((row) => row.section === tab) ?? null}
                     onSaved={(saved) => {
@@ -394,11 +405,13 @@ export function InteractiveReport({
 }
 
 function MobileSectionCatalog({
+  items,
   onOpen,
 }: {
+  items: ReadonlyArray<{ id: string; label: string; subtitle: string }>;
   onOpen: (id: string) => void;
 }) {
-  const rows = REPORT_NAV.filter((item) => item.id !== "home");
+  const rows = items.filter((item) => item.id !== "home");
   return (
     <nav aria-label="Разделы отчёта" className="mt-12 space-y-3 lg:hidden">
       {rows.map((row) => (

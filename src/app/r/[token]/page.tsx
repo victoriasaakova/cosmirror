@@ -1,15 +1,14 @@
 import type { Metadata } from "next";
-import { ReportPage } from "@/components/ReportPage";
+import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
-  title: "Отчёт — Cosmirror",
-  description: "Персональный астрологический отчёт Cosmirror.",
+  robots: { index: false, follow: false },
 };
 
 type Props = {
   params: Promise<{ token: string }>;
 };
 
-export default async function SharedReportPage(_props: Props) {
-  return <ReportPage />;
+export default async function LegacySharedReportPage(_props: Props) {
+  redirect("/");
 }

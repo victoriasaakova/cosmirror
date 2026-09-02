@@ -5,7 +5,7 @@ import Image from "next/image";
 import { NatalWheel } from "@/components/NatalWheel";
 import { SignsTable } from "@/components/SignsTable";
 import { formatDms, signGlyph } from "@/lib/astro-glyphs";
-import type { PaidReport } from "@/lib/api";
+import { createChartShare, type PaidReport } from "@/lib/api";
 
 const CORE = ["sun", "moon", "ascendant"] as const;
 
@@ -28,16 +28,17 @@ type Props = {
   onDownloadPdf: () => void;
   actionNote?: string;
   hideShareActions?: boolean;
+  shareMode?: boolean;
 };
 
 export function ReportOpening({
   report,
   displayName,
-  orderId,
   downloading,
   onDownloadPdf,
   actionNote,
   hideShareActions = false,
+  shareMode = false,
 }: Props) {
   const natal = report.document?.factual?.natal;
   const wheel = natal?.wheel;
@@ -48,6 +49,7 @@ export function ReportOpening({
   const [timeSaved, setTimeSaved] = useState("");
   const [copied, setCopied] = useState(false);
   const [shareHint, setShareHint] = useState("");
+  const [shareBusy, setShareBusy] = useState(false);
 
   useEffect(() => {
     if (!copied) return;
@@ -69,13 +71,21 @@ export function ReportOpening({
   }));
 
   async function onShare() {
-    const url = shareUrlFor(orderId);
+    if (shareBusy) return;
+    setShareBusy(true);
     setShareHint("");
     try {
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-    } catch {
-      setShareHint(url);
+      const { url } = await createChartShare();
+      try {
+        await navigator.clipboard.writeText(url);
+        setCopied(true);
+      } catch {
+        setShareHint(url);
+      }
+    } catch (err) {
+      setShareHint(err instanceof Error ? err.message : "Не получилось создать ссылку");
+    } finally {
+      setShareBusy(false);
     }
   }
 
@@ -92,22 +102,39 @@ export function ReportOpening({
     birth.place || "место не указано",
   ].filter(Boolean);
 
-  const paid = !hideShareActions;
+  const paid = !hideShareActions && !shareMode;
 
   return (
     <header className="reveal">
       <h1 className="text-3xl font-normal leading-[1.15] tracking-tight text-white sm:text-4xl">
-        Добро пожаловать
-        {displayName ? (
+        {shareMode ? (
           <>
-            ,{" "}
+            Натальная{" "}
             <span className="font-display inline-block pb-1 italic leading-[1.15] text-[#F6E7A1]">
-              {displayName}
+              карта
             </span>
           </>
-        ) : null}
+        ) : (
+          <>
+            Добро пожаловать
+            {displayName ? (
+              <>
+                ,{" "}
+                <span className="font-display inline-block pb-1 italic leading-[1.15] text-[#F6E7A1]">
+                  {displayName}
+                </span>
+              </>
+            ) : null}
+          </>
+        )}
       </h1>
 
+      {shareMode ? (
+        !hasBirthTime ? (
+          <p className="report-lede mt-5">Асцендент и дома не считаем.</p>
+        ) : null
+      ) : (
+        <>
       <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2">
         <p className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-base leading-snug text-white/80">
           {birthParts.map((part, index) => (
@@ -157,6 +184,8 @@ export function ReportOpening({
           Время запомнили здесь. Карту пока не пересчитываем, асцендент и дома не считаем.
         </p>
       ) : null}
+        </>
+      )}
 
       <ul className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-white/10">
         {core.map((item) => (
@@ -215,8 +244,13 @@ export function ReportOpening({
                 >
                   {downloading ? "Готовим PDF…" : "Скачать PDF"}
                 </button>
-                <button type="button" onClick={() => void onShare()} className="cabinet-cta-ghost">
-                  {copied ? "Ссылка скопирована" : "Поделиться ссылкой"}
+                <button
+                  type="button"
+                  onClick={() => void onShare()}
+                  disabled={shareBusy}
+                  className="cabinet-cta-ghost"
+                >
+                  {copied ? "Ссылка скопирована" : shareBusy ? "Создаём ссылку…" : "Поделиться ссылкой"}
                 </button>
               </div>
               {shareHint ? (
@@ -324,13 +358,4 @@ function formatBirthDate(raw?: string): string {
 function formatBirthTime(raw?: string): string {
   if (!raw) return "";
   return raw.slice(0, 5);
-}
-
-function shareUrlFor(orderId?: string): string {
-  const origin = window.location.origin.replace(/\/$/, "");
-  if (window.location.pathname.startsWith("/r/")) {
-    return `${origin}${window.location.pathname}`;
-  }
-  if (orderId) return `${origin}/r/${orderId}`;
-  return window.location.href;
 }

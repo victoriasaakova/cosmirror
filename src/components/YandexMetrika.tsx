@@ -1,13 +1,16 @@
 "use client";
 
 import Script from "next/script";
+import { usePathname } from "next/navigation";
 import { useCookieConsent } from "@/components/CookieConsent";
 
 const YM_ID = 111358036;
 
 export function YandexMetrika() {
+  const pathname = usePathname();
   const { ready, analyticsAllowed } = useCookieConsent();
   if (!ready || !analyticsAllowed) return null;
+  if (pathname.startsWith("/s/") || pathname.startsWith("/r/")) return null;
 
   return (
     <Script id="yandex-metrika" strategy="afterInteractive">{`

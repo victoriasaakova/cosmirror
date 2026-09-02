@@ -8,18 +8,36 @@ import {
   type SectionFeedback,
 } from "@/lib/api";
 
-const RATINGS: { id: ReportFeedbackRating; label: string }[] = [
-  { id: "about_me", label: "Про меня" },
-  { id: "partial", label: "Частично" },
-  { id: "not_about_me", label: "Не про меня" },
+const RATINGS: { id: ReportFeedbackRating; emoji: string; label: string }[] = [
+  { id: "about_me", emoji: "🌝", label: "про меня" },
+  { id: "partial", emoji: "🌗", label: "частично" },
+  { id: "not_about_me", emoji: "🌚", label: "не про меня" },
 ];
 
-type Step = "rate" | "comment" | "done";
+const FIELD_CLASS =
+  "mt-3 w-full border-b border-white/20 bg-transparent pb-3 text-lg text-white caret-[#F6E7A1] outline-none placeholder:text-white/30 focus:border-[#F6E7A1] [color-scheme:dark]";
 
-function stepFrom(row?: SectionFeedback | null): Step {
-  if (!row?.rating) return "rate";
-  if (row.comment_skipped || row.comment.trim()) return "done";
-  return "comment";
+function isComplete(row?: SectionFeedback | null): boolean {
+  if (!row?.rating) return false;
+  return row.comment_skipped || Boolean(row.comment.trim());
+}
+
+function DualHeading({
+  before,
+  accent,
+  after,
+}: {
+  before: string;
+  accent: string;
+  after?: string;
+}) {
+  return (
+    <h3 className="text-[1.0625rem] font-normal leading-snug tracking-tight text-white sm:text-lg">
+      {before}{" "}
+      <span className="font-display italic text-[#F6E7A1]">{accent}</span>
+      {after ? <span> {after}</span> : null}
+    </h3>
+  );
 }
 
 export function SectionFeedbackCard({
@@ -32,17 +50,27 @@ export function SectionFeedbackCard({
   onSaved?: (row: SectionFeedback) => void;
 }) {
   const [row, setRow] = useState<SectionFeedback | null>(initial ?? null);
-  const [step, setStep] = useState<Step>(() => stepFrom(initial));
   const [comment, setComment] = useState(initial?.comment ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
+    // Reset only when the report tab changes. `initial` identity also changes
+    // after a save and must not wipe an in-progress comment.
+    setRow(initial ?? null);
+    setComment(initial?.comment ?? "");
+    setError("");
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- section is the reset key
+  }, [section]);
+
+  useEffect(() => {
     if (!initial) return;
     setRow((prev) => prev ?? initial);
-    setStep((prev) => (prev === "rate" ? stepFrom(initial) : prev));
     setComment((prev) => prev || initial.comment || "");
   }, [initial]);
+
+  const rating = row?.rating ?? null;
+  const done = isComplete(row);
 
   async function save(next: {
     rating: ReportFeedbackRating;
@@ -69,88 +97,103 @@ export function SectionFeedbackCard({
     }
   }
 
-  async function onPick(rating: ReportFeedbackRating) {
-    const saved = await save({ rating });
-    if (saved) setStep("comment");
+  async function onPick(nextRating: ReportFeedbackRating) {
+    if (saving || nextRating === rating) return;
+    const previous = row;
+    setRow((prev) => ({
+      section,
+      rating: nextRating,
+      comment: prev?.comment ?? "",
+      comment_skipped: false,
+      updated_at: prev?.updated_at ?? "",
+    }));
+    const saved = await save({ rating: nextRating });
+    if (!saved) setRow(previous);
   }
 
   async function onSubmitComment(event: FormEvent) {
     event.preventDefault();
-    if (!row?.rating) return;
-    const saved = await save({ rating: row.rating, comment: comment.trim() });
-    if (saved) setStep("done");
+    if (!rating) return;
+    const text = comment.trim();
+    await save({
+      rating,
+      comment: text,
+      comment_skipped: !text,
+    });
   }
 
-  async function onSkip() {
-    if (!row?.rating) return;
-    const saved = await save({ rating: row.rating, comment_skipped: true });
-    if (saved) setStep("done");
+  if (done) {
+    return (
+      <section
+        className="mt-8 w-full rounded-2xl border border-[#F6E7A1]/18 bg-white/[0.04] px-4 py-4"
+        aria-live="polite"
+      >
+        <DualHeading before="Уже смотрим твой" accent="фидбэк" after="👀" />
+        <p className="mt-2 text-sm font-normal leading-relaxed text-[#fff]">
+          Спасибо, что помогаешь нам{" "}
+          <span className="font-display italic text-[#F6E7A1]">стать лучше!</span>
+        </p>
+      </section>
+    );
   }
 
   return (
-    <section className="mt-12 rounded-2xl border border-[#F6E7A1]/20 bg-white/[0.04] p-5">
-      {step === "rate" ? (
-        <>
-          <h3 className="report-theme-title pb-1">Насколько это про тебя?</h3>
-          <p className="mt-3 report-lede">
-            Помоги нам понять, насколько точно этот раздел описывает твой опыт.
-          </p>
-          <div
-            role="group"
-            aria-label="Насколько это про тебя"
-            className="mt-5 grid grid-cols-3 gap-2"
-          >
-            {RATINGS.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                disabled={saving}
-                onClick={() => void onPick(item.id)}
-                className="report-chip min-h-11 w-full whitespace-normal px-2 text-center text-sm sm:px-3 sm:text-base"
-                data-active="false"
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
-        </>
-      ) : null}
-
-      {step === "comment" ? (
-        <form onSubmit={(event) => void onSubmitComment(event)}>
-          <h3 className="report-theme-title pb-1">Спасибо!</h3>
-          <label className="mt-3 block">
-            <span className="report-lede">
-              Если хочешь, добавь пару слов о том, что совпало или не совпало.
-            </span>
-            <textarea
-              value={comment}
-              onChange={(event) => setComment(event.target.value)}
-              rows={3}
-              maxLength={2000}
-              disabled={saving}
-              className="mt-3 min-h-[5.5rem] w-full resize-y border-b border-white/20 bg-transparent py-2 text-base text-white outline-none placeholder:text-white/35 focus:border-[#F6E7A1]"
-            />
-          </label>
-          <div className="report-cta-row mt-5 flex flex-col gap-2 sm:flex-row">
-            <button type="submit" disabled={saving} className="cabinet-cta">
-              {saving ? "Сохраняем…" : "Отправить"}
-            </button>
+    <section className="mt-8 w-full rounded-2xl border border-[#F6E7A1]/18 bg-white/[0.04] px-4 py-4">
+      <DualHeading before="Насколько это" accent="про тебя?" />
+      <p className="mt-2 text-sm font-normal leading-relaxed text-[#fff]">
+        Насколько точно этот раздел описывает твой опыт.
+      </p>
+      <div role="group" aria-label="Насколько это про тебя" className="mt-3 flex flex-wrap gap-1">
+        {RATINGS.map((item) => {
+          const active = rating === item.id;
+          return (
             <button
+              key={item.id}
               type="button"
               disabled={saving}
-              onClick={() => void onSkip()}
-              className="cabinet-cta-ghost"
+              aria-pressed={active}
+              onClick={() => void onPick(item.id)}
+              className={`inline-flex min-h-8 items-center gap-1 rounded-full border px-2 py-1 text-[12px] leading-none transition duration-200 ease-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F6E7A1] enabled:active:scale-[0.96] disabled:opacity-50 sm:text-[13px] sm:px-2.5 ${
+                active
+                  ? "border-[#F6E7A1] bg-[#F6E7A1] text-[#0a1a3a] hover:bg-[#f0dc82]"
+                  : "border-white/18 bg-transparent text-white hover:border-[#F6E7A1] hover:bg-white/[0.06] hover:text-[#F6E7A1]"
+              }`}
             >
-              В другой раз
+              <span aria-hidden>{item.emoji}</span>
+              <span>{item.label}</span>
             </button>
-          </div>
+          );
+        })}
+      </div>
+
+      {rating ? (
+        <form onSubmit={(event) => void onSubmitComment(event)} className="mt-1">
+          <label htmlFor={`feedback-comment-${section}`} className="sr-only">
+            Комментарий к разделу
+          </label>
+          <input
+            id={`feedback-comment-${section}`}
+            type="text"
+            name="comment"
+            value={comment}
+            onChange={(event) => setComment(event.target.value)}
+            maxLength={2000}
+            disabled={saving}
+            placeholder="что совпало или не совпало"
+            autoComplete="off"
+            className={FIELD_CLASS}
+          />
+          <button
+            type="submit"
+            disabled={saving}
+            className="mt-4 inline-flex min-h-9 items-center justify-center rounded-full bg-[#F6E7A1] px-5 py-2 text-sm font-medium leading-none text-[#0a1a3a] transition duration-200 ease-out hover:bg-[#f0dc82] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F6E7A1] enabled:active:scale-[0.97] disabled:opacity-50"
+          >
+            {saving ? "Отправляем…" : "Отправить"}
+          </button>
         </form>
       ) : null}
 
-      {step === "done" ? <p className="report-theme-title pb-1">Спасибо!</p> : null}
-
-      {error ? <p className="mt-4 text-base text-[#f0b4b4]">{error}</p> : null}
+      {error ? <p className="mt-3 text-sm text-[#f0b4b4]">{error}</p> : null}
     </section>
   );
 }

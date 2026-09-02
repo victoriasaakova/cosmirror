@@ -59,6 +59,25 @@ ensure_env() {
 }
 ensure_env NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN "phc_APmaNrkAD26rcLdUKopGwiWNe3ufT4KVzoMDi7Ye2ikm"
 ensure_env NEXT_PUBLIC_POSTHOG_HOST "https://us.i.posthog.com"
+SHARE_KEY_FILE="${SHARE_KEY_FILE:-/opt/cosmirror/share-internal.key}"
+mkdir -p "$(dirname "$SHARE_KEY_FILE")"
+if [[ ! -f "$SHARE_KEY_FILE" ]]; then
+  tmp="$(mktemp "${SHARE_KEY_FILE}.XXXXXX")"
+  python3 -c 'import secrets; print(secrets.token_urlsafe(48))' > "$tmp"
+  chmod 600 "$tmp"
+  ln "$tmp" "$SHARE_KEY_FILE" 2>/dev/null || true
+  rm -f "$tmp"
+fi
+for _ in 1 2 3 4 5 6 7 8 9 10; do
+  [[ -s "$SHARE_KEY_FILE" ]] && break
+  sleep 0.5
+done
+SHARE_INTERNAL_KEY="$(tr -d '[:space:]' < "$SHARE_KEY_FILE")"
+if [[ -z "$SHARE_INTERNAL_KEY" ]]; then
+  echo "ERROR: missing $SHARE_KEY_FILE"
+  exit 1
+fi
+ensure_env SHARE_INTERNAL_KEY "$SHARE_INTERNAL_KEY"
 cp -f .env.production .env.local
 
 echo "==> Stopping $SERVICE to free RAM for build"

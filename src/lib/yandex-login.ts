@@ -26,6 +26,6 @@ export function destinationAfterYandexLogin(
   const next = consumeAuthNext().trim();
   if (hasPaidReport) return next.startsWith("/account") ? "/account/" : null;
   if (isCabinetOnboardingPurchase(flow)) return "/account/";
-  if (next.startsWith("/account")) return "/";
+  if (next.startsWith("/account")) return "/account/";
   return "/onboarding/insight/";
 }

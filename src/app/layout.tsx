@@ -50,9 +50,11 @@ export const metadata: Metadata = {
     "Cosmirror — приложение для самопознания через астрологию. Натальная карта, текущие астрологические циклы и личные наблюдения помогают лучше понимать себя и замечать закономерности своей жизни.",
   icons: {
     icon: [
+      { url: "/favicon.ico", sizes: "any" },
       { url: "/icons/favicon-32.png", sizes: "32x32", type: "image/png" },
       { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
     ],
+    shortcut: "/favicon.ico",
     apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
   },
   openGraph: {
@@ -65,10 +67,11 @@ export const metadata: Metadata = {
       "Cosmirror — приложение для самопознания через астрологию. Натальная карта, текущие астрологические циклы и личные наблюдения помогают лучше понимать себя и замечать закономерности своей жизни.",
     images: [
       {
-        url: "/images/og-cover.jpg",
+        url: "/images/og-cover.jpg?v=3",
         width: 1200,
         height: 630,
         alt: "Cosmirror",
+        type: "image/jpeg",
       },
     ],
   },
@@ -77,7 +80,7 @@ export const metadata: Metadata = {
     title: "Натальная карта с расшифровкой онлайн — Cosmirror",
     description:
       "Cosmirror — приложение для самопознания через астрологию. Натальная карта, текущие астрологические циклы и личные наблюдения помогают лучше понимать себя и замечать закономерности своей жизни.",
-    images: ["/images/og-cover.jpg"],
+    images: ["/images/og-cover.jpg?v=3"],
   },
 };
 

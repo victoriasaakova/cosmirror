@@ -27,6 +27,7 @@ export function PostHogAnalytics() {
   const identified = useRef(false);
 
   useEffect(() => {
+    if (pathname.startsWith("/s/") || pathname.startsWith("/r/")) return;
     if (!ready || !analyticsAllowed || !PROJECT_TOKEN || started.current) return;
 
     posthog.init(PROJECT_TOKEN, {
@@ -42,10 +43,11 @@ export function PostHogAnalytics() {
     });
     started.current = true;
     notifyPosthogReady();
-  }, [ready, analyticsAllowed]);
+  }, [ready, analyticsAllowed, pathname]);
 
   useEffect(() => {
     if (!started.current || !analyticsAllowed) return;
+    if (pathname.startsWith("/s/") || pathname.startsWith("/r/")) return;
     posthog.capture("$pageview", { $current_url: window.location.href });
   }, [pathname, searchParams, analyticsAllowed]);
 

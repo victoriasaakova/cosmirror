@@ -95,7 +95,6 @@ export function DevResetPage() {
     setBusy("report");
     setNote("");
     try {
-      await resetLocalDevFlow();
       await devLoginReport();
       window.location.assign("/account/");
     } catch (err) {
@@ -153,6 +152,8 @@ export function DevResetPage() {
           </button>
           <p className="mb-2 px-1 font-grotesk text-sm leading-relaxed text-white/45">
             Готовый кабинет по твоей карте: 26 мая 1995, 19:25, Гдыня. Все разделы открыты.
+            Повторный вход не тратит токены — берёт уже сгенерированный текст. Чтобы собрать
+            заново, сначала «Выйти и стереть демо-заказы».
           </p>
           <button
             type="button"

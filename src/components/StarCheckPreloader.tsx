@@ -69,7 +69,7 @@ export function ReportSectionPreloader() {
         отчёт{" "}
         <span className="font-display italic text-[#F6E7A1]">формируется</span>
       </h2>
-      <p className="mt-3 font-grotesk text-base font-normal text-[#F6E7A1] sm:text-lg">
+      <p className="mt-3 font-grotesk text-base font-normal text-white sm:text-lg">
         {GENERATING_STATUS[index]}
       </p>
     </div>

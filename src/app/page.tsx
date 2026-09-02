@@ -3,6 +3,7 @@ import { Header, JourneyCta } from "@/components/Header";
 import { FallingPills } from "@/components/FallingPills";
 import { LandingChartBlock } from "@/components/LandingChartBlock";
 import { PrefetchOnboarding } from "@/components/PrefetchOnboarding";
+import { SignedInHomeRedirect } from "@/components/SignedInHomeRedirect";
 import { WhatYouGet } from "@/components/WhatYouGet";
 import { SiteFooter } from "@/components/SiteFooter";
 
@@ -207,6 +208,7 @@ function ConstellationPlot({
 export default function Home() {
   return (
     <main className="relative flex flex-1 flex-col overflow-x-hidden">
+      <SignedInHomeRedirect />
       <PrefetchOnboarding />
       {/* ── Header Component with Mobile Burger ── */}
       <Header />
