@@ -14,6 +14,12 @@ import { sanitizePersonName } from "@/lib/person-name";
 
 export type TitlePart = { t: string; accent?: boolean };
 
+export type ChoiceOption = {
+  value: string;
+  label: string;
+  tip?: string;
+};
+
 export type ContentScreen =
   | {
       id: string;
@@ -29,7 +35,7 @@ export type ContentScreen =
       kind: "single";
       field: string;
       title: TitlePart[];
-      options: { value: string; label: string }[];
+      options: ChoiceOption[];
       columns?: 1 | 2;
     }
   | {
@@ -38,7 +44,7 @@ export type ContentScreen =
       field: string;
       title: TitlePart[];
       hint?: string;
-      options: { value: string; label: string }[];
+      options: ChoiceOption[];
     };
 
 /**
@@ -63,7 +69,6 @@ export const CONTENT_UIS: Record<string, ContentScreen[]> = {
       kind: "single",
       field: "gender",
       title: [{ t: "Укажи свой " }, { t: "пол", accent: true }],
-      columns: 2,
       options: [
         { value: "female", label: "Женский" },
         { value: "male", label: "Мужской" },
@@ -74,7 +79,6 @@ export const CONTENT_UIS: Record<string, ContentScreen[]> = {
       kind: "single",
       field: "age",
       title: [{ t: "Сколько тебе " }, { t: "лет?", accent: true }],
-      columns: 2,
       options: [
         { value: "18-24", label: "18–24" },
         { value: "25-34", label: "25–34" },
@@ -91,29 +95,62 @@ export const CONTENT_UIS: Record<string, ContentScreen[]> = {
         { t: "сейчас?", accent: true },
       ],
       options: [
-        { value: "stable", label: "все довольно стабильно" },
-        { value: "one-sphere", label: "меняется одна важная сфера" },
-        { value: "many-spheres", label: "перестройки в нескольких сферах жизни" },
-        { value: "ready-to-change", label: "чувствую, что пора что-то менять" },
-        { value: "unclear", label: "пока не понимаю, что происходит" },
+        {
+          value: "stable",
+          label: "В целом всё стабильно",
+          tip: "Не всему нужен ремонт. Посмотрим, куда направить внимание дальше.",
+        },
+        {
+          value: "one-sphere",
+          label: "Меняется одна важная сфера",
+          tip: "Здесь лучше идти вглубь, а не охватывать всё. Начнём с главного.",
+        },
+        {
+          value: "many-spheres",
+          label: "Меняется сразу несколько сфер",
+          tip: "События могут быть частями одного процесса. Поищем общую нить.",
+        },
+        {
+          value: "unclear",
+          label: "Чувствую перемены, но пока не понимаю их",
+          tip: "Необязательно сразу всё понимать. Начнём с того, что уже ощущается.",
+        },
       ],
     },
     {
       id: "focus",
-      kind: "multi",
+      kind: "single",
       field: "focus",
       title: [
-        { t: "Какая сфера жизни сейчас волнует " },
-        { t: "больше всего?", accent: true },
+        { t: "С чем тебе сейчас важнее всего " },
+        { t: "разобраться?", accent: true },
       ],
-      hint: "Можно выбрать несколько",
       options: [
-        { value: "love", label: "отношения и любовь" },
-        { value: "money", label: "деньги и работа" },
-        { value: "energy", label: "энергия, ресурсы и восстановление" },
-        { value: "confidence", label: "самооценка и уверенность" },
-        { value: "path", label: "самореализация и поиск своего пути" },
-        { value: "other", label: "другое" },
+        {
+          value: "love",
+          label: "Отношения и любовь",
+          tip: "Не всё решают чувства. Иногда больше говорит сам способ быть рядом.",
+        },
+        {
+          value: "money",
+          label: "Работа и деньги",
+          tip: "Не каждый тупик требует нового плана. Посмотрим, что держит на месте.",
+        },
+        {
+          value: "energy",
+          label: "Энергия и восстановление",
+          tip: "Не вся усталость проходит после отдыха. Посмотрим, куда уходят силы.",
+        },
+        {
+          value: "confidence",
+          label: "Уверенность и самооценка",
+          tip: "Сомнения не всегда про слабость. Иногда дело в чужой мерке.",
+        },
+        {
+          value: "path",
+          label: "Самореализация и свой путь",
+          tip: "Не всякая цель действительно твоя. Отделим своё от чужих ожиданий.",
+        },
       ],
     },
     {
@@ -125,13 +162,31 @@ export const CONTENT_UIS: Record<string, ContentScreen[]> = {
         { t: "на данный момент?", accent: true },
       ],
       options: [
-        { value: "future", label: "узнать, что меня ждёт в ближайшем будущем" },
-        { value: "potential", label: "понять себя и свой потенциал" },
-        { value: "uncertainty", label: "найти выход из неопределённости" },
-        { value: "relationships", label: "наладить отношения" },
-        { value: "patterns", label: "понять закономерности своей жизни" },
-        { value: "life-stage", label: "разобраться в текущем жизненном этапе" },
-        { value: "other", label: "другое" },
+        {
+          value: "life-stage",
+          label: "Что происходит сейчас",
+          tip: "Сначала отделим факты от реакции на них. Так станет видна причина.",
+        },
+        {
+          value: "patterns",
+          label: "Какие сценарии повторяются",
+          tip: "Повторение начинается раньше, чем кажется. Посмотрим, где всё запускается.",
+        },
+        {
+          value: "potential",
+          label: "В чём мой потенциал",
+          tip: "Сильная сторона не всегда похожа на талант. Часто она кажется чем-то обычным.",
+        },
+        {
+          value: "uncertainty",
+          label: "Куда двигаться дальше",
+          tip: "Следующий шаг не обязан решать всё сразу. Достаточно, чтобы он вернул движение.",
+        },
+        {
+          value: "future",
+          label: "Чего ждать в ближайшее время",
+          tip: "Точный прогноз начинается не с обещаний. Сначала нужна точка отсчёта.",
+        },
       ],
     },
     {
@@ -139,14 +194,25 @@ export const CONTENT_UIS: Record<string, ContentScreen[]> = {
       kind: "single",
       field: "chart_knowledge",
       title: [
-        { t: "Что ты уже знаешь про " },
-        { t: "свою карту?", accent: true },
+        { t: "Что ты знаешь о " },
+        { t: "своей карте?", accent: true },
       ],
       options: [
-        { value: "sun-only", label: "Только знак зодиака" },
-        { value: "big-three", label: "Знак, луна или асцендент" },
-        { value: "natal-chart", label: "Читаю свою натальную карту" },
-        { value: "transits", label: "Разбираюсь в транзитах" },
+        {
+          value: "sun-only",
+          label: "Знаю только свой знак",
+          tip: "Начинать со словаря не придётся. Объясним карту через знакомые ситуации.",
+        },
+        {
+          value: "big-three",
+          label: "Знаю Солнце, Луну и асцендент",
+          tip: "База уже есть. Покажем связи между отдельными положениями.",
+        },
+        {
+          value: "transits",
+          label: "Читаю карту и слежу за транзитами",
+          tip: "Можно идти глубже. Покажем логику аспектов и текущих влияний.",
+        },
       ],
     },
     {
@@ -158,11 +224,31 @@ export const CONTENT_UIS: Record<string, ContentScreen[]> = {
         { t: "к астрологии?", accent: true },
       ],
       options: [
-        { value: "understand-self", label: "Хочу понять, что со мной происходит" },
-        { value: "person", label: "Не складывается с конкретным человеком" },
-        { value: "decision", label: "Нужно принять решение" },
-        { value: "check-feelings", label: "Хочу проверить свои ощущения" },
-        { value: "curious", label: "Просто интересно" },
+        {
+          value: "understand-self",
+          label: "Хочу понять своё состояние",
+          tip: "Назвать чувство бывает мало. Ясность приходит, когда видна его причина.",
+        },
+        {
+          value: "person",
+          label: "Думаю о конкретном человеке",
+          tip: "В чужих поступках легко потерять себя. Вернём свою точку зрения в центр.",
+        },
+        {
+          value: "decision",
+          label: "Стою перед важным выбором",
+          tip: "Ещё одно мнение редко решает выбор. Нужен собственный критерий.",
+        },
+        {
+          value: "check-feelings",
+          label: "Хочу свериться с собой",
+          tip: "Иногда ответ уже есть. Проверим, почему ему пока трудно доверять.",
+        },
+        {
+          value: "curious",
+          label: "Мне просто интересно",
+          tip: "Не каждому поиску нужна проблема. Иногда интерес сам открывает важное.",
+        },
       ],
     },
   ],
@@ -178,22 +264,52 @@ function isContentScreen(value: unknown): value is ContentScreen {
   );
 }
 
+function canonicalScreenForField(field: string): ContentScreen | undefined {
+  return CONTENT_UIS.profile_quiz.find((screen) => screen.field === field);
+}
+
+/** Old quiz keys that now share a visible option. */
+const LEGACY_CHOICE_ALIASES: Record<string, Record<string, string>> = {
+  focus: { future: "path" },
+  chart_knowledge: { "natal-chart": "transits" },
+};
+
+export function canonicalChoiceValue(field: string, value: string): string {
+  return LEGACY_CHOICE_ALIASES[field]?.[value] ?? value;
+}
+
 /** Resolve multi-screen UI for a content/input/custom step from API meta. */
 export function screensForStep(step: OnboardingStep): ContentScreen[] {
   const meta = step.meta ?? {};
   const rawScreens = meta.screens;
+  let screens: ContentScreen[] = [];
   if (Array.isArray(rawScreens)) {
-    return rawScreens.filter(isContentScreen);
+    screens = rawScreens.filter(isContentScreen);
+  } else {
+    const ui = meta.ui;
+    if (typeof ui === "string" && CONTENT_UIS[ui]) {
+      screens = CONTENT_UIS[ui];
+    } else if (step.slug === "welcome" && step.step_type === "content") {
+      // Back-compat only: old monolith welcome step with no meta.
+      screens = CONTENT_UIS.profile_quiz;
+    }
   }
-  const ui = meta.ui;
-  if (typeof ui === "string" && CONTENT_UIS[ui]) {
-    return CONTENT_UIS[ui];
-  }
-  // Back-compat only: old monolith welcome step with no meta.
-  if (step.slug === "welcome" && step.step_type === "content") {
-    return CONTENT_UIS.profile_quiz;
-  }
-  return [];
+  return screens.map((screen) => {
+    // Quiz copy for personalization screens lives in CONTENT_UIS so tips/labels
+    // ship without waiting for a DB re-seed.
+    if (
+      screen.field === "life_stage" ||
+      screen.field === "gender" ||
+      screen.field === "age" ||
+      screen.field === "focus" ||
+      screen.field === "intent" ||
+      screen.field === "chart_knowledge" ||
+      screen.field === "astrology_trigger"
+    ) {
+      return canonicalScreenForField(screen.field) ?? screen;
+    }
+    return screen;
+  });
 }
 
 /** How many progress dots this API step contributes. */
@@ -302,7 +418,8 @@ export function screenIsComplete(
     if (screen.field === "name") return sanitizePersonName(value).length > 0;
     return value.trim().length > 0;
   }
-  return typeof value === "string" && value.length > 0;
+  if (typeof value === "string" && value.length > 0) return true;
+  return Array.isArray(value) && typeof value[0] === "string" && value[0].length > 0;
 }
 
 /** First screen that still needs an answer (or last if all filled). */

@@ -3,8 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CosmirrorMark } from "@/components/CosmirrorMark";
+import { FormEvent, Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { StarCheckPreloader, StarCheckPreloaderPage } from "@/components/StarCheckPreloader";
 import {
   completeYandexAuth,
@@ -34,6 +33,7 @@ import {
 import {
   adjacentStep,
   buildProgressModel,
+  canonicalChoiceValue,
   canonicalOnboardingSlug,
   firstIncompleteScreenIndex,
   insightHrefForScreen,
@@ -55,6 +55,13 @@ import {
 import { sanitizePersonName, sanitizePersonNameInput } from "@/lib/person-name";
 import { ImmediateOnboardingPurchase } from "@/components/onboarding/ImmediateOnboardingPurchase";
 import { CabinetInsightPurchase } from "@/components/onboarding/CabinetInsightPurchase";
+import { SynthesisView } from "@/components/onboarding/SynthesisView";
+import {
+  ensureSynthesisStep,
+  isSynthesisStep,
+  SYNTHESIS_CTA,
+  SYNTHESIS_SLUG,
+} from "@/lib/onboarding/synthesis";
 import {
   INSIGHT_CONFIRM_INDEX,
   INSIGHT_OFFER_INDEX,
@@ -212,11 +219,19 @@ const CONTACTS_SUPPORT =
   "Введи реальные данные — нужно верифицировать Telegram и email";
 
 function choiceClass(active: boolean) {
-  return `w-full rounded-2xl border px-5 py-4 text-left text-lg font-medium leading-snug transition-colors sm:text-xl ${
+  return `w-full min-h-11 rounded-lg border px-4 py-3 text-left text-sm font-normal leading-snug transition-colors lg:min-h-12 lg:rounded-xl lg:px-5 lg:py-3.5 lg:text-lg ${
     active
       ? "border-[#F6E7A1] bg-white/[0.03] text-[#F6E7A1]"
       : "border-white/15 bg-white/[0.03] text-white/75 hover:border-[#F6E7A1] hover:text-[#F6E7A1]"
   }`;
+}
+
+function quizTitleClass() {
+  return "text-[1.35rem] font-normal leading-snug tracking-tight text-white lg:text-[2.35rem] lg:leading-[1.15]";
+}
+
+function onboardingShellClass() {
+  return "mx-auto w-full max-w-lg";
 }
 
 function fieldClass() {
@@ -224,7 +239,12 @@ function fieldClass() {
 }
 
 function labelFor(options: { value: string; label: string }[], value: string) {
-  return options.find((item) => item.value === value)?.label ?? "";
+  return (
+    options.find((item) => item.value === value)?.label ??
+    options.find((item) => item.value === canonicalChoiceValue("focus", value))?.label ??
+    options.find((item) => item.value === canonicalChoiceValue("chart_knowledge", value))?.label ??
+    ""
+  );
 }
 
 function renderTitle(parts: TitlePart[]) {
@@ -376,7 +396,12 @@ function buildWaitlistPayload(
   const waitlist = waitlistStepOf(steps);
   const existing = waitlist ? (payloadByStep[waitlist.slug] ?? {}) : {};
   const contentPayload = mergeContentPayloads(steps, payloadByStep);
-  const focus = Array.isArray(contentPayload.focus) ? (contentPayload.focus as string[]) : [];
+  const focusRaw = contentPayload.focus;
+  const focus = Array.isArray(focusRaw)
+    ? (focusRaw as string[])
+    : typeof focusRaw === "string" && focusRaw
+      ? [focusRaw]
+      : [];
   const allScreens = steps.flatMap((step) => screensForStep(step));
   const focusScreens = allScreens.find((screen) => screen.field === "focus");
   const intentScreen = allScreens.find((screen) => screen.field === "intent");
@@ -424,6 +449,7 @@ function buildWaitlistPayload(
 
 function ctaLabel(step: OnboardingStep | null, submitting: boolean): string {
   if (!step) return "Продолжить";
+  if (isSynthesisStep(step)) return SYNTHESIS_CTA;
   if (step.step_type === "birth_data") {
     return submitting ? "Считаем карту…" : "Посмотреть карту";
   }
@@ -456,7 +482,7 @@ export function resetOnboardingFlowCache() {
 /** Прогрев списка шагов с лендинга — первый экран онбординга открывается без ожидания API. */
 export function primeOnboardingSteps(apiSteps: OnboardingStep[]) {
   if (!apiSteps.length) return;
-  flowCache.steps = apiSteps;
+  flowCache.steps = ensureSynthesisStep(apiSteps);
 }
 
 export function OnboardingFlow({
@@ -530,8 +556,9 @@ export function OnboardingFlow({
   }, [currentStep?.step_type, isCabinetPurchase, steps, slug, screenIndex]);
 
   const applySteps = useCallback((apiSteps: OnboardingStep[]) => {
-    flowCache.steps = apiSteps;
-    setSteps(apiSteps);
+    const next = ensureSynthesisStep(apiSteps);
+    flowCache.steps = next;
+    setSteps(next);
   }, []);
 
   const applyToken = useCallback((token: string) => {
@@ -594,6 +621,13 @@ export function OnboardingFlow({
         }
       }
 
+      if (!apiSteps) {
+        setLoadError("Не удалось загрузить онбординг");
+        return;
+      }
+      apiSteps = ensureSynthesisStep(apiSteps);
+      applySteps(apiSteps);
+
       const draft = readDraft();
       const byStep = remapLegacyPayloads(flowCache.payloadByStep);
       applyPayload(byStep);
@@ -643,8 +677,13 @@ export function OnboardingFlow({
         router.replace(first ? stepHref(first.slug) : "/");
       }
 
-      // Фоновый refresh сессии без сброса UI (только если уже были в кэше).
+      // Фоновый refresh сессии и каталога шагов без сброса UI.
       if (hasCache && token) {
+        void fetchOnboardingSteps()
+          .then((fetched) => applySteps(fetched))
+          .catch(() => {
+            /* ignore soft refresh errors */
+          });
         void fetchOnboardingSession(token)
           .then((session) => {
             const next = { ...flowCache.payloadByStep };
@@ -988,7 +1027,11 @@ export function OnboardingFlow({
   async function persistStep(stepSlug: string, payload: Record<string, unknown>, completed: boolean) {
     const token = sessionToken ?? (await ensureSessionToken());
     setSessionToken(token);
-    await submitOnboardingStep(token, stepSlug, payload, completed);
+    try {
+      await submitOnboardingStep(token, stepSlug, payload, completed);
+    } catch (err) {
+      if (stepSlug !== SYNTHESIS_SLUG) throw err;
+    }
     updateStepPayload(stepSlug, payload);
     return token;
   }
@@ -1371,13 +1414,13 @@ export function OnboardingFlow({
       />
 
       <div className="relative z-10 flex h-full min-h-0 flex-col px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-6 md:px-8 md:pt-8">
-        <div className="mx-auto flex w-full max-w-lg shrink-0 items-center justify-between">
+        <div className={`${onboardingShellClass()} relative flex h-11 shrink-0 items-center`}>
           {insightLoading ? (
-            <span className="w-11" aria-hidden />
+            <span className="relative z-10 h-11 w-11 shrink-0" aria-hidden />
           ) : isFirstScreen && !isReservedSlug(slug) ? (
             <Link
-              href="/"
-              className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-white/[0.04] text-white/80 transition hover:border-white/30 hover:text-white"
+              href={homeHref}
+              className="relative z-10 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/[0.04] text-white/80 transition hover:border-white/30 hover:text-white"
               aria-label="На главную"
             >
               <BackIcon />
@@ -1386,50 +1429,33 @@ export function OnboardingFlow({
             <button
               type="button"
               onClick={goBack}
-              className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-white/[0.04] text-white/80 transition hover:border-white/30 hover:text-white"
+              className="relative z-10 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/[0.04] text-white/80 transition hover:border-white/30 hover:text-white"
               aria-label="Назад"
             >
               <BackIcon />
             </button>
           )}
 
-          {insightLoading ? (
-            <span className="text-xl font-medium">
-              <CosmirrorMark />
-            </span>
-          ) : (
-            <Link
-              href={homeHref}
-              className="text-xl font-medium transition hover:opacity-90"
-            >
-              <CosmirrorMark />
-            </Link>
-          )}
-
-          <span className="w-11" aria-hidden />
-        </div>
-
-        {showProgress ? (
-          <div className="mx-auto mt-8 flex w-full max-w-lg shrink-0 items-center justify-center gap-1.5">
-            {Array.from({ length: progress.total }).map((_, index) => {
-              const active = index === progress.index;
-              const done = index < progress.index;
-              return (
-                <span
-                  key={index}
-                  aria-hidden
-                  className={`h-1.5 rounded-full transition-all duration-300 ${
-                    active
-                      ? "w-7 bg-[#F6E7A1]"
-                      : done
-                        ? "w-4 bg-[#F6E7A1]/55"
-                        : "w-4 bg-white/20"
-                  }`}
+          {showProgress ? (
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+              <div
+                role="progressbar"
+                aria-valuemin={1}
+                aria-valuemax={progress.total}
+                aria-valuenow={progress.index + 1}
+                aria-label={`Шаг ${progress.index + 1} из ${progress.total}`}
+                className="h-1 w-[min(14.5rem,52%)] overflow-hidden rounded-full bg-white/15"
+              >
+                <div
+                  className="h-full rounded-full bg-[#F6E7A1] transition-[width] duration-300 ease-out"
+                  style={{
+                    width: `${progress.total > 0 ? ((progress.index + 1) / progress.total) * 100 : 0}%`,
+                  }}
                 />
-              );
-            })}
-          </div>
-        ) : null}
+              </div>
+            </div>
+          ) : null}
+        </div>
 
         {mapLoading ? (
           <StarCheckPreloader />
@@ -1480,7 +1506,7 @@ export function OnboardingFlow({
           <form
             noValidate
             onSubmit={handleSubmit}
-            className="mx-auto flex w-full max-w-lg min-h-0 flex-1 flex-col pt-8 md:pt-10"
+            className={`${onboardingShellClass()} flex min-h-0 flex-1 flex-col pt-6 md:pt-10`}
           >
             <div className="reveal min-h-0 flex-1 overflow-y-auto overscroll-contain pb-4 [-webkit-overflow-scrolling:touch]">
               <StepBody
@@ -1488,6 +1514,7 @@ export function OnboardingFlow({
                 screens={contentScreens}
                 screenIndex={screenIndex}
                 payload={payload}
+                answers={mergeContentPayloads(steps, payloadByStep)}
                 error={error}
                 submitting={submitting}
                 signedIn={signedIn}
@@ -1550,6 +1577,7 @@ function StepBody({
   screens,
   screenIndex,
   payload,
+  answers,
   error,
   submitting,
   signedIn,
@@ -1564,6 +1592,7 @@ function StepBody({
   screens: ContentScreen[];
   screenIndex: number;
   payload: Record<string, unknown>;
+  answers: Record<string, unknown>;
   error: string;
   submitting: boolean;
   signedIn: boolean;
@@ -1574,6 +1603,10 @@ function StepBody({
   onYandex: () => void;
   onPayload: (patch: Record<string, unknown>) => void;
 }) {
+  if (isSynthesisStep(step)) {
+    return <SynthesisView answers={answers} />;
+  }
+
   if (step.step_type === "birth_data") {
     return (
       <BirthStep
@@ -1642,9 +1675,7 @@ function ContentScreenView({
     const value = typeof payload[screen.field] === "string" ? (payload[screen.field] as string) : "";
     return (
       <div className="flex flex-col">
-        <h1 className="text-3xl font-normal leading-tight tracking-tight text-white sm:text-4xl md:text-5xl">
-          {renderTitle(screen.title)}
-        </h1>
+        <h1 className={quizTitleClass()}>{renderTitle(screen.title)}</h1>
         <label htmlFor={`onboarding-${screen.field}`} className="sr-only">
           {screen.field}
         </label>
@@ -1668,32 +1699,64 @@ function ContentScreenView({
                   : event.target.value,
             })
           }
-          className="mt-10 w-full border-b border-white/20 bg-transparent pb-3 text-2xl text-white outline-none placeholder:text-white/30 focus:border-[#F6E7A1] sm:text-3xl"
+          className="mt-6 w-full border-b border-white/20 bg-transparent pb-2.5 text-xl text-white outline-none placeholder:text-white/30 focus:border-[#F6E7A1] md:mt-8 md:text-3xl"
         />
       </div>
     );
   }
 
   if (screen.kind === "single") {
-    const value = typeof payload[screen.field] === "string" ? (payload[screen.field] as string) : "";
+    const raw = payload[screen.field];
+    const stored =
+      typeof raw === "string"
+        ? raw
+        : Array.isArray(raw) && typeof raw[0] === "string"
+          ? raw[0]
+          : "";
+    const value = stored ? canonicalChoiceValue(screen.field, stored) : "";
+    const listGap = "mt-6 grid gap-3.5 md:mt-8 md:gap-5";
     return (
       <div className="flex flex-col">
-        <h1 className="text-3xl font-normal leading-tight tracking-tight text-white sm:text-4xl md:text-[2.6rem]">
-          {renderTitle(screen.title)}
-        </h1>
-        <div
-          className={`mt-10 grid gap-3 ${screen.columns === 2 ? "grid-cols-2 sm:grid-cols-2" : ""}`}
-        >
-          {screen.options.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              onClick={() => onPayload({ [screen.field]: option.value })}
-              className={`${choiceClass(value === option.value)} ${screen.columns === 2 ? "text-center" : ""}`}
-            >
-              {option.label}
-            </button>
-          ))}
+        <h1 className={quizTitleClass()}>{renderTitle(screen.title)}</h1>
+        <div className={`${listGap} ${screen.columns === 2 ? "grid-cols-2" : ""}`}>
+          {screen.options.map((option) => {
+            const active = value === option.value;
+            const tip = active && option.tip ? (
+              <p
+                id={`quiz-tip-${screen.field}-${option.value}`}
+                className="quiz-choice-tip"
+                role="status"
+                aria-live="polite"
+              >
+                {option.tip}
+              </p>
+            ) : null;
+            const button = (
+              <button
+                type="button"
+                aria-pressed={active}
+                aria-describedby={active && option.tip ? `quiz-tip-${screen.field}-${option.value}` : undefined}
+                onClick={() => onPayload({ [screen.field]: option.value })}
+                className={`${choiceClass(active)} ${screen.columns === 2 ? "text-center" : ""}`}
+              >
+                {option.label}
+              </button>
+            );
+            if (screen.columns === 2) {
+              return (
+                <div key={option.value} className="flex flex-col gap-3.5 md:gap-5">
+                  {button}
+                  {tip}
+                </div>
+              );
+            }
+            return (
+              <Fragment key={option.value}>
+                {button}
+                {tip}
+              </Fragment>
+            );
+          })}
         </div>
       </div>
     );
@@ -1704,30 +1767,41 @@ function ContentScreenView({
     : [];
   return (
     <div className="flex flex-col">
-      <h1 className="text-3xl font-normal leading-tight tracking-tight text-white sm:text-4xl md:text-[2.6rem]">
-        {renderTitle(screen.title)}
-      </h1>
+      <h1 className={quizTitleClass()}>{renderTitle(screen.title)}</h1>
       {screen.hint ? (
-        <p className="mt-3 text-sm font-normal text-white/80">{screen.hint}</p>
+        <p className="mt-2.5 text-xs font-normal text-white/70 md:mt-3 md:text-base">{screen.hint}</p>
       ) : null}
-      <div className="mt-8 flex flex-col gap-3">
+      <div className="mt-6 flex flex-col gap-3.5 md:mt-8 md:gap-5">
         {screen.options.map((option) => {
           const active = values.includes(option.value);
-          return (
-            <button
-              key={option.value}
-              type="button"
-              aria-pressed={active}
-              onClick={() => {
-                const next = active
-                  ? values.filter((item) => item !== option.value)
-                  : [...values, option.value];
-                onPayload({ [screen.field]: next });
-              }}
-              className={choiceClass(active)}
+          const tip = active && option.tip ? (
+            <p
+              id={`quiz-tip-${screen.field}-${option.value}`}
+              className="quiz-choice-tip"
+              role="status"
+              aria-live="polite"
             >
-              {option.label}
-            </button>
+              {option.tip}
+            </p>
+          ) : null;
+          return (
+            <Fragment key={option.value}>
+              <button
+                type="button"
+                aria-pressed={active}
+                aria-describedby={active && option.tip ? `quiz-tip-${screen.field}-${option.value}` : undefined}
+                onClick={() => {
+                  const next = active
+                    ? values.filter((item) => item !== option.value)
+                    : [...values, option.value];
+                  onPayload({ [screen.field]: next });
+                }}
+                className={choiceClass(active)}
+              >
+                {option.label}
+              </button>
+              {tip}
+            </Fragment>
           );
         })}
       </div>

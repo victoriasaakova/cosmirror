@@ -449,6 +449,113 @@ html.report-lock-scroll .cabinet-shell article {
   animation: fade-up 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+@keyframes quiz-tip-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.quiz-choice-tip {
+  position: relative;
+  margin: 0;
+  border: 0;
+  border-radius: 0 0.5rem 0.5rem 0;
+  background: rgba(246, 231, 161, 0.14);
+  padding: 0.7rem 0.95rem 0.75rem 1.05rem;
+  color: #f4efe8;
+  font-size: 0.8125rem;
+  font-weight: 400;
+  line-height: 1.45;
+  animation: quiz-tip-in 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.quiz-choice-tip::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 2px;
+  background: var(--accent);
+  border-radius: 0;
+}
+
+@media (min-width: 1024px) {
+  .quiz-choice-tip {
+    border-radius: 0 0.75rem 0.75rem 0;
+    font-size: 0.9375rem;
+    line-height: 1.5;
+    padding: 0.85rem 1.1rem 0.9rem 1.15rem;
+  }
+}
+
+.onboarding-synthesis-block {
+  position: relative;
+  margin: 0;
+  border: 0;
+  border-radius: 0.5rem;
+  background: rgba(246, 231, 161, 0.14);
+  padding: 0.85rem 1rem 0.95rem 1.05rem;
+}
+
+.onboarding-synthesis-block::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 2px;
+  background: var(--accent);
+  border-radius: 0;
+}
+
+.onboarding-synthesis-block__title {
+  padding-left: 0.35rem;
+  font-family: var(--font-grotesk), system-ui, sans-serif;
+  font-size: 0.8125rem;
+  font-weight: 400;
+  line-height: 1.35;
+  letter-spacing: 0.01em;
+  color: var(--accent);
+}
+
+.onboarding-synthesis-block__text {
+  margin: 0.45rem 0 0;
+  padding-left: 0.35rem;
+  font-family: var(--font-grotesk), system-ui, sans-serif;
+  font-size: 0.8125rem;
+  font-weight: 400;
+  line-height: 1.45;
+  color: #f4efe8;
+}
+
+@media (min-width: 1024px) {
+  .onboarding-synthesis-block {
+    border-radius: 0.75rem;
+    padding: 0.95rem 1.15rem 1.05rem 1.2rem;
+  }
+
+  .onboarding-synthesis-block::before {
+    top: 0;
+    bottom: 0;
+  }
+
+  .onboarding-synthesis-block__title {
+    font-size: 0.9375rem;
+  }
+
+  .onboarding-synthesis-block__text {
+    margin-top: 0.55rem;
+    font-size: 0.9375rem;
+    line-height: 1.5;
+  }
+}
+
 /* ── Falling pills zone ── */
 
 .pill-zone {
@@ -686,6 +793,8 @@ html.report-lock-scroll .cabinet-shell article {
   .reveal-delay-1,
   .reveal-delay-2,
   .reveal-delay-3,
+  .quiz-choice-tip,
+  .onboarding-synthesis-block,
   .growth-stem-core,
   .growth-stem-bloom,
   .growth-item,

@@ -1,7 +1,7 @@
 "use client";
 
 import type { OnboardingInsight, OnboardingStep } from "@/lib/api";
-import { CONTENT_UIS, mergeContentPayloads, screensForStep } from "@/lib/onboarding/screens";
+import { CONTENT_UIS, canonicalChoiceValue, mergeContentPayloads, screensForStep } from "@/lib/onboarding/screens";
 import { sanitizePersonName } from "@/lib/person-name";
 
 export const INSIGHT_OFFER_INDEX = 2;
@@ -21,7 +21,12 @@ function labelFor(
   options: { value: string; label: string }[],
   value: string,
 ): string {
-  return options.find((o) => o.value === value)?.label ?? value;
+  return (
+    options.find((o) => o.value === value)?.label ??
+    options.find((o) => o.value === canonicalChoiceValue("focus", value))?.label ??
+    options.find((o) => o.value === canonicalChoiceValue("chart_knowledge", value))?.label ??
+    value
+  );
 }
 
 function asStringList(value: unknown): string[] {
