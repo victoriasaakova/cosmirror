@@ -86,10 +86,33 @@ function ReportInner({ initialSection }: { initialSection?: "account" }) {
   const [bootstrapped, setBootstrapped] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [downloadNote, setDownloadNote] = useState("");
-  const [checkoutReturned, setCheckoutReturned] = useState(fromProdamus);
+  const [checkoutReturned, setCheckoutReturned] = useState(false);
   const [paymentSlow, setPaymentSlow] = useState(false);
   const paidCaptured = useRef(false);
   const isLocalDemo = process.env.NODE_ENV === "development";
+  const paidUser = Boolean(user?.has_paid_report);
+
+  useEffect(() => {
+    if (fromProdamus && ready && user && !user.has_paid_report) {
+      setCheckoutReturned(true);
+    }
+  }, [fromProdamus, ready, user]);
+
+  useEffect(() => {
+    if (!confirmed && !paidUser) return;
+    const params = new URLSearchParams(window.location.search);
+    let dirty = false;
+    for (const key of ["from", "_payform_status", "_payform_id", "_payform_order_id"]) {
+      if (params.has(key)) {
+        params.delete(key);
+        dirty = true;
+      }
+    }
+    if (!dirty) return;
+    const qs = params.toString();
+    window.history.replaceState(null, "", qs ? `${pathname}?${qs}` : pathname);
+    setCheckoutReturned(false);
+  }, [confirmed, paidUser, pathname]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.hash.replace(/^#/, ""));
@@ -376,6 +399,7 @@ function ReportInner({ initialSection }: { initialSection?: "account" }) {
       !needsAuth &&
       !failed &&
       !confirmed &&
+      !paidUser &&
       !cabinetEmpty &&
       checkoutReturned);
   const generating = preview === "report";
@@ -413,7 +437,7 @@ function ReportInner({ initialSection }: { initialSection?: "account" }) {
     !showFreeCabinet &&
     !error &&
     !cabinetEmpty &&
-    !checkoutReturned &&
+    !waitingBank &&
     (waitingAuth || Boolean(user));
   const isStatus =
     !accountOpen &&
