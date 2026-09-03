@@ -503,13 +503,20 @@ export function WhatYouGet() {
                   </span>
                   <span
                     aria-hidden
-                    className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-lg transition-all duration-300 ${
-                      isActive
-                        ? "rotate-45 border-[#F6E7A1] bg-[#F6E7A1] text-[#0a1a3a]"
-                        : "border-white/20 text-white/55"
+                    className={`flex h-10 w-10 shrink-0 items-center justify-center text-[#F6E7A1] transition-transform duration-200 ${
+                      isActive ? "rotate-45" : ""
                     }`}
                   >
-                    +
+                    <svg
+                      viewBox="0 0 24 24"
+                      className="h-6 w-6"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                    >
+                      <path d="M12 5v14M5 12h14" />
+                    </svg>
                   </span>
                 </button>
                 <div

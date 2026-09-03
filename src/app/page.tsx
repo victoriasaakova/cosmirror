@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { Header, JourneyCta } from "@/components/Header";
 import { FallingPills } from "@/components/FallingPills";
+import { HowItWorksCards } from "@/components/HowItWorksCards";
 import { LandingChartBlock } from "@/components/LandingChartBlock";
 import { PrefetchOnboarding } from "@/components/PrefetchOnboarding";
 import { SignedInHomeRedirect } from "@/components/SignedInHomeRedirect";
@@ -27,23 +28,23 @@ const FAMILIAR_CARDS = [
 
 const HOW_CARDS = [
   {
-    title: "Поймёшь свои циклы",
-    text: "Узнаешь, какие циклы ты проживаешь сейчас, поймёшь, как они могут проявляться именно в твоей жизни, и сможешь ими управлять.",
+    title: "Разберёшь основу своей карты",
+    text: "Поймёшь, как связаны ключевые элементы натальной карты, какие качества остаются твоей опорой и где возникают внутренние противоречия.",
     image: "/images/planet.webp",
   },
   {
-    title: "Раскроешь свою силу",
-    text: "Узнаешь, какие у тебя сильные стороны, и научишься опираться на них в жизни, чтобы раскрыть свой потенциал.",
+    title: "Поймёшь текущий период",
+    text: "Узнаешь, какие астрологические влияния действуют сейчас, как они могут проявляться в событиях, отношениях, решениях и изменениях внутреннего состояния.",
     image: "/images/flower.webp",
   },
   {
-    title: "Заметишь свои паттерны",
-    text: "Сможешь отслеживать свои состояния, повторяющиеся сценарии и уровень энергии, чтобы легче ими управлять.",
-    image: "/images/pattern.webp",
+    title: "Увидишь связь со своим запросом",
+    text: "Разбор покажет, как особенности карты и текущий период связаны именно с тем, что волнует тебя сейчас, а не с абстрактным описанием личности.",
+    image: "/images/puzzles.webp",
   },
   {
-    title: "Соберёшь живую карту себя",
-    text: "Увидишь взаимосвязи между своей историей и влиянием планет, сможешь делать более осознанные выборы с помощью AI-компаньона.",
+    title: "Распознаешь повторяющиеся сценарии",
+    text: "Заметишь привычные реакции и способы действовать, которые возвращаются в похожих ситуациях. Поймёшь, что их запускает и как можно с ними работать.",
     image: "/images/moon.webp",
   },
 ];
@@ -254,7 +255,7 @@ export default function Home() {
             своей&nbsp;жизни
           </h1>
 
-          <p className="reveal reveal-delay-1 mt-5 w-[min(100%,26rem)] font-grotesk text-base font-normal leading-relaxed text-white/80 sm:mt-6 sm:w-[34rem] sm:text-lg md:w-[38rem] md:text-xl drop-shadow-[0_2px_12px_rgba(0,0,0,0.9)]">
+          <p className="reveal reveal-delay-1 mx-auto mt-5 w-[min(100%,20rem)] font-grotesk text-base font-normal leading-relaxed text-white/80 sm:mt-6 sm:w-[34rem] sm:text-lg md:w-[38rem] md:text-xl drop-shadow-[0_2px_12px_rgba(0,0,0,0.9)]">
             Соединяем астрологию с&nbsp;твоим реальным опытом
             в&nbsp;историю, которая меняется вместе с&nbsp;тобой.
           </p>
@@ -269,7 +270,7 @@ export default function Home() {
       </section>
 
       {/* ── Eye bridge — tight under hero ── */}
-      <div className="relative z-10 -mt-2 flex justify-center bg-[#050d4a] px-5 pb-3 pt-2 sm:-mt-3 sm:pb-4 sm:pt-3 md:pb-5">
+      <div className="relative z-10 -mt-2 flex justify-center bg-[#050d4a] px-5 pb-1 pt-2 sm:-mt-3 sm:pb-2 sm:pt-3 md:pb-3">
         <Image
           src="/images/eye-silver.webp"
           alt=""
@@ -282,12 +283,12 @@ export default function Home() {
         />
       </div>
 
-      {/* ── If this is familiar ── */}
+      {/* ── If this is familiar (hidden, keep in markup) ── */}
       <section
         id="for"
-        className="relative scroll-mt-20 overflow-hidden bg-[#050d4a] pt-3 pb-0 md:pt-5"
+        className="relative scroll-mt-20 overflow-hidden bg-[#050d4a] pt-0 pb-0"
       >
-        <div className="relative z-10 mx-auto max-w-6xl px-5 md:px-8">
+        <div className="relative z-10 mx-auto hidden max-w-6xl px-5 md:px-8">
           {/* Section Heading */}
           <div className="mx-auto max-w-3xl text-center">
             <h2 className="text-3xl font-normal leading-tight tracking-tight text-white md:text-5xl lg:text-6xl">
@@ -327,7 +328,7 @@ export default function Home() {
         {/* Constellation — full-bleed stars background */}
         <div
           id="about"
-          className="relative mt-8 min-h-[36rem] scroll-mt-28 overflow-hidden pb-8 pt-10 sm:mt-10 sm:min-h-[42rem] sm:pb-10 sm:pt-12 md:min-h-[52rem] md:pb-44 md:pt-14"
+          className="relative mt-0 min-h-[36rem] scroll-mt-28 overflow-hidden pb-8 pt-2 sm:min-h-[42rem] sm:pb-10 sm:pt-4 md:min-h-[52rem] md:pb-44 md:pt-6"
         >
           <Image
             src="/images/landscape_stars.webp"
@@ -379,34 +380,7 @@ export default function Home() {
             </h2>
           </div>
 
-          <div className="mt-14 grid gap-6 sm:grid-cols-2">
-            {HOW_CARDS.map((card, index) => (
-              <div
-                key={card.title}
-                className="group relative flex flex-col rounded-2xl border border-[#F6E7A1]/55 bg-white/[0.03] p-6 backdrop-blur-md transition-all duration-300 hover:-translate-y-1.5 hover:border-[#F6E7A1]/80 hover:bg-white/[0.06] sm:p-7"
-              >
-                <span className="mb-3 self-end font-display text-xl italic leading-none text-[#F6E7A1]/80 sm:text-2xl">
-                  {String(index + 1).padStart(2, "0")}
-                </span>
-                <div className="mb-4 flex h-28 w-full items-start justify-start sm:h-32 md:h-36">
-                  <Image
-                    src={card.image}
-                    alt=""
-                    width={196}
-                    height={196}
-                    className="h-full w-auto max-w-full object-contain object-left"
-                    sizes="(max-width: 768px) 80vw, 40vw"
-                  />
-                </div>
-                <h3 className="mb-3 text-lg font-normal leading-snug text-[#F6E7A1] sm:text-xl">
-                  {card.title}
-                </h3>
-                <p className="text-sm font-normal leading-relaxed text-white/80 sm:text-[0.95rem]">
-                  {card.text}
-                </p>
-              </div>
-            ))}
-          </div>
+          <HowItWorksCards cards={HOW_CARDS} />
 
           <WhatYouGet />
 
