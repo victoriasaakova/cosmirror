@@ -121,7 +121,7 @@ export function AccountSettings({ onSaved }: { onSaved?: () => Promise<void> | v
       setEditing(false);
       setNote(
         next.has_paid_report
-          ? "Сохранили. Карту и разбор пересчитаем по новым данным."
+          ? "Сохранили. Карту на главной пересчитаем, разбор остаётся прежним."
           : "Сохранили данные рождения.",
       );
     } catch (err) {
@@ -149,6 +149,10 @@ export function AccountSettings({ onSaved }: { onSaved?: () => Promise<void> | v
 
   const fieldClass =
     "mt-3 w-full border-b border-white/20 bg-transparent pb-3 text-xl text-white outline-none placeholder:text-white/50 focus:border-[#F6E7A1] [color-scheme:dark]";
+  const smallBtn =
+    "inline-flex h-8 w-auto shrink-0 items-center justify-center gap-1.5 rounded-full px-3 text-[14px] font-medium leading-none transition duration-200 ease-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F6E7A1] enabled:active:scale-[0.97] disabled:opacity-50";
+  const smallPrimary = `${smallBtn} bg-[#F6E7A1] text-[#0a1a3a] hover:bg-[#f0dc82]`;
+  const smallGhost = `${smallBtn} border border-[#F6E7A1]/40 bg-transparent font-normal text-[#F6E7A1] hover:border-[#F6E7A1]/70 hover:bg-white/[0.06]`;
 
   const loginLine = useMemo(() => {
     if (email) return `Вход выполнен через Яндекс: ${email}`;
@@ -163,24 +167,29 @@ export function AccountSettings({ onSaved }: { onSaved?: () => Promise<void> | v
       </h1>
 
       <section className="mt-10">
-        <div className="flex items-start justify-between gap-4">
-          <h2 className="text-xl font-normal text-white sm:text-2xl">Данные рождения</h2>
-          <button
-            type="button"
-            onClick={() => {
-              setError("");
-              setNote("");
-              setEditing((open) => !open);
-            }}
-            className="inline-flex min-h-11 shrink-0 items-center gap-2 text-base text-[#F6E7A1] transition hover:text-[#f0dc82]"
-          >
-            <Pencil className="h-4 w-4" strokeWidth={1.7} aria-hidden />
-            {editing ? "Отмена" : "Изменить"}
-          </button>
-        </div>
-
         {editing ? (
-          <form onSubmit={(event) => void onSave(event)} className="mt-6 flex flex-col gap-8">
+          <form id="birth-form" onSubmit={(event) => void onSave(event)} className="flex flex-col gap-8">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <h2 className="text-xl font-normal text-white sm:text-2xl">Данные рождения</h2>
+              <div className="flex flex-row gap-2">
+                <button type="submit" disabled={saving} className={smallPrimary}>
+                  {saving ? "Сохраняем…" : "Сохранить"}
+                </button>
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={() => {
+                    setError("");
+                    setNote("");
+                    setDraft(draftFromUser(user));
+                    setEditing(false);
+                  }}
+                  className={smallGhost}
+                >
+                  Отмена
+                </button>
+              </div>
+            </div>
             <label className="block">
               <span className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.16em] text-white/80">
                 <Calendar className="h-3.5 w-3.5 text-[#F6E7A1]" strokeWidth={1.7} aria-hidden />
@@ -304,17 +313,30 @@ export function AccountSettings({ onSaved }: { onSaved?: () => Promise<void> | v
                 <span>Не знаю точное время рождения</span>
               </label>
             </div>
-
-            <button type="submit" disabled={saving} className="cabinet-cta sm:w-auto">
-              {saving ? "Сохраняем…" : "Сохранить"}
-            </button>
           </form>
         ) : (
-          <ul className="mt-6 space-y-4">
-            <BirthRow icon={Calendar} label="Дата" value={dateLabel} />
-            <BirthRow icon={Clock} label="Время" value={timeLabel} />
-            <BirthRow icon={MapPin} label="Место" value={placeLabel} />
-          </ul>
+          <>
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-xl font-normal text-white sm:text-2xl">Данные рождения</h2>
+              <button
+                type="button"
+                onClick={() => {
+                  setError("");
+                  setNote("");
+                  setEditing(true);
+                }}
+                className={smallPrimary}
+              >
+                <Pencil className="h-3.5 w-3.5" strokeWidth={1.8} aria-hidden />
+                Изменить
+              </button>
+            </div>
+            <ul className="mt-6 space-y-4">
+              <BirthRow icon={Calendar} label="Дата" value={dateLabel} />
+              <BirthRow icon={Clock} label="Время" value={timeLabel} />
+              <BirthRow icon={MapPin} label="Место" value={placeLabel} />
+            </ul>
+          </>
         )}
       </section>
 

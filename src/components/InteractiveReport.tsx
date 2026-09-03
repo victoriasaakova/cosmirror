@@ -493,14 +493,18 @@ function NatalTab({ document, focusKey }: { document: ReportDocument; focusKey?:
     <div className="space-y-10">
       {usingLibrary && coreThemes.length > 0 ? (
         <section className="space-y-6">
-          {coreThemes.map((theme) => (
-            <ThemeBlock key={theme.theme_id || theme.headline} theme={theme} />
+          {coreThemes.map((theme, index) => (
+            <ThemeBlock
+              key={theme.theme_id || theme.headline}
+              theme={theme}
+              openingHeadline={index === 0}
+            />
           ))}
         </section>
       ) : portrait?.headline || portrait?.summary ? (
         <section>
           {portrait.headline ? (
-            <h2 className="report-theme-title pb-1">
+            <h2 className="report-theme-title report-opening-title pb-1">
               {portrait.headline}
             </h2>
           ) : null}
@@ -628,11 +632,19 @@ function NatalTab({ document, focusKey }: { document: ReportDocument; focusKey?:
   );
 }
 
-function ThemeBlock({ theme }: { theme: NatalFallbackTheme }) {
+function ThemeBlock({
+  theme,
+  openingHeadline = false,
+}: {
+  theme: NatalFallbackTheme;
+  openingHeadline?: boolean;
+}) {
   return (
     <div>
       {theme.headline ? (
-        <h2 className="report-theme-title pb-1">
+        <h2
+          className={`report-theme-title pb-1${openingHeadline ? " report-opening-title" : ""}`}
+        >
           {theme.headline}
         </h2>
       ) : null}
@@ -895,7 +907,7 @@ function AspectsTab({
   return (
     <div>
       {intro?.headline ? (
-        <h2 className="report-theme-title pb-1">
+        <h2 className="report-theme-title report-opening-title pb-1">
           {intro.headline}
         </h2>
       ) : null}
@@ -1161,7 +1173,7 @@ function CyclesTab({
   return (
     <div>
       {overview?.headline ? (
-        <h2 className="report-theme-title pb-1">
+        <h2 className="report-theme-title report-opening-title pb-1">
           {overview.headline}
         </h2>
       ) : null}

@@ -42,7 +42,7 @@ export function ReportOpening({
   shareMode = false,
   mobileView = "overview",
 }: Props) {
-  const natal = report.document?.factual?.natal;
+  const natal = report.home_natal ?? report.document?.factual?.natal;
   const wheel = natal?.wheel;
   const hasBirthTime = Boolean(report.person?.has_birth_time ?? natal?.has_birth_time);
   const canEditTime = !hasBirthTime;
@@ -346,10 +346,11 @@ function coreLabel(key: CoreKey): string {
 }
 
 function findPoint(report: PaidReport, key: CoreKey): CorePoint | null {
-  const points = report.document?.factual?.natal?.points ?? [];
+  const natal = report.home_natal ?? report.document?.factual?.natal;
+  const points = natal?.points ?? [];
   const fromPoints = points.find((point) => point.key === key);
   if (fromPoints) return fromPoints;
-  const fromWheel = report.document?.factual?.natal?.wheel?.planets?.find((planet) => planet.key === key);
+  const fromWheel = natal?.wheel?.planets?.find((planet) => planet.key === key);
   if (!fromWheel) return null;
   return {
     sign: fromWheel.sign,

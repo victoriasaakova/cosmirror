@@ -26,13 +26,21 @@ function DualHeading({
   before,
   accent,
   after,
+  large = false,
 }: {
   before: string;
   accent: string;
   after?: string;
+  large?: boolean;
 }) {
   return (
-    <h3 className="text-base font-normal leading-snug tracking-tight text-white sm:text-lg">
+    <h3
+      className={
+        large
+          ? "text-[1.75rem] font-normal leading-[1.15] tracking-tight text-white sm:text-[2rem] md:text-[2.25rem]"
+          : "text-lg font-normal leading-snug tracking-tight text-white sm:text-xl"
+      }
+    >
       {before}{" "}
       <span className="font-display italic text-[#F6E7A1]">{accent}</span>
       {after ? <span> {after}</span> : null}
@@ -51,7 +59,8 @@ export function SectionFeedbackCard({
 }) {
   const [row, setRow] = useState<SectionFeedback | null>(initial ?? null);
   const [comment, setComment] = useState(initial?.comment ?? "");
-  const [saving, setSaving] = useState(false);
+  const [savingRating, setSavingRating] = useState(false);
+  const [savingComment, setSavingComment] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -72,11 +81,15 @@ export function SectionFeedbackCard({
   const rating = row?.rating ?? null;
   const done = isComplete(row);
 
-  async function save(next: {
-    rating: ReportFeedbackRating;
-    comment?: string;
-    comment_skipped?: boolean;
-  }) {
+  async function save(
+    next: {
+      rating: ReportFeedbackRating;
+      comment?: string;
+      comment_skipped?: boolean;
+    },
+    mode: "rating" | "comment",
+  ) {
+    const setSaving = mode === "rating" ? setSavingRating : setSavingComment;
     setSaving(true);
     setError("");
     try {
@@ -98,7 +111,7 @@ export function SectionFeedbackCard({
   }
 
   async function onPick(nextRating: ReportFeedbackRating) {
-    if (saving || nextRating === rating) return;
+    if (savingRating || savingComment || nextRating === rating) return;
     const previous = row;
     setRow((prev) => ({
       section,
@@ -107,19 +120,22 @@ export function SectionFeedbackCard({
       comment_skipped: false,
       updated_at: prev?.updated_at ?? "",
     }));
-    const saved = await save({ rating: nextRating });
+    const saved = await save({ rating: nextRating }, "rating");
     if (!saved) setRow(previous);
   }
 
   async function onSubmitComment(event: FormEvent) {
     event.preventDefault();
-    if (!rating) return;
+    if (!rating || savingComment) return;
     const text = comment.trim();
-    await save({
-      rating,
-      comment: text,
-      comment_skipped: !text,
-    });
+    await save(
+      {
+        rating,
+        comment: text,
+        comment_skipped: !text,
+      },
+      "comment",
+    );
   }
 
   if (done) {
@@ -129,7 +145,7 @@ export function SectionFeedbackCard({
         aria-live="polite"
       >
         <DualHeading before="Уже смотрим твой" accent="фидбэк" after="👀" />
-        <p className="mt-2 text-sm font-normal leading-relaxed text-[#fff]">
+        <p className="mt-2 text-base font-normal leading-relaxed text-[#fff]">
           Спасибо, что помогаешь нам{" "}
           <span className="font-display italic text-[#F6E7A1]">стать лучше!</span>
         </p>
@@ -139,21 +155,21 @@ export function SectionFeedbackCard({
 
   return (
     <section className="mt-8 w-full rounded-2xl border border-[#F6E7A1]/18 bg-white/[0.04] px-4 py-4">
-      <DualHeading before="Насколько это" accent="про тебя?" />
-      <p className="mt-2 text-sm font-normal leading-relaxed text-[#fff]">
-        Насколько точно этот раздел описывает твой опыт.
+      <DualHeading before="Насколько это" accent="про тебя?" large />
+      <p className="mt-2 text-base font-normal leading-relaxed text-[#fff] sm:text-lg">
+        Помоги нам понять, насколько точно этот раздел описывает твой опыт.
       </p>
-      <div role="group" aria-label="Насколько это про тебя" className="mt-3 flex flex-wrap gap-1">
+      <div role="group" aria-label="Насколько это про тебя" className="mt-3 flex flex-wrap gap-2">
         {RATINGS.map((item) => {
           const active = rating === item.id;
           return (
             <button
               key={item.id}
               type="button"
-              disabled={saving}
+              disabled={savingComment}
               aria-pressed={active}
               onClick={() => void onPick(item.id)}
-              className={`inline-flex min-h-8 items-center gap-1 rounded-full border px-2 py-1 text-[12px] leading-none transition duration-200 ease-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F6E7A1] enabled:active:scale-[0.96] disabled:opacity-50 sm:text-[13px] sm:px-2.5 ${
+              className={`inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3 py-1.5 text-[14px] leading-none transition duration-200 ease-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F6E7A1] enabled:active:scale-[0.96] disabled:opacity-50 ${
                 active
                   ? "border-[#F6E7A1] bg-[#F6E7A1] text-[#0a1a3a] hover:bg-[#f0dc82]"
                   : "border-white/18 bg-transparent text-white hover:border-[#F6E7A1] hover:bg-white/[0.06] hover:text-[#F6E7A1]"
@@ -178,17 +194,17 @@ export function SectionFeedbackCard({
             value={comment}
             onChange={(event) => setComment(event.target.value)}
             maxLength={2000}
-            disabled={saving}
+            disabled={savingComment}
             placeholder="что совпало или не совпало"
             autoComplete="off"
             className={FIELD_CLASS}
           />
           <button
             type="submit"
-            disabled={saving}
+            disabled={savingComment}
             className="mt-4 inline-flex min-h-9 items-center justify-center rounded-full bg-[#F6E7A1] px-5 py-2 text-sm font-medium leading-none text-[#0a1a3a] transition duration-200 ease-out hover:bg-[#f0dc82] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F6E7A1] enabled:active:scale-[0.97] disabled:opacity-50"
           >
-            {saving ? "Отправляем…" : "Отправить"}
+            {savingComment ? "Отправляем…" : "Отправить"}
           </button>
         </form>
       ) : null}

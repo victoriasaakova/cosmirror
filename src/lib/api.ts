@@ -907,6 +907,7 @@ export type PaidReport = {
     birth_place?: string;
     has_birth_time?: boolean;
   };
+  home_natal?: NonNullable<NonNullable<ReportDocument["factual"]>["natal"]>;
   document?: ReportDocument;
   sections: ReportSection[];
   disclaimer?: string;
