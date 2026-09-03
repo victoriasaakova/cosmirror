@@ -77,6 +77,7 @@ function ReportInner({ initialSection }: { initialSection?: "account" }) {
     pathname === "/account/settings/" ||
     searchParams.get("s") === "account";
   const [order, setOrder] = useState<Order | null>(null);
+  const confirmed = order?.status === "paid";
   const [cabinet, setCabinet] = useState<CabinetPayload | null | undefined>(undefined);
   const [paywallOpen, setPaywallOpen] = useState(false);
   const [onboardingSteps, setOnboardingSteps] = useState<OnboardingStep[]>([]);
@@ -389,7 +390,6 @@ function ReportInner({ initialSection }: { initialSection?: "account" }) {
 
   const failed =
     preview === "failed" || order?.status === "canceled" || order?.status === "denied";
-  const confirmed = order?.status === "paid";
   const report = confirmed ? order?.report : null;
   const showReport = Boolean(report?.document);
   const waitingAuth = !preview && (!bootstrapped || !ready);
