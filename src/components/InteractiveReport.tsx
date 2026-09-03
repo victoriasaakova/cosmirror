@@ -516,7 +516,7 @@ function NatalTab({ document, focusKey }: { document: ReportDocument; focusKey?:
         </section>
       ) : (
         <p className="report-lede">
-          Это гипотезы по уже посчитанной карте. Узнаёшь - бери. Не узнаёшь - это тоже ответ.
+          Это гипотезы по уже посчитанной карте: положения и дома как рамка чтения, не приговор.
         </p>
       )}
       {grouped.map((group) => (
