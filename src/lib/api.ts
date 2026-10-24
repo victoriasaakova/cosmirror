@@ -45,8 +45,14 @@ function abortAfter(ms: number, parent?: AbortSignal): AbortSignal {
   return controller.signal;
 }
 
-async function fetchWithRetry(input: string, init?: RequestInit, retries = 3): Promise<Response> {
-  const headers = authHeaders(init?.headers);
+async function fetchWithRetry(
+  input: string,
+  init?: RequestInit,
+  retries = 3,
+  options?: { anonymous?: boolean },
+): Promise<Response> {
+  const headers = options?.anonymous ? new Headers(init?.headers) : authHeaders(init?.headers);
+  if (options?.anonymous) headers.delete("Authorization");
   const nextInit: RequestInit = { ...init, headers };
   let lastErr: unknown;
   for (let attempt = 0; attempt < retries; attempt += 1) {
@@ -1497,12 +1503,17 @@ export async function createChartShare(): Promise<{ url: string }> {
 export async function createCompatibilityReport(body: unknown): Promise<unknown> {
   let created: Response;
   try {
-    created = await fetchWithRetry(`${API_URL}/api/compatibility/v1/reports`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-      cache: "no-store",
-    });
+    created = await fetchWithRetry(
+      `${API_URL}/api/compatibility/v1/reports`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        cache: "no-store",
+      },
+      3,
+      { anonymous: true },
+    );
   } catch (err) {
     if (err instanceof TypeError) throw new Error("Не получилось собрать разбор. Можно попробовать ещё раз.");
     throw new Error(networkErrorMessage(err, "Не получилось собрать разбор."));
@@ -1515,7 +1526,12 @@ export async function createCompatibilityReport(body: unknown): Promise<unknown>
 
   let detail: Response;
   try {
-    detail = await fetchWithRetry(`${API_URL}/api/compatibility/v1/reports/${reportId}`, { cache: "no-store" });
+    detail = await fetchWithRetry(
+      `${API_URL}/api/compatibility/v1/reports/${reportId}`,
+      { cache: "no-store" },
+      3,
+      { anonymous: true },
+    );
   } catch (err) {
     if (err instanceof TypeError) throw new Error("Не получилось открыть разбор. Можно попробовать ещё раз.");
     throw new Error(networkErrorMessage(err, "Не получилось открыть разбор."));
