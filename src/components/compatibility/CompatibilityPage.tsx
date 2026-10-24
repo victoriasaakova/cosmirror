@@ -1,8 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import Image from "next/image";
-import Link from "next/link";
+import { Header } from "@/components/Header";
 import { toIsoDate } from "@/lib/birth-input";
 import { loadLiveCompatibility } from "@/lib/compatibility/live-provider";
 import type { CompatibilityRequest, CompatibilityResult, NatalRow, PersonDraft } from "@/lib/compatibility/types";
@@ -64,25 +63,6 @@ function tablePoints(rows: NatalRow[], side: "a" | "b"): SignsTablePoint[] {
       },
     ];
   });
-}
-
-function PageMark() {
-  return (
-    <Link
-      href="/"
-      aria-label="Cosmirror"
-      className="inline-flex rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#F6E7A1]"
-    >
-      <Image
-        src="/images/eye-silver.webp"
-        alt=""
-        width={512}
-        height={512}
-        priority
-        className="h-auto w-16 sm:w-20"
-      />
-    </Link>
-  );
 }
 
 function BirthCards({ people }: { people: [PersonDraft, PersonDraft] }) {
@@ -197,11 +177,8 @@ export function CompatibilityPage() {
 
   return (
     <main className="relative min-h-[100dvh] overflow-x-hidden bg-[#050d4a] text-white">
-      <div className="relative z-10 mx-auto w-full max-w-5xl px-5 pb-20 pt-12 sm:px-8 sm:pt-16">
-        <div className="flex justify-center">
-          <PageMark />
-        </div>
-
+      <Header />
+      <div className="relative z-10 mx-auto w-full max-w-5xl px-5 pb-20 pt-24 sm:px-8 md:pt-28">
         {showForm ? (
           <div className="mt-8">
             <CompatibilityHero />
@@ -355,18 +332,6 @@ export function CompatibilityPage() {
             ) : null}
           </>
         ) : null}
-      </div>
-
-      <div className="pointer-events-none relative mt-4 h-[min(100vw,40rem)]">
-        <Image
-          src="/images/hero-coastal-moon-trail_4.webp"
-          alt=""
-          fill
-          sizes="100vw"
-          aria-hidden
-          className="object-cover object-center md:object-[center_62%]"
-        />
-        <div aria-hidden className="absolute inset-x-0 top-0 h-10 bg-gradient-to-b from-[#050d4a] to-transparent" />
       </div>
     </main>
   );
