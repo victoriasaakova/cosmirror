@@ -5,7 +5,6 @@ import { CookieConsentProvider } from "@/components/CookieConsent";
 import { YandexMetrika } from "@/components/YandexMetrika";
 import { PostHogAnalytics } from "@/components/PostHogAnalytics";
 import { AuthProvider } from "@/components/AuthProvider";
-import { BackToTop } from "@/components/BackToTop";
 import {
   SITE_DESCRIPTION,
   SITE_OG_IMAGE_PATH,
@@ -107,7 +106,6 @@ export default function RootLayout({
               <PostHogAnalytics />
             </Suspense>
             {children}
-            <BackToTop />
           </AuthProvider>
         </CookieConsentProvider>
       </body>

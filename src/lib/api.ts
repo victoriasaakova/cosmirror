@@ -1494,4 +1494,35 @@ export async function createChartShare(): Promise<{ url: string }> {
   return { url };
 }
 
+export async function createCompatibilityReport(body: unknown): Promise<unknown> {
+  let created: Response;
+  try {
+    created = await fetchWithRetry(`${API_URL}/api/compatibility/v1/reports`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      cache: "no-store",
+    });
+  } catch (err) {
+    if (err instanceof TypeError) throw new Error("Не получилось собрать разбор. Можно попробовать ещё раз.");
+    throw new Error(networkErrorMessage(err, "Не получилось собрать разбор."));
+  }
+  const posted = await parseJson(created);
+  if (!created.ok) throw new Error(sanitizeApiError(errorMessage(posted, "Не получилось собрать разбор."), "Не получилось собрать разбор."));
+  const reportId =
+    typeof posted === "object" && posted && "report_id" in posted ? String((posted as { report_id: string }).report_id) : "";
+  if (!reportId) throw new Error("Не получилось собрать разбор.");
+
+  let detail: Response;
+  try {
+    detail = await fetchWithRetry(`${API_URL}/api/compatibility/v1/reports/${reportId}`, { cache: "no-store" });
+  } catch (err) {
+    if (err instanceof TypeError) throw new Error("Не получилось открыть разбор. Можно попробовать ещё раз.");
+    throw new Error(networkErrorMessage(err, "Не получилось открыть разбор."));
+  }
+  const document = await parseJson(detail);
+  if (!detail.ok) throw new Error(sanitizeApiError(errorMessage(document, "Не получилось открыть разбор."), "Не получилось открыть разбор."));
+  return document;
+}
+
 export { API_URL };
