@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useState } from "react";
 import { Header } from "@/components/Header";
 import { toIsoDate } from "@/lib/birth-input";
 import { loadLiveCompatibility } from "@/lib/compatibility/live-provider";
@@ -19,30 +19,32 @@ import { SignsTable, type SignsTablePoint } from "@/components/SignsTable";
 
 type Status = "empty" | "editing" | "loading" | "results" | "error";
 
-const DEMO_PEOPLE: [PersonDraft, PersonDraft] = [
-  {
-    id: "A",
-    displayName: "Виктория",
-    birthDate: "26.05.1995",
-    birthTime: "19:25",
-    unknownTime: false,
-    placeName: "Гдыня, Польша",
-    latitude: 54.516498,
-    longitude: 18.540274,
-    timezone: "Europe/Warsaw",
-  },
-  {
-    id: "B",
-    displayName: "Марк",
-    birthDate: "14.02.1993",
-    birthTime: "08:40",
-    unknownTime: false,
-    placeName: "Рим, Италия",
-    latitude: 41.902783,
-    longitude: 12.496366,
-    timezone: "Europe/Rome",
-  },
-];
+function blankPeople(): [PersonDraft, PersonDraft] {
+  return [
+    {
+      id: "A",
+      displayName: "",
+      birthDate: "",
+      birthTime: "",
+      unknownTime: false,
+      placeName: "",
+      latitude: null,
+      longitude: null,
+      timezone: "",
+    },
+    {
+      id: "B",
+      displayName: "",
+      birthDate: "",
+      birthTime: "",
+      unknownTime: false,
+      placeName: "",
+      latitude: null,
+      longitude: null,
+      timezone: "",
+    },
+  ];
+}
 
 function displayName(person: PersonDraft) {
   const fallback = person.id === "A" ? "Ты" : "Партнёр";
@@ -108,8 +110,8 @@ function validate(people: [PersonDraft, PersonDraft]) {
 }
 
 export function CompatibilityPage() {
-  const [status, setStatus] = useState<Status>("loading");
-  const [people, setPeople] = useState<[PersonDraft, PersonDraft]>(DEMO_PEOPLE);
+  const [status, setStatus] = useState<Status>("empty");
+  const [people, setPeople] = useState<[PersonDraft, PersonDraft]>(blankPeople);
   const [error, setError] = useState("");
   const [result, setResult] = useState<CompatibilityResult | null>(null);
   const [aspectsOpen, setAspectsOpen] = useState(false);
@@ -118,24 +120,6 @@ export function CompatibilityPage() {
     A: result?.persons[0].displayName ?? displayName(people[0]),
     B: result?.persons[1].displayName ?? displayName(people[1]),
   };
-
-  useEffect(() => {
-    let cancelled = false;
-    loadLiveCompatibility(toRequest(DEMO_PEOPLE))
-      .then((next) => {
-        if (cancelled) return;
-        setResult(next);
-        setStatus("results");
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return;
-        setError(err instanceof Error ? err.message : "Не получилось собрать разбор. Можно попробовать ещё раз.");
-        setStatus("error");
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   function updatePerson(next: PersonDraft) {
     setPeople((current) => {
