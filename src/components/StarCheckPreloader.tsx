@@ -41,6 +41,44 @@ const GENERATING_STATUS = [
   "формирую шаги для практики...",
 ];
 
+const COMPATIBILITY_STATUS = [
+  "сверяемся со\u00a0звёздами",
+  "считаем карту",
+  "разбираем динамику",
+  "собираем инсайты",
+];
+
+export function CompatibilityPreloader() {
+  const [index, setIndex] = useState(0);
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setIndex((current) => (current + 1) % COMPATIBILITY_STATUS.length);
+    }, 2800);
+    return () => window.clearInterval(timer);
+  }, []);
+  return (
+    <div
+      className="mx-auto flex w-full max-w-lg flex-col items-center justify-center px-4 py-8 text-center"
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
+    >
+      <Image
+        src="/images/eye-silver.webp"
+        alt=""
+        width={512}
+        height={512}
+        className="animate-eye-spin h-auto w-[min(46vw,11rem)] sm:w-[12rem]"
+        sizes="(max-width: 640px) 46vw, 12rem"
+        priority
+      />
+      <p className="mt-8 font-grotesk text-base font-normal text-white sm:text-lg">
+        {COMPATIBILITY_STATUS[index]}
+      </p>
+    </div>
+  );
+}
+
 export function ReportSectionPreloader() {
   const [index, setIndex] = useState(0);
   useEffect(() => {

@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { Header } from "@/components/Header";
+import { CompatibilityPreloader } from "@/components/StarCheckPreloader";
 import { toIsoDate } from "@/lib/birth-input";
 import { loadLiveCompatibility } from "@/lib/compatibility/live-provider";
 import type { CompatibilityRequest, CompatibilityResult, NatalRow, PersonDraft } from "@/lib/compatibility/types";
@@ -206,9 +207,8 @@ export function CompatibilityPage() {
         )}
 
         {status === "loading" ? (
-          <div className="mx-auto mt-12 grid max-w-5xl gap-4 md:grid-cols-2" aria-hidden>
-            <div className="motion-safe:animate-pulse h-40 rounded-2xl border border-white/10 bg-white/[0.04]" />
-            <div className="motion-safe:animate-pulse h-40 rounded-2xl border border-white/10 bg-white/[0.04]" />
+          <div className="mt-6">
+            <CompatibilityPreloader />
           </div>
         ) : null}
 
