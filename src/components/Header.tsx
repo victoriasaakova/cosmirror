@@ -12,7 +12,7 @@ import { LANDING_CHART_EVENT, readLandingChartToken } from "@/lib/onboarding/ses
 const GUEST_NAV = [
   { id: "chart", hash: "#chart", path: "/#chart", label: "Расчёт карты" },
   { id: "how", hash: "#how-it-works", path: "/#how-it-works", label: "Как это работает" },
-  { id: "get", hash: "#what-you-get", path: "/#what-you-get", label: "Что внутри" },
+  { id: "compatibility", hash: "/compatibility/", path: "/compatibility/", label: "Совместимость" },
   { id: "blog", hash: "/blog/", path: "/blog/", label: "Блог" },
 ] as const;
 
@@ -48,11 +48,12 @@ export function Header() {
   const ctaLabel = showCabinetCta ? "Моя карта" : "Начать путешествие";
   const onAccountSettings = pathname === "/account/settings" || pathname === "/account/settings/";
   const onBlog = isBlogPath(pathname);
+  const onCompatibility = isCompatibilityPath(pathname);
   const nav = GUEST_NAV.map((item) => ({
     id: item.id,
-    href: item.id === "blog" ? item.path : onHome ? item.hash : item.path,
+    href: isPageNav(item.id) ? item.path : onHome ? item.hash : item.path,
     label: item.label,
-    active: item.id === "blog" && onBlog,
+    active: (item.id === "blog" && onBlog) || (item.id === "compatibility" && onCompatibility),
   }));
 
   useEffect(() => {
@@ -217,7 +218,7 @@ function GuestNavLink({
   onClick?: () => void;
 }) {
   const current = active ? "page" : undefined;
-  if (href.startsWith("/blog")) {
+  if (href.startsWith("/blog") || href.startsWith("/compatibility")) {
     return (
       <Link href={href} onClick={onClick} className={className} aria-current={current}>
         {label}
@@ -240,8 +241,16 @@ function navLinkClass(active: boolean, size: "desktop" | "mobile") {
   return `${sizeClass} ${colorClass} transition-colors`;
 }
 
+function isPageNav(id: string) {
+  return id === "blog" || id === "compatibility";
+}
+
 function isBlogPath(pathname: string) {
   return pathname === "/blog" || pathname.startsWith("/blog/");
+}
+
+function isCompatibilityPath(pathname: string) {
+  return pathname === "/compatibility" || pathname.startsWith("/compatibility/");
 }
 
 function HeaderBrand() {

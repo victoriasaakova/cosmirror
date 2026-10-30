@@ -3,8 +3,11 @@ export const fieldClass =
 
 export const labelClass = "text-sm text-white/70";
 
+export const glassFrameClass =
+  "rounded-2xl border border-[#F6E7A1]/55 bg-white/[0.03] backdrop-blur-md";
+
 export const personCardClass =
-  "rounded-2xl border border-[#F6E7A1]/45 bg-white/[0.03] px-5 py-7 sm:px-6 sm:py-8";
+  "rounded-2xl border border-[#F6E7A1]/55 bg-transparent px-5 py-7 sm:px-6 sm:py-8";
 
 export const quietCardClass = "rounded-2xl border border-white/10 bg-white/5 p-5";
 

@@ -3,7 +3,7 @@ import { CompatibilityPage } from "@/components/compatibility/CompatibilityPage"
 
 export const metadata: Metadata = {
   title: "Совместимость — Cosmirror",
-  description: "Исследуйте связь через две натальные карты.",
+  description: "Исследуй свои отношения по натальной карте.",
   robots: { index: false, follow: false },
 };
 

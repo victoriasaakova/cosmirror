@@ -6,7 +6,8 @@ import { formatBirthDateInput } from "@/lib/birth-input";
 import type { PersonDraft } from "@/lib/compatibility/types";
 import { fieldClass, labelClass, personCardClass } from "@/components/compatibility/styles";
 
-const ROLE_LABEL = { A: "Ты", B: "Партнёр" } as const;
+const CARD_TITLE = { A: "Твоя карта", B: "Карта партнёра" } as const;
+const NAME_PLACEHOLDER = { A: "Ты", B: "Партнёр" } as const;
 
 type Props = {
   person: PersonDraft;
@@ -18,7 +19,8 @@ export function PersonCard({ person, disabled = false, onChange }: Props) {
   const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([]);
   const [suggestOpen, setSuggestOpen] = useState(false);
   const [suggestLoading, setSuggestLoading] = useState(false);
-  const role = ROLE_LABEL[person.id];
+  const title = CARD_TITLE[person.id];
+  const namePlaceholder = NAME_PLACEHOLDER[person.id];
   const dateId = `${person.id}-birth-date`;
   const placeId = `${person.id}-birth-place`;
   const timeId = `${person.id}-birth-time`;
@@ -68,7 +70,7 @@ export function PersonCard({ person, disabled = false, onChange }: Props) {
 
   return (
     <article className={personCardClass}>
-      <h2 className="font-display text-3xl italic leading-[1.15] text-[#F6E7A1]">{role}</h2>
+      <h2 className="font-grotesk text-2xl font-normal leading-tight tracking-tight text-white">{title}</h2>
 
       <div className="mt-8">
         <label htmlFor={nameId} className={labelClass}>
@@ -80,7 +82,7 @@ export function PersonCard({ person, disabled = false, onChange }: Props) {
           name={`${person.id}-name`}
           autoComplete="name"
           disabled={disabled}
-          placeholder={role}
+          placeholder={namePlaceholder}
           value={person.displayName}
           onChange={(event) => onChange({ ...person, displayName: event.target.value })}
           className={`${fieldClass} ${disabled ? "opacity-60" : ""}`}

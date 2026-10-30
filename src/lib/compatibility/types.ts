@@ -1,5 +1,9 @@
 export type PersonId = "A" | "B";
 
+export type RelationshipKind = "friendship" | "romantic" | "family";
+
+export type RelationshipStage = "meeting" | "together" | "past";
+
 export type BirthTimeStatus = "known" | "unknown";
 
 export type DataQuality = "full" | "partial";

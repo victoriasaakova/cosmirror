@@ -1,13 +1,23 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import Image from "next/image";
 import { Header } from "@/components/Header";
 import { CompatibilityPreloader } from "@/components/StarCheckPreloader";
 import { toIsoDate } from "@/lib/birth-input";
 import { loadLiveCompatibility } from "@/lib/compatibility/live-provider";
-import type { CompatibilityRequest, CompatibilityResult, NatalRow, PersonDraft } from "@/lib/compatibility/types";
+import type {
+  CompatibilityRequest,
+  CompatibilityResult,
+  NatalRow,
+  PersonDraft,
+  RelationshipKind,
+  RelationshipStage,
+} from "@/lib/compatibility/types";
 import { signLabel } from "@/components/compatibility/astro-label";
 import { CompatibilityHero } from "@/components/compatibility/CompatibilityHero";
+import { CompatibilityInsight } from "@/components/compatibility/CompatibilityInsight";
+import { CompatibilityReading } from "@/components/compatibility/CompatibilityReading";
 import { BondSection } from "@/components/compatibility/BondSection";
 import { CoupleCycleInsight } from "@/components/compatibility/CoupleCycleInsight";
 import { CoupleInput } from "@/components/compatibility/CoupleInput";
@@ -101,18 +111,26 @@ function toRequest(people: [PersonDraft, PersonDraft]): CompatibilityRequest {
   };
 }
 
-function validate(people: [PersonDraft, PersonDraft]) {
+function validate(
+  people: [PersonDraft, PersonDraft],
+  relationshipKind: RelationshipKind | null,
+  relationshipStage: RelationshipStage | null,
+) {
   if (people.some((person) => !toIsoDate(person.birthDate))) return "Нужна дата рождения у обоих.";
   if (people.some((person) => person.placeName.trim().length < 2)) return "Нужен город рождения у обоих.";
   if (people.some((person) => person.latitude == null || person.longitude == null || !person.timezone)) {
     return "Выбери город из списка, чтобы взять координаты.";
   }
+  if (!relationshipKind) return "Выбери тип отношений.";
+  if (relationshipKind === "romantic" && !relationshipStage) return "Выбери статус отношений.";
   return "";
 }
 
 export function CompatibilityPage() {
   const [status, setStatus] = useState<Status>("empty");
   const [people, setPeople] = useState<[PersonDraft, PersonDraft]>(blankPeople);
+  const [relationshipKind, setRelationshipKind] = useState<RelationshipKind | null>(null);
+  const [relationshipStage, setRelationshipStage] = useState<RelationshipStage | null>(null);
   const [error, setError] = useState("");
   const [result, setResult] = useState<CompatibilityResult | null>(null);
   const [aspectsOpen, setAspectsOpen] = useState(false);
@@ -135,9 +153,28 @@ export function CompatibilityPage() {
     }
   }
 
+  function noteInteraction() {
+    if (status === "empty") setStatus("editing");
+    if (status === "error") {
+      setStatus("editing");
+      setError("");
+    }
+  }
+
+  function selectRelationshipKind(kind: RelationshipKind) {
+    setRelationshipKind(kind);
+    if (kind !== "romantic") setRelationshipStage(null);
+    noteInteraction();
+  }
+
+  function selectRelationshipStage(stage: RelationshipStage) {
+    setRelationshipStage(stage);
+    noteInteraction();
+  }
+
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const problem = validate(people);
+    const problem = validate(people, relationshipKind, relationshipStage);
     if (problem) {
       setError(problem);
       setStatus("error");
@@ -163,16 +200,41 @@ export function CompatibilityPage() {
   return (
     <main className="relative min-h-[100dvh] overflow-x-hidden bg-[#050d4a] text-white">
       <Header />
-      <div className="relative z-10 mx-auto w-full max-w-5xl px-5 pb-20 pt-24 sm:px-8 md:pt-28">
+      {showForm ? (
+        <div aria-hidden className="pointer-events-none fixed inset-0 z-0">
+          <Image
+            src="/images/compatibility-sky.webp"
+            alt=""
+            fill
+            priority
+            className="object-cover object-center"
+            sizes="100vw"
+          />
+        </div>
+      ) : null}
+      <div
+        className={`relative z-10 mx-auto w-full px-5 pb-24 pt-24 sm:px-8 md:pt-28 ${
+          showForm ? "max-w-6xl" : "max-w-5xl"
+        }`}
+      >
         {showForm ? (
           <div className="mt-8">
             <CompatibilityHero />
+            <CompatibilityReading />
+            <CompatibilityInsight />
             <CoupleInput
               people={people}
+              relationshipKind={relationshipKind}
+              relationshipStage={relationshipStage}
               error={error}
               onChange={updatePerson}
+              onRelationshipKind={selectRelationshipKind}
+              onRelationshipStage={selectRelationshipStage}
               onSubmit={onSubmit}
             />
+            <p className="mx-auto mt-10 max-w-xl text-center text-sm leading-relaxed text-white/55 sm:mt-12">
+              Это не предсказание и не вердикт вашим отношениям, информация носит ознакомительный характер.
+            </p>
           </div>
         ) : (
           <header className="mx-auto mt-8 flex max-w-3xl flex-col items-center text-center">
