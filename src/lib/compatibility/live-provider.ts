@@ -7,10 +7,17 @@ import type {
   BondSummaryCard,
   CompatibilityRequest,
   CompatibilityResult,
+  CompatibilityScores,
+  ScoreIndex,
+  ScoreStatus,
   NatalRow,
+  PairArcanaPerson,
+  PairTarotCard,
+  PairTarotLove,
   PersonId,
   Placement,
   PointKey,
+  TarotArcana,
   SignComparison,
   SynastryAspect,
 } from "@/lib/compatibility/types";
@@ -33,12 +40,46 @@ const BODY_RU: Record<string, string> = {
   mc: "MC",
 };
 
-const ASPECT_RU: Record<string, string> = {
-  conjunction: "соединение",
-  sextile: "секстиль",
-  square: "квадрат",
-  trine: "тригон",
-  opposition: "оппозиция",
+const DATIVE: Record<string, string> = {
+  sun: "Солнцу",
+  moon: "Луне",
+  mercury: "Меркурию",
+  venus: "Венере",
+  mars: "Марсу",
+  jupiter: "Юпитеру",
+  saturn: "Сатурну",
+  uranus: "Урану",
+  neptune: "Нептуну",
+  pluto: "Плутону",
+  north_node: "Северному узлу",
+  south_node: "Южному узлу",
+  asc: "Асценденту",
+  mc: "середине неба",
+};
+
+const INSTRUMENTAL: Record<string, string> = {
+  sun: "Солнцем",
+  moon: "Луной",
+  mercury: "Меркурием",
+  venus: "Венерой",
+  mars: "Марсом",
+  jupiter: "Юпитером",
+  saturn: "Сатурном",
+  uranus: "Ураном",
+  neptune: "Нептуном",
+  pluto: "Плутоном",
+  north_node: "Северным узлом",
+  south_node: "Южным узлом",
+  asc: "Асцендентом",
+  mc: "серединой неба",
+};
+
+const ASPECT_PHRASE: Record<string, string> = {
+  conjunction: "в соединении с {other}",
+  sextile: "в секстиле к {other}",
+  square: "в квадрате к {other}",
+  trine: "в тригоне к {other}",
+  opposition: "в оппозиции к {other}",
 };
 
 const CATEGORY_RU: Record<string, string> = {
@@ -122,6 +163,74 @@ type ApiDocument = {
     overlays?: { A_in_B?: { body: string; house: number }[]; B_in_A?: { body: string; house: number }[] };
   };
   meta?: { data_quality?: string; warnings?: string[] };
+  insight?: {
+    status?: string;
+    temporal_frame?: string;
+    title?: string;
+    body?: string;
+    basis?: string;
+  };
+  pair_card?: {
+    status?: string;
+    formula_note?: string;
+    card?: { number?: number; name?: string; image?: string };
+    persons?: { id?: string; number?: number; name?: string }[];
+    love?: { name?: string; upright?: string; reversed?: string };
+  };
+  scoring?: {
+    harmony?: ApiScore;
+    karmic_patterns?: ApiScore;
+    current_tension?: ApiScore;
+    transformation?: ApiScore;
+  };
+  deep_dive?: {
+    sections?: ApiDeepSection[];
+    conclusion?: {
+      headline?: string | null;
+      body?: string | null;
+      summary?: string | null;
+      potential_or_meaning?: string | null;
+      conditions_or_limits?: string | null;
+    };
+  };
+  active_cycles?: {
+    persons?: {
+      A?: ApiCycle;
+      B?: ApiCycle;
+    };
+  };
+};
+
+type ApiDeepSection = {
+  id?: string;
+  section_title?: string;
+  headline?: string | null;
+  body?: string | null;
+  preview?: string | null;
+  evidence_ids?: string[];
+  primary_evidence_id?: string | null;
+  astro_basis?: { cross_evidence_ids?: string[] };
+};
+
+type ApiCycle = {
+  status?: string;
+  interpretation?: {
+    headline?: string;
+    body?: string;
+    teaser?: string;
+    focus?: string;
+    sensitive_point?: string;
+    need?: string;
+    resource?: string;
+    relationship_lens?: string;
+    astrological_basis_ru?: string;
+  } | null;
+};
+
+type ApiScore = {
+  value?: number | null;
+  status?: string;
+  summary?: string;
 };
 
 export async function loadLiveCompatibility(request: CompatibilityRequest): Promise<CompatibilityResult> {
@@ -132,6 +241,7 @@ export async function loadLiveCompatibility(request: CompatibilityRequest): Prom
 function toApiBody(request: CompatibilityRequest) {
   return {
     relationship_type: request.relationshipType,
+    relationship_status: request.relationshipStatus,
     persons: request.persons.map((person) => ({
       person_id: person.id,
       display_name: person.displayName,
@@ -165,7 +275,7 @@ function toResult(document: ApiDocument): CompatibilityResult {
   const primaryCount = Math.min(8, readable.length || orderedAspects.length);
 
   return {
-    schemaVersion: "compatibility-v1",
+    schemaVersion: document.schema_version === "compatibility-v2" ? "compatibility-v2" : "compatibility-v1",
     source: "api",
     dataQuality: document.meta?.data_quality === "full" ? "full" : "partial",
     warnings: timeNotes(document.persons),
@@ -183,6 +293,12 @@ function toResult(document: ApiDocument): CompatibilityResult {
         placements: [],
       },
     ],
+    insight: toInsight(document.insight),
+    pairCard: toPairCard(document.pair_card),
+    scores: toScores(document.scoring),
+    deepSections: toDeepSections(document, names),
+    readingConclusion: toConclusion(document.deep_dive?.conclusion),
+    cycleSlots: toCycleSlots(document.active_cycles),
     overview: {
       title: relationshipLine(document.bond, insights),
       summary: "",
@@ -202,6 +318,164 @@ function toResult(document: ApiDocument): CompatibilityResult {
     aspects: orderedAspects.map((row, index) => toAspect(row, index < primaryCount, insights, names)),
     houseOverlays: toHouses(document.chart.overlays, names),
     reflection: { question: "", conclusion: "" },
+  };
+}
+
+const PAIR_CARD_NOTE = "Это выбранная формула Cosmirror, а не универсальное правило Таро.";
+const TAROT_IMAGE = /^\/images\/tarot\/ar(?:0\d|1\d|2[01])\.jpg$/;
+
+function toPairCard(raw: ApiDocument["pair_card"]): PairTarotCard | undefined {
+  if (!raw || raw.status !== "ready") return undefined;
+  const card = toArcana(raw.card);
+  if (!card) return undefined;
+  const note = raw.formula_note?.trim();
+  const love = toLove(raw.love);
+  return {
+    formulaNote: note || PAIR_CARD_NOTE,
+    card,
+    persons: toPairPersons(raw.persons),
+    ...(love ? { love } : {}),
+  };
+}
+
+function toLove(raw: { name?: string; upright?: string; reversed?: string } | undefined): PairTarotLove | undefined {
+  const name = raw?.name?.trim() ?? "";
+  const upright = raw?.upright?.trim() ?? "";
+  const reversed = raw?.reversed?.trim() ?? "";
+  if (!name || !upright || !reversed) return undefined;
+  if (name.length > 80 || upright.length > 240 || reversed.length > 240) return undefined;
+  return { name, upright, reversed };
+}
+
+function toPairPersons(raw: { id?: string; number?: number; name?: string }[] | undefined): PairArcanaPerson[] {
+  if (!Array.isArray(raw)) return [];
+  const people: PairArcanaPerson[] = [];
+  const seen = new Set<string>();
+  for (const row of raw) {
+    const id = row?.id;
+    const number = row?.number;
+    const name = row?.name?.trim() ?? "";
+    if ((id !== "A" && id !== "B") || seen.has(id)) continue;
+    if (typeof number !== "number" || !Number.isInteger(number) || number < 1 || number > 22) continue;
+    if (!name || name.length > 40) continue;
+    seen.add(id);
+    people.push({ id, number, name });
+  }
+  return people.sort((left, right) => (left.id < right.id ? -1 : 1));
+}
+
+function toArcana(raw: { number?: number; name?: string; image?: string } | undefined): TarotArcana | undefined {
+  const number = raw?.number;
+  if (!raw || typeof number !== "number" || !Number.isInteger(number) || number < 1 || number > 22) {
+    return undefined;
+  }
+  const name = raw.name?.trim() ?? "";
+  const image = raw.image ?? "";
+  if (!name || name.length > 40 || !TAROT_IMAGE.test(image)) return undefined;
+  return { number, name, image };
+}
+
+function toScores(scoring: ApiDocument["scoring"]): CompatibilityScores | undefined {
+  if (!scoring) return undefined;
+  const harmony = toScore(scoring.harmony);
+  const karmic = toScore(scoring.karmic_patterns);
+  const currentTension = toScore(scoring.current_tension);
+  const transformation = toScore(scoring.transformation);
+  if (!harmony || !karmic || !currentTension || !transformation) return undefined;
+  return { harmony, karmic, currentTension, transformation };
+}
+
+function toScore(row: ApiScore | undefined): ScoreIndex | undefined {
+  if (!row || !isScoreStatus(row.status)) return undefined;
+  const value = typeof row.value === "number" && Number.isFinite(row.value) ? Math.round(row.value) : null;
+  return { value, status: row.status, summary: row.summary || "" };
+}
+
+function isScoreStatus(status: string | undefined): status is ScoreStatus {
+  return status === "ready" || status === "limited" || status === "pending" || status === "unavailable" || status === "error";
+}
+
+function toDeepSections(document: ApiDocument, names: Record<PersonId, string>): CompatibilityResult["deepSections"] {
+  const sections = document.deep_dive?.sections;
+  if (!sections?.length) return undefined;
+  const aspects = new Map((document.chart.cross_aspects || []).map((row) => [row.id, row]));
+  return sections.map((section) => {
+    const evidenceIds = section.evidence_ids?.length
+      ? section.evidence_ids
+      : section.astro_basis?.cross_evidence_ids?.length
+        ? section.astro_basis.cross_evidence_ids
+        : section.primary_evidence_id
+          ? [section.primary_evidence_id]
+          : [];
+    const evidence = evidenceIds.map((id) => aspects.get(id)).filter((row): row is ApiAspect => Boolean(row));
+    const paragraphs = bodyParagraphs(section.body);
+    return {
+      id: section.id || "section",
+      title: section.headline || "",
+      teaser: paragraphs.length ? "" : section.preview || "",
+      paragraphs,
+      aspectLines: evidence.map((row) => aspectLine(row, names)),
+      glyphs: evidence.slice(0, 3).map((row) => ({
+        id: row.id,
+        pointA: row.person_a_point,
+        aspect: row.aspect,
+        pointB: row.person_b_point,
+      })),
+    };
+  });
+}
+
+function bodyParagraphs(body: string | null | undefined): { label: string; text: string }[] {
+  if (!body) return [];
+  return body
+    .split(/\n\s*\n/)
+    .map((text) => text.replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+    .map((text) => ({ label: "", text }));
+}
+
+function toConclusion(row: NonNullable<ApiDocument["deep_dive"]>["conclusion"]): CompatibilityResult["readingConclusion"] {
+  if (!row) return undefined;
+  const text = row.body || [row.summary, row.potential_or_meaning, row.conditions_or_limits].filter(Boolean).join("\n\n");
+  if (!row.headline && !text) return undefined;
+  return { headline: row.headline || "Главное о вашей связи", text };
+}
+
+function toCycleSlots(cycles: ApiDocument["active_cycles"]): CompatibilityResult["cycleSlots"] {
+  const persons = cycles?.persons;
+  if (!persons) return undefined;
+  return (["A", "B"] as PersonId[]).map((personId) => {
+    const row = persons[personId];
+    const text = row?.interpretation;
+    if (!text || row?.status !== "ready") {
+      return {
+        personId,
+        title: "—",
+        period: "",
+        text: "Сейчас нет отдельного значимого цикла по выбранным критериям.",
+      };
+    }
+    const prose = text.body
+      || [text.teaser, text.focus, text.sensitive_point, text.need, text.resource, text.relationship_lens]
+        .filter(Boolean)
+        .join(" ");
+    return {
+      personId,
+      title: text.headline || "—",
+      period: text.astrological_basis_ru || "",
+      text: prose,
+    };
+  });
+}
+
+function toInsight(row: ApiDocument["insight"]): CompatibilityResult["insight"] {
+  if (!row || (row.status !== "ready" && row.status !== "unavailable")) return undefined;
+  return {
+    status: row.status,
+    temporalFrame: row.temporal_frame === "current" ? "current" : "base",
+    title: row.title || "",
+    body: row.body || "",
+    basis: row.basis || "",
   };
 }
 
@@ -383,9 +657,23 @@ function aspectHeadline(insight: ApiInsight, names: Record<PersonId, string>, by
 
 function aspectLine(row: ApiAspect, names: Record<PersonId, string>) {
   const left = BODY_RU[row.person_a_point] || row.person_a_point;
-  const right = BODY_RU[row.person_b_point] || row.person_b_point;
-  const name = ASPECT_RU[row.aspect] || row.aspect;
-  return `${left} · ${names.A}, ${name}, ${right} · ${names.B}`;
+  const other = row.aspect === "conjunction" ? INSTRUMENTAL[row.person_b_point] : DATIVE[row.person_b_point];
+  const phrase = ASPECT_PHRASE[row.aspect] || `в аспекте к ${other || row.person_b_point}`;
+  const planet = phrase.replace("{other}", other || BODY_RU[row.person_b_point] || row.person_b_point);
+  return `${left} у ${genitiveName(names.A)} ${planet} у ${genitiveName(names.B)}`;
+}
+
+function genitiveName(name: string) {
+  const word = name.trim();
+  if (word.toLowerCase() === "ты") return "тебя";
+  if (!word || word.includes(" ")) return word;
+  const lower = word.toLowerCase();
+  if (/(ша|ча|жа|ща)$/.test(lower)) return `${word.slice(0, -1)}и`;
+  if (lower.endsWith("а")) return `${word.slice(0, -1)}ы`;
+  if (lower.endsWith("я")) return `${word.slice(0, -1)}и`;
+  if (lower.endsWith("й") || lower.endsWith("ь")) return `${word.slice(0, -1)}я`;
+  if (/[бвгджзклмнпрстфхцчшщ]$/i.test(lower)) return `${word}а`;
+  return word;
 }
 
 function humanize(text: string, names: Record<PersonId, string>) {

@@ -51,7 +51,8 @@ export type PersonProfile = {
 };
 
 export type CompatibilityRequest = {
-  relationshipType: "romantic";
+  relationshipType: RelationshipKind;
+  relationshipStatus?: string;
   persons: [PersonProfile, PersonProfile];
 };
 
@@ -150,12 +151,92 @@ export type SynastryAspect = {
   requiresTime: PersonId | "both" | null;
 };
 
+export type TarotArcana = {
+  number: number;
+  name: string;
+  image: string;
+};
+
+export type PairArcanaPerson = {
+  id: PersonId;
+  number: number;
+  name: string;
+};
+
+export type PairTarotLove = {
+  name: string;
+  upright: string;
+  reversed: string;
+};
+
+export type PairTarotCard = {
+  formulaNote: string;
+  card: TarotArcana;
+  persons: PairArcanaPerson[];
+  love?: PairTarotLove;
+};
+
+export type PersonalInsight = {
+  status: "ready" | "unavailable";
+  temporalFrame: "base" | "current";
+  title: string;
+  body: string;
+  basis: string;
+};
+
+export type ScoreStatus = "ready" | "limited" | "pending" | "unavailable" | "error";
+
+export type ScoreIndex = {
+  value: number | null;
+  status: ScoreStatus;
+  summary: string;
+};
+
+export type CompatibilityScores = {
+  harmony: ScoreIndex;
+  karmic: ScoreIndex;
+  currentTension: ScoreIndex;
+  transformation: ScoreIndex;
+};
+
+export type DeepParagraph = {
+  label: string;
+  text: string;
+};
+
+export type DeepSection = {
+  id: string;
+  title: string;
+  teaser: string;
+  paragraphs: DeepParagraph[];
+  aspectLines: string[];
+  glyphs: { id: string; pointA: string; aspect: string; pointB: string }[];
+};
+
+export type ReadingConclusion = {
+  headline: string;
+  text: string;
+};
+
+export type ReadingCycleSlot = {
+  personId: PersonId;
+  title: string;
+  period: string;
+  text: string;
+};
+
 export type CompatibilityResult = {
-  schemaVersion: "compatibility-preview-v0" | "compatibility-v1";
+  schemaVersion: "compatibility-preview-v0" | "compatibility-v1" | "compatibility-v2";
   source: "mock" | "api";
   dataQuality: DataQuality;
   warnings: string[];
   persons: [PersonSnapshot, PersonSnapshot];
+  insight?: PersonalInsight;
+  pairCard?: PairTarotCard;
+  scores?: CompatibilityScores;
+  deepSections?: DeepSection[];
+  readingConclusion?: ReadingConclusion;
+  cycleSlots?: ReadingCycleSlot[];
   overview: {
     title: string;
     summary: string;
