@@ -23,6 +23,7 @@ const PREVIEWS = [
 ];
 
 const PAGES = [
+  { href: "/dev/compatibility/", label: "Разбор совместимости, зашитая пара" },
   { href: "/", label: "Главная" },
   { href: freshOnboardingHref(), label: "Квиз с первого шага" },
   { href: "/account/", label: "Кабинет как есть" },

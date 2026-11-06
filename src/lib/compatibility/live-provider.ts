@@ -1,4 +1,4 @@
-import { createCompatibilityReport } from "@/lib/api";
+import { createCompatibilityReport, fetchCompatibilityReport } from "@/lib/api";
 import { signLabel } from "@/components/compatibility/astro-label";
 import type {
   AspectKey,
@@ -17,6 +17,8 @@ import type {
   PersonId,
   Placement,
   PointKey,
+  RelationshipKind,
+  RelationshipStage,
   TarotArcana,
   SignComparison,
   SynastryAspect,
@@ -142,6 +144,9 @@ type ApiPosition = {
 
 type ApiDocument = {
   schema_version: string;
+  report_id?: string;
+  relationship_type?: string;
+  relationship_context?: { type?: string; status?: string };
   persons: { id: PersonId; display_name: string; birth_time_status: "known" | "approximate" | "unknown" }[];
   bond: {
     strongest_connection_id?: string | null;
@@ -233,9 +238,56 @@ type ApiScore = {
   summary?: string;
 };
 
+export type SharedCompatibility = {
+  result: CompatibilityResult;
+  names: Record<PersonId, string>;
+  relationshipKind: RelationshipKind | null;
+  relationshipStage: RelationshipStage | null;
+};
+
 export async function loadLiveCompatibility(request: CompatibilityRequest): Promise<CompatibilityResult> {
   const document = (await createCompatibilityReport(toApiBody(request))) as ApiDocument;
   return toResult(document);
+}
+
+export async function loadSharedCompatibility(reportId: string): Promise<SharedCompatibility | null> {
+  const raw = await fetchCompatibilityReport(reportId);
+  if (!raw || typeof raw !== "object") return null;
+  const document = raw as ApiDocument;
+  if (!Array.isArray(document.persons) || !document.chart?.positions) return null;
+  try {
+    const result = toResult(document);
+    if (!result.reportId) result.reportId = reportId;
+    return {
+      result,
+      names: {
+        A: result.persons[0].displayName,
+        B: result.persons[1].displayName,
+      },
+      ...relationshipOf(document),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function relationshipOf(document: ApiDocument): {
+  relationshipKind: RelationshipKind | null;
+  relationshipStage: RelationshipStage | null;
+} {
+  const type = document.relationship_type || document.relationship_context?.type;
+  const status = document.relationship_context?.status;
+  const relationshipKind: RelationshipKind | null =
+    type === "romantic" || type === "friendship" || type === "family" ? type : null;
+  const relationshipStage: RelationshipStage | null =
+    status === "dating" || status === "new"
+      ? "meeting"
+      : status === "together" || status === "close"
+        ? "together"
+        : status === "ended" || status === "distant"
+          ? "past"
+          : null;
+  return { relationshipKind, relationshipStage };
 }
 
 function toApiBody(request: CompatibilityRequest) {
@@ -277,6 +329,7 @@ function toResult(document: ApiDocument): CompatibilityResult {
   return {
     schemaVersion: document.schema_version === "compatibility-v2" ? "compatibility-v2" : "compatibility-v1",
     source: "api",
+    reportId: document.report_id || undefined,
     dataQuality: document.meta?.data_quality === "full" ? "full" : "partial",
     warnings: timeNotes(document.persons),
     persons: [

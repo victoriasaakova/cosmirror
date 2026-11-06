@@ -10,8 +10,9 @@ import type {
   RelationshipKind,
   RelationshipStage,
 } from "@/lib/compatibility/types";
+import { NatalComparisonTable } from "@/components/compatibility/NatalComparisonTable";
 import { PairCard } from "@/components/compatibility/PairCard";
-import { glassFrameClass } from "@/components/compatibility/styles";
+import { glassFrameClass, goldButtonClass } from "@/components/compatibility/styles";
 import {
   buildReadingModel,
   type DeepTopic,
@@ -40,15 +41,20 @@ export function ReadingResult({ people, result, names, relationshipKind, relatio
       </header>
 
       <div className="mx-auto mt-14 grid max-w-3xl grid-cols-2 gap-4 sm:mt-16 sm:gap-5">
-        {people.map((person) => (
-          <article key={person.id} className={`${glassFrameClass} px-4 py-4 text-center sm:px-5 sm:py-5`}>
-            <h2 className="font-display text-2xl italic leading-none text-[#F6E7A1] sm:text-3xl">
-              {names[person.id]}
-            </h2>
-            <p className="mt-2 text-sm leading-snug text-white/80 sm:text-base">{personLine(person)}</p>
-          </article>
-        ))}
+        {people.map((person) => {
+          const line = personLine(person);
+          return (
+            <article key={person.id} className={`${glassFrameClass} px-4 py-4 text-center sm:px-5 sm:py-5`}>
+              <h2 className="font-display text-2xl italic leading-none text-[#F6E7A1] sm:text-3xl">
+                {names[person.id]}
+              </h2>
+              {line ? <p className="mt-2 text-sm leading-snug text-white/80 sm:text-base">{line}</p> : null}
+            </article>
+          );
+        })}
       </div>
+
+      {result.reportId ? <ShareReading reportId={result.reportId} /> : null}
 
       <section className={`${blockGap} mx-auto max-w-3xl`} aria-labelledby="now-insight-title">
         <h2 id="now-insight-title" className={sectionTitleClass}>
@@ -135,6 +141,16 @@ export function ReadingResult({ people, result, names, relationshipKind, relatio
         </div>
       </section>
 
+      {result.natalRows.some((row) => row.a?.sign || row.b?.sign) ? (
+        <section className={blockGap} aria-labelledby="pair-chart-title">
+          <h2 id="pair-chart-title" className={sectionTitleClass}>
+            Карта <span className={accentClass}>пары</span>
+          </h2>
+          <div className="mt-10 sm:mt-12">
+            <NatalComparisonTable rows={result.natalRows} names={names} />
+          </div>
+        </section>
+      ) : null}
     </div>
   );
 }
@@ -195,6 +211,38 @@ function splitInsightTitle(title: string) {
   const first = words[accentStart].toLowerCase().replace(/^[«"„]+|[»"“.,:;!?]+$/g, "");
   if (conjunctions.has(first) && accentStart > 1) accentStart -= 1;
   return { lead: words.slice(0, accentStart).join(" "), accent: words.slice(accentStart).join(" ") };
+}
+
+function ShareReading({ reportId }: { reportId: string }) {
+  const [copied, setCopied] = useState(false);
+  const [link, setLink] = useState("");
+
+  async function onShare() {
+    const url = `${window.location.origin}/compatibility/s/${reportId}/`;
+    let wrote = false;
+    try {
+      await Promise.race([
+        navigator.clipboard.writeText(url),
+        new Promise((_, reject) => {
+          window.setTimeout(() => reject(new Error("clipboard")), 800);
+        }),
+      ]);
+      wrote = true;
+    } catch {
+      wrote = false;
+    }
+    setCopied(wrote);
+    setLink(wrote ? "" : url);
+  }
+
+  return (
+    <div className="mx-auto mt-8 max-w-3xl text-center">
+      <button type="button" onClick={() => void onShare()} className={goldButtonClass}>
+        {copied ? "Ссылка скопирована" : "Поделиться разбором"}
+      </button>
+      {link ? <p className="mt-3 break-all text-sm text-white/70">{link}</p> : null}
+    </div>
+  );
 }
 
 function personLine(person: PersonDraft) {

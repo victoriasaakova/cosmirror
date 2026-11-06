@@ -30,10 +30,42 @@ export function SiteFooter() {
           <a href="/offer/" className="transition hover:text-white">
             Публичная оферта
           </a>
+          <a href="/credits/" className="transition hover:text-white">
+            Credits
+          </a>
           <a href="mailto:hello@cosmirror.ru" className="transition hover:text-white">
             hello@cosmirror.ru
           </a>
         </nav>
+        <section aria-labelledby="footer-credits" className="max-w-xl">
+          <h2 id="footer-credits" className="text-sm text-white/80">
+            Credits
+          </h2>
+          <p className="mt-2 text-xs leading-relaxed text-white/40">
+            Тексты Таро:{" "}
+            <a
+              href="https://www.loveoracle.app"
+              className="text-white/55 underline-offset-2 transition hover:text-white hover:underline"
+            >
+              Love Oracle
+            </a>
+            , лицензия{" "}
+            <a
+              href="https://creativecommons.org/licenses/by/4.0/"
+              className="text-white/55 underline-offset-2 transition hover:text-white hover:underline"
+            >
+              CC BY 4.0
+            </a>
+            .{" "}
+            <a
+              href="/credits/"
+              className="text-white/55 underline-offset-2 transition hover:text-white hover:underline"
+            >
+              Все источники
+            </a>
+            .
+          </p>
+        </section>
         <p className="text-xs leading-relaxed text-white/40">Саакова Виктория · ИНН 773180561611</p>
       </div>
     </footer>

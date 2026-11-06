@@ -31,6 +31,9 @@ export function BlogShell({ children }: BlogShellProps) {
           <a href="/offer/" className="transition hover:text-white">
             Публичная оферта
           </a>
+          <a href="/credits/" className="transition hover:text-white">
+            Credits
+          </a>
           <a href="mailto:hello@cosmirror.ru" className="transition hover:text-white">
             hello@cosmirror.ru
           </a>

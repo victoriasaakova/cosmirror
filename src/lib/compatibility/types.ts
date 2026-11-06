@@ -228,6 +228,7 @@ export type ReadingCycleSlot = {
 export type CompatibilityResult = {
   schemaVersion: "compatibility-preview-v0" | "compatibility-v1" | "compatibility-v2";
   source: "mock" | "api";
+  reportId?: string;
   dataQuality: DataQuality;
   warnings: string[];
   persons: [PersonSnapshot, PersonSnapshot];

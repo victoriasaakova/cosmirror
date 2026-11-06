@@ -1541,4 +1541,20 @@ export async function createCompatibilityReport(body: unknown): Promise<unknown>
   return document;
 }
 
+export async function fetchCompatibilityReport(reportId: string): Promise<unknown | null> {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(reportId)) {
+    return null;
+  }
+  try {
+    const res = await fetch(`${API_URL}/api/compatibility/v1/reports/${reportId}/`, {
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
 export { API_URL };
