@@ -5,10 +5,10 @@ export function CompatibilityHero() {
   return (
     <header className="mx-auto w-full text-center">
       <Image
-        src="/images/compatibility-heart.webp"
+        src="/images/compatibility-emblem.webp"
         alt=""
         width={1024}
-        height={935}
+        height={1024}
         priority
         className="mx-auto h-auto w-[min(78vw,20rem)] sm:w-[22rem]"
         sizes="(max-width: 640px) 78vw, 22rem"
