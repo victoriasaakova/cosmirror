@@ -4,11 +4,11 @@ export function CompatibilityInsight() {
   return (
     <section className="mx-auto mt-16 flex max-w-3xl flex-col items-center px-1 text-center sm:mt-20" aria-labelledby="insight-quote">
       <Image
-        src="/images/eye-silver.webp"
+        src="/images/compatibility-insight-heart.webp"
         alt=""
-        width={512}
-        height={512}
-        className="animate-eye-spin h-auto w-[min(42vw,11rem)] sm:w-[min(36vw,13rem)] md:w-[14rem]"
+        width={1024}
+        height={935}
+        className="h-auto w-[min(42vw,11rem)] sm:w-[min(36vw,13rem)] md:w-[14rem]"
         sizes="(max-width: 768px) 42vw, 14rem"
       />
       <h2

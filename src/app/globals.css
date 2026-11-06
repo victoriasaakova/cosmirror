@@ -675,6 +675,12 @@ html.report-lock-scroll .cabinet-shell article {
   will-change: transform;
 }
 
+.animate-orbit-spin {
+  animation: eye-spin 48s linear infinite reverse;
+  transform-origin: center;
+  will-change: transform;
+}
+
 @keyframes pulse-dot {
   0%,
   100% {
@@ -870,6 +876,7 @@ html.report-lock-scroll .cabinet-shell article {
   .animate-float-delayed,
   .animate-pulse-glow,
   .animate-eye-spin,
+  .animate-orbit-spin,
   .animate-pulse-dot,
   .reveal,
   .reveal-delay-1,
