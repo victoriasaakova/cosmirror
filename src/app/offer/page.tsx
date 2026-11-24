@@ -35,10 +35,6 @@ export default function OfferPage() {
             (самозанятый); ОГРНИП / ОГРН не применяются;
           </li>
           <li>
-            <span className="text-white/85">Банк:</span> АО «ТБанк», БИК 044525974, к/с
-            30101810145250000974, р/с 40820810300001007648;
-          </li>
-          <li>
             <span className="text-white/85">Контакт:</span>{" "}
             <a
               href="mailto:hello@cosmirror.ru"
